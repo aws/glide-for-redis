@@ -11,8 +11,9 @@ inputs:
             - ubuntu-latest
     target:
         description: "Specified target for rust toolchain, ex. x86_64-apple-darwin"
+        required: false
         type: string
-        required: true
+        default: "x86_64-unknown-linux-gnu"
     publish:
         description: "Enable building the wrapper in release mode"
         required: false

@@ -8,6 +8,7 @@ from glide.config import (
     ProtocolVersion,
     RedisClientConfiguration,
     RedisCredentials,
+    TlsMode,
 )
 from glide.logger import Level as logLevel
 from glide.logger import Logger
@@ -111,14 +112,14 @@ async def create_client(
     protocol: ProtocolVersion = ProtocolVersion.RESP3,
 ) -> Union[RedisClient, RedisClusterClient]:
     # Create async socket client
-    use_tls = request.config.getoption("--tls")
+    tls_mode = TlsMode.Auto if request.config.getoption("--tls") else None
     if cluster_mode:
         assert type(pytest.redis_cluster) is RedisCluster
         assert database_id == 0
         seed_nodes = random.sample(pytest.redis_cluster.nodes_addr, k=3)
         cluster_config = ClusterClientConfiguration(
             addresses=seed_nodes if addresses is None else addresses,
-            use_tls=use_tls,
+            tls_mode=tls_mode,
             credentials=credentials,
             client_name=client_name,
             protocol=protocol,
@@ -130,7 +131,7 @@ async def create_client(
             addresses=pytest.standalone_cluster.nodes_addr
             if addresses is None
             else addresses,
-            use_tls=use_tls,
+            tls_mode=tls_mode,
             credentials=credentials,
             database_id=database_id,
             client_name=client_name,

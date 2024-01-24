@@ -217,7 +217,7 @@ async function main(
         const clients = await createClients(clientCount, () =>
             clientClass.createClient({
                 addresses: [{ host, port }],
-                useTLS,
+                tlsMode: useTLS ? "auto" : undefined,
             })
         );
         await run_clients(

@@ -4,7 +4,7 @@ from typing import List, Optional
 from glide.protobuf.connection_request_pb2 import ConnectionRequest
 from glide.protobuf.connection_request_pb2 import ProtocolVersion as SentProtocolVersion
 from glide.protobuf.connection_request_pb2 import ReadFrom as ProtobufReadFrom
-from glide.protobuf.connection_request_pb2 import TlsMode
+from glide.protobuf.connection_request_pb2 import TlsMode as ProtoTlsMode
 
 
 class NodeAddress:
@@ -51,6 +51,19 @@ class ProtocolVersion(Enum):
     """
 
 
+class TlsMode(Enum):
+    """
+    Disabled TLS mode.
+    """
+
+    Disabled = 0
+    """
+    Enabled TLS mode, with automatic loading of certificates.
+    """
+
+    Auto = 1
+
+
 class BackoffStrategy:
     def __init__(self, num_of_retries: int, factor: int, exponent_base: int):
         """
@@ -94,7 +107,7 @@ class BaseClientConfiguration:
     def __init__(
         self,
         addresses: List[NodeAddress],
-        use_tls: bool = False,
+        tls_mode: Optional[TlsMode] = None,
         credentials: Optional[RedisCredentials] = None,
         read_from: ReadFrom = ReadFrom.PRIMARY,
         request_timeout: Optional[int] = None,
@@ -115,8 +128,8 @@ class BaseClientConfiguration:
                         {address:sample-address-0001.use1.cache.amazonaws.com, port:6379},
                         {address: sample-address-0002.use2.cache.amazonaws.com, port:6379}
                     ].
-            use_tls (bool): True if communication with the cluster should use Transport Level Security.
-                Should match the TLS configuration of the server/cluster, otherwise the connection attempt will fail
+            tls_mode (TlsMode): `auto` if communication with the cluster should use Transport Level Security, with automatic loading of certificates.
+                    Should match the TLS configuration of the server/cluster, otherwise the connection attempt will fail.
             credentials (RedisCredentials): Credentials for authentication process.
                     If none are set, the client will not authenticate itself with the server.
             read_from (ReadFrom): If not set, `PRIMARY` will be used.
@@ -126,7 +139,7 @@ class BaseClientConfiguration:
             client_name (Optional[str]): Client name to be used for the client. Will be used with CLIENT SETNAME command during connection establishment.
         """
         self.addresses = addresses
-        self.use_tls = use_tls
+        self.tls_mode = tls_mode
         self.credentials = credentials
         self.read_from = read_from
         self.request_timeout = request_timeout
@@ -150,7 +163,11 @@ class BaseClientConfiguration:
             address_info = request.addresses.add()
             address_info.host = address.host
             address_info.port = address.port
-        request.tls_mode = TlsMode.SecureTls if self.use_tls else TlsMode.NoTls
+        request.tls_mode = (
+            ProtoTlsMode.SecureTls
+            if self.tls_mode == TlsMode.Auto
+            else ProtoTlsMode.NoTls
+        )
         request.read_from = self.read_from.value
         if self.request_timeout:
             request.request_timeout = self.request_timeout
@@ -178,7 +195,8 @@ class RedisClientConfiguration(BaseClientConfiguration):
                     {address:sample-address-0001.use1.cache.amazonaws.com, port:6379},
                     {address: sample-address-0002.use2.cache.amazonaws.com, port:6379}
                 ].
-        use_tls (bool): True if communication with the cluster should use Transport Level Security.
+        tls_mode (TlsMode): `auto` if communication with the cluster should use Transport Level Security, with automatic loading of certificates.
+                Should match the TLS configuration of the server/cluster, otherwise the connection attempt will fail.
         credentials (RedisCredentials): Credentials for authentication process.
                 If none are set, the client will not authenticate itself with the server.
         read_from (ReadFrom): If not set, `PRIMARY` will be used.
@@ -197,7 +215,7 @@ class RedisClientConfiguration(BaseClientConfiguration):
     def __init__(
         self,
         addresses: List[NodeAddress],
-        use_tls: bool = False,
+        tls_mode: Optional[TlsMode] = None,
         credentials: Optional[RedisCredentials] = None,
         read_from: ReadFrom = ReadFrom.PRIMARY,
         request_timeout: Optional[int] = None,
@@ -208,7 +226,7 @@ class RedisClientConfiguration(BaseClientConfiguration):
     ):
         super().__init__(
             addresses=addresses,
-            use_tls=use_tls,
+            tls_mode=tls_mode,
             credentials=credentials,
             read_from=read_from,
             request_timeout=request_timeout,
@@ -248,7 +266,8 @@ class ClusterClientConfiguration(BaseClientConfiguration):
                 [
                     {address:configuration-endpoint.use1.cache.amazonaws.com, port:6379}
                 ].
-        use_tls (bool): True if communication with the cluster should use Transport Level Security.
+        tls_mode (TlsMode): `auto` if communication with the cluster should use Transport Level Security, with automatic loading of certificates.
+                Should match the TLS configuration of the server/cluster, otherwise the connection attempt will fail.
         credentials (RedisCredentials): Credentials for authentication process.
                 If none are set, the client will not authenticate itself with the server.
         read_from (ReadFrom): If not set, `PRIMARY` will be used.
@@ -266,7 +285,7 @@ class ClusterClientConfiguration(BaseClientConfiguration):
     def __init__(
         self,
         addresses: List[NodeAddress],
-        use_tls: bool = False,
+        tls_mode: Optional[TlsMode] = None,
         credentials: Optional[RedisCredentials] = None,
         read_from: ReadFrom = ReadFrom.PRIMARY,
         request_timeout: Optional[int] = None,
@@ -275,7 +294,7 @@ class ClusterClientConfiguration(BaseClientConfiguration):
     ):
         super().__init__(
             addresses=addresses,
-            use_tls=use_tls,
+            tls_mode=tls_mode,
             credentials=credentials,
             read_from=read_from,
             request_timeout=request_timeout,

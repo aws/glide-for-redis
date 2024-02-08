@@ -103,6 +103,7 @@ enum RequestType {
     Zcount = 65;
     ZIncrBy = 66;
     ZScore = 67;
+    FTCreateIndex=68;
 }
 
 message Command {

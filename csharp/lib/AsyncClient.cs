@@ -9,14 +9,14 @@ namespace Glide;
 public class AsyncClient : IDisposable
 {
     #region public methods
-    public AsyncClient(string host, UInt32 port, bool useTLS)
+    public AsyncClient(string host, uint port, bool useTLS)
     {
-        successCallbackDelegate = SuccessCallback;
-        var successCallbackPointer = Marshal.GetFunctionPointerForDelegate(successCallbackDelegate);
-        failureCallbackDelegate = FailureCallback;
-        var failureCallbackPointer = Marshal.GetFunctionPointerForDelegate(failureCallbackDelegate);
-        clientPointer = CreateClientFfi(host, port, useTLS, successCallbackPointer, failureCallbackPointer);
-        if (clientPointer == IntPtr.Zero)
+        _successCallbackDelegate = SuccessCallback;
+        nint successCallbackPointer = Marshal.GetFunctionPointerForDelegate(_successCallbackDelegate);
+        _failureCallbackDelegate = FailureCallback;
+        nint failureCallbackPointer = Marshal.GetFunctionPointerForDelegate(_failureCallbackDelegate);
+        _clientPointer = CreateClientFfi(host, port, useTLS, successCallbackPointer, failureCallbackPointer);
+        if (_clientPointer == IntPtr.Zero)
         {
             throw new Exception("Failed creating a client");
         }
@@ -24,27 +24,27 @@ public class AsyncClient : IDisposable
 
     public async Task SetAsync(string key, string value)
     {
-        var message = messageContainer.GetMessageForCall(key, value);
-        SetFfi(clientPointer, (ulong)message.Index, message.KeyPtr, message.ValuePtr);
-        await message;
+        Message<string> message = _messageContainer.GetMessageForCall(key, value);
+        SetFfi(_clientPointer, (ulong)message.Index, message.KeyPtr, message.ValuePtr);
+        _ = await message;
     }
 
     public async Task<string?> GetAsync(string key)
     {
-        var message = messageContainer.GetMessageForCall(key, null);
-        GetFfi(clientPointer, (ulong)message.Index, message.KeyPtr);
+        Message<string> message = _messageContainer.GetMessageForCall(key, null);
+        GetFfi(_clientPointer, (ulong)message.Index, message.KeyPtr);
         return await message;
     }
 
     public void Dispose()
     {
-        if (clientPointer == IntPtr.Zero)
+        if (_clientPointer == IntPtr.Zero)
         {
             return;
         }
-        messageContainer.DisposeWithError(null);
-        CloseClientFfi(clientPointer);
-        clientPointer = IntPtr.Zero;
+        _messageContainer.DisposeWithError(null);
+        CloseClientFfi(_clientPointer);
+        _clientPointer = IntPtr.Zero;
     }
 
     #endregion public methods
@@ -53,24 +53,22 @@ public class AsyncClient : IDisposable
 
     private void SuccessCallback(ulong index, IntPtr str)
     {
-        var result = str == IntPtr.Zero ? null : Marshal.PtrToStringAnsi(str);
+        string? result = str == IntPtr.Zero ? null : Marshal.PtrToStringAnsi(str);
         // Work needs to be offloaded from the calling thread, because otherwise we might starve the client's thread pool.
-        Task.Run(() =>
+        _ = Task.Run(() =>
         {
-            var message = messageContainer.GetMessage((int)index);
+            Message<string> message = _messageContainer.GetMessage((int)index);
             message.SetResult(result);
         });
     }
 
-    private void FailureCallback(ulong index)
-    {
+    private void FailureCallback(ulong index) =>
         // Work needs to be offloaded from the calling thread, because otherwise we might starve the client's thread pool.
         Task.Run(() =>
         {
-            var message = messageContainer.GetMessage((int)index);
+            Message<string> message = _messageContainer.GetMessage((int)index);
             message.SetException(new Exception("Operation failed"));
         });
-    }
 
     ~AsyncClient() => Dispose();
     #endregion private methods
@@ -79,16 +77,16 @@ public class AsyncClient : IDisposable
 
     /// Held as a measure to prevent the delegate being garbage collected. These are delegated once
     /// and held in order to prevent the cost of marshalling on each function call.
-    private readonly FailureAction failureCallbackDelegate;
+    private readonly FailureAction _failureCallbackDelegate;
 
     /// Held as a measure to prevent the delegate being garbage collected. These are delegated once
     /// and held in order to prevent the cost of marshalling on each function call.
-    private readonly StringAction successCallbackDelegate;
+    private readonly StringAction _successCallbackDelegate;
 
     /// Raw pointer to the underlying native client.
-    private IntPtr clientPointer;
+    private IntPtr _clientPointer;
 
-    private readonly MessageContainer<string> messageContainer = new();
+    private readonly MessageContainer<string> _messageContainer = new();
 
     #endregion private fields
 
@@ -104,7 +102,7 @@ public class AsyncClient : IDisposable
 
     private delegate void IntAction(IntPtr arg);
     [DllImport("libglide_rs", CallingConvention = CallingConvention.Cdecl, EntryPoint = "create_client")]
-    private static extern IntPtr CreateClientFfi(String host, UInt32 port, bool useTLS, IntPtr successCallback, IntPtr failureCallback);
+    private static extern IntPtr CreateClientFfi(string host, uint port, bool useTLS, IntPtr successCallback, IntPtr failureCallback);
 
     [DllImport("libglide_rs", CallingConvention = CallingConvention.Cdecl, EntryPoint = "close_client")]
     private static extern void CloseClientFfi(IntPtr client);

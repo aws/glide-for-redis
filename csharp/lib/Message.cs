@@ -11,39 +11,31 @@ using Glide;
 /// Reusable source of ValueTask. This object can be allocated once and then reused
 /// to create multiple asynchronous operations, as long as each call to CreateTask
 /// is awaited to completion before the next call begins.
-internal class Message<T> : INotifyCompletion
+internal class Message<T>(int index, MessageContainer<T> container) : INotifyCompletion
 {
     /// This is the index of the message in an external array, that allows the user to
     /// know how to find the message and set its result.
-    public int Index { get; }
+    public int Index { get; } = index;
 
     /// The pointer to the unmanaged memory that contains the operation's key.
     public IntPtr KeyPtr { get; private set; }
 
     /// The pointer to the unmanaged memory that contains the operation's key.
     public IntPtr ValuePtr { get; private set; }
-    private readonly MessageContainer<T> container;
-
-    public Message(int index, MessageContainer<T> container)
-    {
-        Index = index;
-        continuation = () => { };
-        this.container = container;
-    }
-
-    private Action? continuation;
-    const int COMPLETION_STAGE_STARTED = 0;
-    const int COMPLETION_STAGE_NEXT_SHOULD_EXECUTE_CONTINUATION = 1;
-    const int COMPLETION_STAGE_CONTINUATION_EXECUTED = 2;
-    private int completionState;
-    private T? result;
-    private Exception? exception;
+    private readonly MessageContainer<T> _container = container;
+    private Action? _continuation = () => { };
+    private const int COMPLETION_STAGE_STARTED = 0;
+    private const int COMPLETION_STAGE_NEXT_SHOULD_EXECUTE_CONTINUATION = 1;
+    private const int COMPLETION_STAGE_CONTINUATION_EXECUTED = 2;
+    private int _completionState;
+    private T? _result;
+    private Exception? _exception;
 
     /// Triggers a succesful completion of the task returned from the latest call
     /// to CreateTask.
     public void SetResult(T? result)
     {
-        this.result = result;
+        _result = result;
         FinishSet();
     }
 
@@ -51,7 +43,7 @@ internal class Message<T> : INotifyCompletion
     /// CreateTask.
     public void SetException(Exception exc)
     {
-        this.exception = exc;
+        _exception = exc;
         FinishSet();
     }
 
@@ -64,17 +56,17 @@ internal class Message<T> : INotifyCompletion
 
     private void CheckRaceAndCallContinuation()
     {
-        if (Interlocked.CompareExchange(ref this.completionState, COMPLETION_STAGE_NEXT_SHOULD_EXECUTE_CONTINUATION, COMPLETION_STAGE_STARTED) == COMPLETION_STAGE_NEXT_SHOULD_EXECUTE_CONTINUATION)
+        if (Interlocked.CompareExchange(ref _completionState, COMPLETION_STAGE_NEXT_SHOULD_EXECUTE_CONTINUATION, COMPLETION_STAGE_STARTED) == COMPLETION_STAGE_NEXT_SHOULD_EXECUTE_CONTINUATION)
         {
-            Debug.Assert(this.continuation != null);
-            this.completionState = COMPLETION_STAGE_CONTINUATION_EXECUTED;
+            Debug.Assert(_continuation != null);
+            _completionState = COMPLETION_STAGE_CONTINUATION_EXECUTED;
             try
             {
-                continuation();
+                _continuation();
             }
             finally
             {
-                this.container.ReturnFreeMessage(this);
+                _container.ReturnFreeMessage(this);
             }
         }
     }
@@ -86,13 +78,13 @@ internal class Message<T> : INotifyCompletion
     /// and cleaned once it is complete.
     public void StartTask(string? key, string? value, object client)
     {
-        continuation = null;
-        this.completionState = COMPLETION_STAGE_STARTED;
-        this.result = default(T);
-        this.exception = null;
-        this.client = client;
-        this.KeyPtr = key is null ? IntPtr.Zero : Marshal.StringToHGlobalAnsi(key);
-        this.ValuePtr = value is null ? IntPtr.Zero : Marshal.StringToHGlobalAnsi(value);
+        _continuation = null;
+        _completionState = COMPLETION_STAGE_STARTED;
+        _result = default;
+        _exception = null;
+        _client = client;
+        KeyPtr = key is null ? IntPtr.Zero : Marshal.StringToHGlobalAnsi(key);
+        ValuePtr = value is null ? IntPtr.Zero : Marshal.StringToHGlobalAnsi(value);
     }
 
     // This function isn't thread-safe. Access to it should be from a single thread, and only once per operation.
@@ -109,20 +101,20 @@ internal class Message<T> : INotifyCompletion
             Marshal.FreeHGlobal(ValuePtr);
             ValuePtr = IntPtr.Zero;
         }
-        client = null;
+        _client = null;
     }
 
     // Holding the client prevents it from being CG'd until all operations complete.
-    private object? client;
+    private object? _client;
 
 
     public void OnCompleted(Action continuation)
     {
-        this.continuation = continuation;
+        _continuation = continuation;
         CheckRaceAndCallContinuation();
     }
 
-    public bool IsCompleted => completionState == COMPLETION_STAGE_CONTINUATION_EXECUTED;
+    public bool IsCompleted => _completionState == COMPLETION_STAGE_CONTINUATION_EXECUTED;
 
-    public T? GetResult() => this.exception is null ? this.result : throw this.exception;
+    public T? GetResult() => _exception is null ? _result : throw _exception;
 }

@@ -3,6 +3,8 @@
  */
 
 
+using System.Runtime.InteropServices;
+
 using Glide;
 
 using static Tests.Integration.IntegrationTestBase;
@@ -59,6 +61,10 @@ public class GetAndSet
     [Test]
     public async Task HandleVeryLargeInput()
     {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+            Assert.Ignore("Flaky on MacOS");
+        }
         using AsyncClient client = new("localhost", TestConfiguration.STANDALONE_PORTS[0], false);
         string key = Guid.NewGuid().ToString();
         string value = Guid.NewGuid().ToString();

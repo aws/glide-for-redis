@@ -1105,3 +1105,13 @@ export function createXread(
 
     return createCommand(RequestType.XRead, args);
 }
+
+/**
+ * @internal
+ */
+export function createRename(
+    key: string,
+    newKey: string,
+): redis_request.Command {
+    return createCommand(RequestType.Rename, [key, newKey]);
+}

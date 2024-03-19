@@ -62,6 +62,7 @@ export function transactionTest(
     const key7 = "{key}" + uuidv4();
     const key8 = "{key}" + uuidv4();
     const key9 = "{key}" + uuidv4();
+    const key10 = "{key}" + uuidv4();
     const field = uuidv4();
     const value = uuidv4();
     const args: ReturnType[] = [];
@@ -190,6 +191,10 @@ export function transactionTest(
         threshold: "0-2",
         exact: true,
     });
+    args.push(1);
+    baseTransaction.rename(key9, key10);
+    args.push("OK");
+    baseTransaction.exists([key10]);
     args.push(1);
     return args;
 }

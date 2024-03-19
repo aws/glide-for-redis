@@ -55,6 +55,7 @@ import {
     createPttl,
     createRPop,
     createRPush,
+    createRename,
     createSAdd,
     createSCard,
     createSMembers,
@@ -1324,6 +1325,21 @@ export class BaseClient {
      */
     public persist(key: string): Promise<boolean> {
         return this.createWritePromise(createPersist(key));
+    }
+
+    /**
+     * Renames `key` to `newkey`.
+     * If `newkey` already exists it is overwritten.
+     * In Cluster mode, both `key` and `newkey` must be in the same hash slot,
+     * meaning that in practice only keys that have the same hash tag can be reliably renamed in cluster.
+     * See https://redis.io/commands/rename/ for more details.
+     *
+     * @param key - The key to rename.
+     * @param newKey - The new name of the key.
+     * @returns - If the `key` was successfully renamed, return "OK". If `key` does not exist, an error is thrown.
+     */
+    public rename(key: string, newKey: string): Promise<"OK"> {
+        return this.createWritePromise(createRename(key, newKey));
     }
 
     /**

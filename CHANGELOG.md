@@ -23,6 +23,7 @@
 * Python, Node: Added LINDEX command ([#1058](https://github.com/aws/glide-for-redis/pull/1058), [#999](https://github.com/aws/glide-for-redis/pull/999))
 * Python: Added ZRANK command ([#1065](https://github.com/aws/glide-for-redis/pull/1065))
 * Core: Enabled Cluster Mode periodic checks by default ([#1089](https://github.com/aws/glide-for-redis/pull/1089))
+* Node: Added Rename command. ([#1124](https://github.com/aws/glide-for-redis/pull/1124))
 
 #### Features
 

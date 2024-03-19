@@ -1963,6 +1963,25 @@ export function runBaseTests<Context>(config: {
         },
         config.timeout,
     );
+
+    it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
+        "rename test_%p",
+        async (protocol) => {
+            await runTest(async (client: BaseClient) => {
+                // Making sure both keys will be oart of the same slot
+                const key = uuidv4() + "{123}";
+                const newKey = uuidv4() + "{123}";
+                await client.set(key, "value");
+                await client.rename(key, newKey);
+                const result = await client.get(newKey);
+                expect(result).toEqual("value");
+                // If key doesn't exist it should throw, it also test that key has succfully been renamed
+                await expect(client.rename(key, newKey)).rejects.toThrow();
+                client.close();
+            }, protocol);
+        },
+        config.timeout,
+    );
 }
 
 export function runCommonTests<Context>(config: {

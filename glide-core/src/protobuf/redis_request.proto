@@ -133,6 +133,7 @@ enum RequestType {
     JsonGet = 89;
     ZRemRangeByScore = 90;
     Time = 91;
+    Zrank = 92;
 }
 
 message Command {

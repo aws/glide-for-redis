@@ -72,19 +72,17 @@ jobs:
 
             - name: test hybrid node modules - commonjs
               run: |
-                cd hybrid-node-tests
-                cd commonjs-test
-                npm install 
+                npm install --package-lock-only
+                npm ci 
                 npm run build-and-test
-              working-directory: ./node
+              working-directory: ./node/hybrid-node-tests/commonjs-test
             
             - name: test hybrid node modules - ecma
               run: |
-                cd hybrid-node-tests
-                cd ecmascript-test
-                npm install
+                npm install --package-lock-only
+                npm ci
                 npm run build-and-test
-              working-directory: ./node
+              working-directory: ./node/hybrid-node-tests/ecmascript-test
             
             - name: test redis modules
               run: npm run test-modules -- --load-module=$GITHUB_WORKSPACE/redisearch.so --load-module=$GITHUB_WORKSPACE/redisjson.so
@@ -109,7 +107,7 @@ jobs:
 
     build-macos-latest:
         runs-on: macos-latest
-        timeout-minutes: 15
+        timeout-minutes: 25
         steps:
             - uses: actions/checkout@v4
               with:

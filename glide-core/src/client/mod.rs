@@ -2,7 +2,7 @@
  * Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0
  */
 use crate::connection_request::{
-    ConnectionRequest, NodeAddress, ProtocolVersion, ReadFrom, TlsMode,
+    connection_request, ConnectionRequest, NodeAddress, ProtocolVersion, ReadFrom, TlsMode,
 };
 use crate::scripts_container::get_script;
 use futures::FutureExt;
@@ -26,6 +26,7 @@ pub const HEARTBEAT_SLEEP_DURATION: Duration = Duration::from_secs(1);
 
 pub const DEFAULT_RESPONSE_TIMEOUT: Duration = Duration::from_millis(250);
 pub const DEFAULT_CONNECTION_ATTEMPT_TIMEOUT: Duration = Duration::from_millis(250);
+pub const DEFAULT_PERIODIC_CHECKS_INTERVAL: Duration = Duration::from_secs(60);
 pub const INTERNAL_CONNECTION_TIMEOUT: Duration = Duration::from_millis(250);
 
 pub(super) fn get_port(address: &NodeAddress) -> u16 {
@@ -284,10 +285,22 @@ async fn create_cluster_client(
         .collect();
     let read_from = request.read_from.enum_value().unwrap_or(ReadFrom::Primary);
     let read_from_replicas = !matches!(read_from, ReadFrom::Primary,); // TODO - implement different read from replica strategies.
+    let periodic_checks = match request.periodic_checks {
+        Some(periodic_checks) => match periodic_checks {
+            connection_request::Periodic_checks::PeriodicChecksManualInterval(interval) => {
+                Some(Duration::from_secs(interval.duration_in_sec.into()))
+            }
+            connection_request::Periodic_checks::PeriodicChecksDisabled(_) => None,
+        },
+        None => Some(DEFAULT_PERIODIC_CHECKS_INTERVAL),
+    };
     let mut builder = redis::cluster::ClusterClientBuilder::new(initial_nodes)
         .connection_timeout(INTERNAL_CONNECTION_TIMEOUT);
     if read_from_replicas {
         builder = builder.read_from_replicas();
+    }
+    if let Some(interval_duration) = periodic_checks {
+        builder = builder.periodic_topology_checks(interval_duration);
     }
     builder = builder.use_protocol(convert_to_redis_protocol(
         request.protocol.enum_value_or_default(),
@@ -388,7 +401,6 @@ fn sanitized_request_string(request: &ConnectionRequest) -> String {
     let connection_retry_strategy = request.connection_retry_strategy.0.as_ref().map(|strategy|
             format!("\nreconnect backoff strategy: number of increasing duration retries: {}, base: {}, factor: {}",
         strategy.number_of_retries, strategy.exponent_base, strategy.factor)).unwrap_or_default();
-
     let protocol = request
         .protocol
         .enum_value()
@@ -397,9 +409,30 @@ fn sanitized_request_string(request: &ConnectionRequest) -> String {
     let client_name = chars_to_string_option(&request.client_name)
         .map(|client_name| format!("\nClient name: {client_name}"))
         .unwrap_or_default();
+    let periodic_checks = if request.cluster_mode_enabled {
+        match request.periodic_checks {
+            Some(ref periodic_checks) => match periodic_checks {
+                connection_request::Periodic_checks::PeriodicChecksManualInterval(interval) => {
+                    format!(
+                        "\nPeriodic Checks: Enabled with manual interval of {:?}s",
+                        interval.duration_in_sec
+                    )
+                }
+                connection_request::Periodic_checks::PeriodicChecksDisabled(_) => {
+                    "\nPeriodic Checks: Disabled".to_string()
+                }
+            },
+            None => format!(
+                "\nPeriodic Checks: Enabled with default interval of {:?}",
+                DEFAULT_PERIODIC_CHECKS_INTERVAL
+            ),
+        }
+    } else {
+        "".to_string()
+    };
 
     format!(
-        "\nAddresses: {addresses}{tls_mode}{cluster_mode}{request_timeout}{rfr_strategy}{connection_retry_strategy}{database_id}{protocol}{client_name}",
+        "\nAddresses: {addresses}{tls_mode}{cluster_mode}{request_timeout}{rfr_strategy}{connection_retry_strategy}{database_id}{protocol}{client_name}{periodic_checks}",
     )
 }
 

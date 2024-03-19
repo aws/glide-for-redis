@@ -29,6 +29,13 @@ enum ProtocolVersion {
     RESP2 = 1; 
 }
 
+message PeriodicChecksManualInterval {
+    uint32 duration_in_sec = 1;
+}
+
+message PeriodicChecksDisabled {
+}
+
 // IMPORTANT - if you add fields here, you probably need to add them also in client/mod.rs:`sanitized_request_string`.
 message ConnectionRequest {
     repeated NodeAddress addresses = 1;
@@ -41,6 +48,10 @@ message ConnectionRequest {
     uint32 database_id = 8;
     ProtocolVersion protocol = 9;
     string client_name = 10;
+    oneof periodic_checks {
+        PeriodicChecksManualInterval periodic_checks_manual_interval = 11;
+        PeriodicChecksDisabled periodic_checks_disabled = 12;
+    }
 }
 
 message ConnectionRetryStrategy {

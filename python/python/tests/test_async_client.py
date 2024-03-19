@@ -759,6 +759,25 @@ class TestCommands:
 
     @pytest.mark.parametrize("cluster_mode", [True, False])
     @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
+    async def test_hvals(self, redis_client: TRedisClient):
+        key = get_random_string(10)
+        key2 = get_random_string(5)
+        field = get_random_string(5)
+        field2 = get_random_string(5)
+        field_value_map = {field: "value", field2: "value2"}
+
+        assert await redis_client.hset(key, field_value_map) == 2
+        assert await redis_client.hvals(key) == ["value", "value2"]
+        assert await redis_client.hdel(key, [field]) == 1
+        assert await redis_client.hvals(key) == ["value2"]
+        assert await redis_client.hvals("non_existing_key") == []
+
+        assert await redis_client.set(key2, "value") == OK
+        with pytest.raises(RequestError):
+            await redis_client.hvals(key2)
+
+    @pytest.mark.parametrize("cluster_mode", [True, False])
+    @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
     async def test_lpush_lpop_lrange(self, redis_client: TRedisClient):
         key = get_random_string(10)
         value_list = ["value4", "value3", "value2", "value1"]
@@ -1076,6 +1095,16 @@ class TestCommands:
 
         assert await redis_client.pexpireat(key, current_time * 1000 + 30000)
         assert 0 < await redis_client.pttl(key) <= 30000
+
+    @pytest.mark.parametrize("cluster_mode", [True, False])
+    @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
+    async def test_persist(self, redis_client: TRedisClient):
+        key = get_random_string(10)
+        assert await redis_client.set(key, "value") == OK
+        assert not await redis_client.persist(key)
+
+        assert await redis_client.expire(key, 10)
+        assert await redis_client.persist(key)
 
     @pytest.mark.parametrize("cluster_mode", [True, False])
     @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
@@ -1472,6 +1501,27 @@ class TestCommands:
 
         with pytest.raises(RequestError):
             await redis_client.zrange_withscores(key, RangeByIndex(start=0, stop=1))
+
+    @pytest.mark.parametrize("cluster_mode", [True, False])
+    @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
+    async def test_zrank(self, redis_client: TRedisClient):
+        key = get_random_string(10)
+        members_scores = {"one": 1.5, "two": 2, "three": 3}
+        assert await redis_client.zadd(key, members_scores) == 3
+        assert await redis_client.zrank(key, "one") == 0
+        if not await check_if_server_version_lt(redis_client, "7.2.0"):
+            assert await redis_client.zrank_withscore(key, "one") == [0, 1.5]
+            assert await redis_client.zrank_withscore(key, "non_existing_field") is None
+            assert (
+                await redis_client.zrank_withscore("non_existing_key", "field") is None
+            )
+
+        assert await redis_client.zrank(key, "non_existing_field") is None
+        assert await redis_client.zrank("non_existing_key", "field") is None
+
+        assert await redis_client.set(key, "value") == OK
+        with pytest.raises(RequestError):
+            await redis_client.zrank(key, "one")
 
     @pytest.mark.parametrize("cluster_mode", [True, False])
     @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])

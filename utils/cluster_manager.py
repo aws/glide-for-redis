@@ -426,7 +426,7 @@ def create_cluster(
         stderr=subprocess.PIPE,
         text=True,
     )
-    output, err = p.communicate(timeout=20)
+    output, err = p.communicate(timeout=40)
     if err or "[OK] All 16384 slots covered." not in output:
         raise Exception(f"Failed to create cluster: {err if err else output}")
 
@@ -963,7 +963,9 @@ def main():
         tic = time.perf_counter()
         cluster_prefix = f"tls-{args.prefix}" if args.tls else args.prefix
         cluster_folder = create_cluster_folder(args.folder_path, cluster_prefix)
-        logging.info(f"{datetime.now(timezone.utc)} Starting script for cluster {cluster_folder}")
+        logging.info(
+            f"{datetime.now(timezone.utc)} Starting script for cluster {cluster_folder}"
+        )
         logfile = (
             f"{cluster_folder}/cluster_manager.log"
             if not args.logfile

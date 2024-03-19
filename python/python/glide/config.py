@@ -1,7 +1,7 @@
 # Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0
 
 from enum import Enum
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from glide.protobuf.connection_request_pb2 import ConnectionRequest
 from glide.protobuf.connection_request_pb2 import ProtocolVersion as SentProtocolVersion
@@ -90,6 +90,33 @@ class RedisCredentials:
         """
         self.password = password
         self.username = username
+
+
+class PeriodicChecksManualInterval:
+    def __init__(self, duration_in_sec: int) -> None:
+        """
+        Represents a manually configured interval for periodic checks.
+
+        Args:
+            duration_in_sec (int): The duration in seconds for the interval between periodic checks.
+        """
+        self.duration_in_sec = duration_in_sec
+
+
+class PeriodicChecksStatus(Enum):
+    """
+    Represents the cluster's periodic checks status.
+    To configure specific interval, see PeriodicChecksManualInterval.
+    """
+
+    ENABLED_DEFAULT_CONFIGS = 0
+    """
+    Enables the periodic checks with the default configurations.
+    """
+    DISABLED = 1
+    """
+    Disables the periodic checks.
+    """
 
 
 class BaseClientConfiguration:
@@ -191,7 +218,7 @@ class RedisClientConfiguration(BaseClientConfiguration):
         reconnect_strategy (Optional[BackoffStrategy]): Strategy used to determine how and when to reconnect, in case of
             connection failures.
             If not set, a default backoff strategy will be used.
-        database_id (Optional[Int]): index of the logical database to connect to.
+        database_id (Optional[int]): index of the logical database to connect to.
         client_name (Optional[str]): Client name to be used for the client. Will be used with CLIENT SETNAME command during connection establishment.
         protocol (ProtocolVersion): The version of the Redis RESP protocol to communicate with the server.
     """
@@ -224,7 +251,7 @@ class RedisClientConfiguration(BaseClientConfiguration):
         self, cluster_mode: bool = False
     ) -> ConnectionRequest:
         assert cluster_mode is False
-        request = super()._create_a_protobuf_conn_request(False)
+        request = super()._create_a_protobuf_conn_request(cluster_mode)
         if self.reconnect_strategy:
             request.connection_retry_strategy.number_of_retries = (
                 self.reconnect_strategy.num_of_retries
@@ -259,6 +286,10 @@ class ClusterClientConfiguration(BaseClientConfiguration):
             If the specified timeout is exceeded for a pending request, it will result in a timeout error. If not set, a default value will be used.
         client_name (Optional[str]): Client name to be used for the client. Will be used with CLIENT SETNAME command during connection establishment.
         protocol (ProtocolVersion): The version of the Redis RESP protocol to communicate with the server.
+        periodic_checks (Union[PeriodicChecksStatus, PeriodicChecksManualInterval]): Configure the periodic topology checks.
+            These checks evaluate changes in the cluster's topology, triggering a slot refresh when detected.
+            Periodic checks ensure a quick and efficient process by querying a limited number of nodes.
+            Defaults to PeriodicChecksStatus.ENABLED_DEFAULT_CONFIGS.
 
     Notes:
         Currently, the reconnection strategy in cluster mode is not configurable, and exponential backoff
@@ -274,6 +305,9 @@ class ClusterClientConfiguration(BaseClientConfiguration):
         request_timeout: Optional[int] = None,
         client_name: Optional[str] = None,
         protocol: ProtocolVersion = ProtocolVersion.RESP3,
+        periodic_checks: Union[
+            PeriodicChecksStatus, PeriodicChecksManualInterval
+        ] = PeriodicChecksStatus.ENABLED_DEFAULT_CONFIGS,
     ):
         super().__init__(
             addresses=addresses,
@@ -284,3 +318,18 @@ class ClusterClientConfiguration(BaseClientConfiguration):
             client_name=client_name,
             protocol=protocol,
         )
+        self.periodic_checks = periodic_checks
+
+    def _create_a_protobuf_conn_request(
+        self, cluster_mode: bool = False
+    ) -> ConnectionRequest:
+        assert cluster_mode is True
+        request = super()._create_a_protobuf_conn_request(cluster_mode)
+        if type(self.periodic_checks) is PeriodicChecksManualInterval:
+            request.periodic_checks_manual_interval.duration_in_sec = (
+                self.periodic_checks.duration_in_sec
+            )
+        elif self.periodic_checks == PeriodicChecksStatus.DISABLED:
+            request.periodic_checks_disabled.SetInParent()
+
+        return request

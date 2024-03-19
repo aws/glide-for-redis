@@ -363,6 +363,7 @@ fn get_command(request: &Command) -> Option<Cmd> {
         RequestType::JsonGet => Some(cmd("JSON.GET")),
         RequestType::ZRemRangeByScore => Some(cmd("ZREMRANGEBYSCORE")),
         RequestType::Time => Some(cmd("TIME")),
+        RequestType::Zrank => Some(cmd("ZRANK")),
     }
 }
 

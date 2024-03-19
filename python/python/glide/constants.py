@@ -14,13 +14,13 @@ TOK = Literal["OK"]
 TResult = Union[
     TOK,
     str,
-    List[str],
     List[List[str]],
     int,
     None,
     Dict[str, T],
     float,
     Set[T],
+    List[T],
 ]
 TRequest = Union[RedisRequest, ConnectionRequest]
 # When routing to a single node, response will be T

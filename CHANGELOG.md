@@ -13,19 +13,23 @@
 * Python, Node: Added ZPOPMAX command ([#996](https://github.com/aws/glide-for-redis/pull/996), [#1009](https://github.com/aws/glide-for-redis/pull/1009))
 * Python: Added ZRANGE command ([#906](https://github.com/aws/glide-for-redis/pull/906))
 * Python, Node: Added PTTL command ([#1036](https://github.com/aws/glide-for-redis/pull/1036), [#1082](https://github.com/aws/glide-for-redis/pull/1082))
-* Node: Added HVAL command ([#1022](https://github.com/aws/glide-for-redis/pull/1022))
-* Node: Added PERSIST command ([#1023](https://github.com/aws/glide-for-redis/pull/1023))
+* Python, Node: Added HVAL command ([#1130](https://github.com/aws/glide-for-redis/pull/1130)), ([#1022](https://github.com/aws/glide-for-redis/pull/1022))
+* Python, Node: Added PERSIST command ([#1129](https://github.com/aws/glide-for-redis/pull/1129)), ([#1023](https://github.com/aws/glide-for-redis/pull/1023))
 * Node: Added ZREMRANGEBYSCORE command ([#926](https://github.com/aws/glide-for-redis/pull/926))
 * Node: Added ZREMRANGEBYRANK command ([#924](https://github.com/aws/glide-for-redis/pull/924))
 * Node: Added Xadd, Xtrim commands. ([#1057](https://github.com/aws/glide-for-redis/pull/1057))
 * Python: Added json module and JSON.SET JSON.GET commands  ([#1056](https://github.com/aws/glide-for-redis/pull/1056))
 * Node: Added Time command. ([#1114](https://github.com/aws/glide-for-redis/pull/1114))
 * Python, Node: Added LINDEX command ([#1058](https://github.com/aws/glide-for-redis/pull/1058), [#999](https://github.com/aws/glide-for-redis/pull/999))
+* Python: Added ZRANK command ([#1065](https://github.com/aws/glide-for-redis/pull/1065))
+* Core: Enabled Cluster Mode periodic checks by default ([#1089](https://github.com/aws/glide-for-redis/pull/1089))
 
 #### Features
 
 * Python: Allow chaining function calls on transaction. ([#987](https://github.com/aws/glide-for-redis/pull/987))
 * Node: Adding support for GLIDE's usage in projects based on either `CommonJS` or `ECMAScript` modules. ([#1132](https://github.com/aws/glide-for-redis/pull/1132))
+* Python: Added Cluster Mode configuration for periodic checks interval ([#1089](https://github.com/aws/glide-for-redis/pull/1089))
+
 
 ## 0.2.0 (2024-02-11)
 

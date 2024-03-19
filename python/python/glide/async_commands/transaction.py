@@ -529,6 +529,20 @@ class BaseTransaction:
         """
         return self.append_command(RequestType.HashDel, [key] + fields)
 
+    def hvals(self: TTransaction, key: str) -> TTransaction:
+        """
+        Returns all values in the hash stored at `key`.
+
+        See https://redis.io/commands/hvals/ for more details.
+
+        Args:
+            key (str): The key of the hash.
+
+        Command response:
+            List[str]: A list of values in the hash, or an empty list when the key does not exist.
+        """
+        return self.append_command(RequestType.Hvals, [key])
+
     def lpush(self: TTransaction, key: str, elements: List[str]) -> TTransaction:
         """
         Insert all the specified values at the head of the list stored at `key`.
@@ -979,6 +993,24 @@ class BaseTransaction:
         """
         return self.append_command(RequestType.PTTL, [key])
 
+    def persist(
+        self: TTransaction,
+        key: str,
+    ) -> TTransaction:
+        """
+        Remove the existing timeout on `key`, turning the key from volatile (a key with an expire set) to
+        persistent (a key that will never expire as no timeout is associated).
+
+        See https://redis.io/commands/persist/ for more details.
+
+        Args:
+            key (str): TThe key to remove the existing timeout on.
+
+        Commands response:
+            bool: False if `key` does not exist or does not have an associated timeout, True if the timeout has been removed.
+        """
+        return self.append_command(RequestType.Persist, [key])
+
     def echo(self: TTransaction, message: str) -> TTransaction:
         """
         Echoes the provided `message` back.
@@ -1263,6 +1295,48 @@ class BaseTransaction:
         args = _create_zrange_args(key, range_query, reverse, with_scores=True)
 
         return self.append_command(RequestType.Zrange, args)
+
+    def zrank(
+        self: TTransaction,
+        key: str,
+        member: str,
+    ) -> TTransaction:
+        """
+        Returns the rank of `member` in the sorted set stored at `key`, with scores ordered from low to high.
+
+        See https://redis.io/commands/zrank for more details.
+
+        To get the rank of `member` with it's score, see `zrank_withscore`.
+
+        Args:
+            key (str): The key of the sorted set.
+            member (str): The member whose rank is to be retrieved.
+
+        Commands response:
+            Optional[int]: The rank of `member` in the sorted set.
+            If `key` doesn't exist, or if `member` is not present in the set, None will be returned.
+        """
+        return self.append_command(RequestType.Zrank, [key, member])
+
+    def zrank_withscore(
+        self: TTransaction,
+        key: str,
+        member: str,
+    ) -> TTransaction:
+        """
+        Returns the rank of `member` in the sorted set stored at `key` with it's score, where scores are ordered from the lowest to highest.
+
+        See https://redis.io/commands/zrank for more details.
+
+        Args:
+            key (str): The key of the sorted set.
+            member (str): The member whose rank is to be retrieved.
+
+        Commands response:
+            Optional[List[Union[int, float]]]: A list containing the rank and score of `member` in the sorted set.
+            If `key` doesn't exist, or if `member` is not present in the set, None will be returned.
+        """
+        return self.append_command(RequestType.Zrank, [key, member, "WITHSCORE"])
 
     def zrem(
         self: TTransaction,

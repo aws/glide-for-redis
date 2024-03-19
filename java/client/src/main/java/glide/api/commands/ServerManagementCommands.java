@@ -19,6 +19,11 @@ public interface ServerManagementCommands {
      * @see <a href="https://redis.io/commands/info/">redis.io</a> for details.
      * @return Response from Redis containing a <code>String</code> with the information for the
      *     default sections.
+     * @example
+     *     <pre>{@code
+     * String response = client.info().get();
+     * assert response.contains("# Stats");
+     * }</pre>
      */
     CompletableFuture<String> info();
 
@@ -30,6 +35,11 @@ public interface ServerManagementCommands {
      *     retrieve. When no parameter is provided, the {@link Section#DEFAULT} option is assumed.
      * @return Response from Redis containing a <code>String</code> with the information for the
      *     sections requested.
+     * @example
+     *     <pre>{@code
+     * String response = regularClient.info(InfoOptions.builder().section(STATS).build()).get();
+     * assert response.contains("total_net_input_bytes");
+     * }</pre>
      */
     CompletableFuture<String> info(InfoOptions options);
 
@@ -39,6 +49,11 @@ public interface ServerManagementCommands {
      * @see <a href="https://redis.io/commands/select/">redis.io</a> for details.
      * @param index The index of the database to select.
      * @return A simple <code>OK</code> response.
+     * @example
+     *     <pre>{@code
+     * String response = regularClient.select(0).get();
+     * assert response.equals("OK");
+     * }</pre>
      */
     CompletableFuture<String> select(long index);
 

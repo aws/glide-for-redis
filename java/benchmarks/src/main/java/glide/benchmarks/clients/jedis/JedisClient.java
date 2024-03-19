@@ -28,7 +28,7 @@ public class JedisClient implements SyncClient {
 
     @Override
     public String getName() {
-        return "Jedis";
+        return "jedis";
     }
 
     @Override

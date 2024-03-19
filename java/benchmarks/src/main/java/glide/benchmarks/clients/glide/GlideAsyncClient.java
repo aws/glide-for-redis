@@ -78,6 +78,6 @@ public class GlideAsyncClient implements AsyncClient<String> {
 
     @Override
     public String getName() {
-        return "Glide Async";
+        return "glide";
     }
 }

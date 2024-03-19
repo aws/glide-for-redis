@@ -60,6 +60,6 @@ public class LettuceAsyncClient implements AsyncClient<String> {
 
     @Override
     public String getName() {
-        return "Lettuce Async";
+        return "lettuce";
     }
 }

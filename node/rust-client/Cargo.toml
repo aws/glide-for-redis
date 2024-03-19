@@ -12,7 +12,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 redis = { path = "../../submodules/redis-rs/redis", features = ["aio", "tokio-comp", "tokio-rustls-comp"] }
-glide-core = { path = "../../glide-core" }
+glide-core = { path = "../../glide-core", features = ["socket-layer"] }
 tokio = { version = "1", features = ["rt", "macros", "rt-multi-thread", "time"] }
 napi = {version = "2.14", features = ["napi4", "napi6"] }
 napi-derive = "2.14"

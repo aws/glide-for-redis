@@ -30,6 +30,11 @@ runs:
           working-directory: ${{ inputs.cargo-toml-folder }}
           shell: bash
 
+          # We run clippy without features
+        - run: cargo clippy --all-targets -- -D warnings
+          working-directory: ${{ inputs.cargo-toml-folder }}
+          shell: bash          
+
         - run: |
               cargo update
               cargo install cargo-deny

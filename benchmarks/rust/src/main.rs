@@ -11,10 +11,7 @@ static GLOBAL: Jemalloc = Jemalloc;
 
 use clap::Parser;
 use futures::{self, future::join_all, stream, StreamExt};
-use glide_core::{
-    client::Client,
-    connection_request::{ConnectionRequest, NodeAddress, TlsMode},
-};
+use glide_core::client::{Client, ConnectionRequest, NodeAddress, TlsMode};
 use rand::{thread_rng, Rng};
 use serde_json::Value;
 use std::{
@@ -223,19 +220,21 @@ fn generate_random_string(length: usize) -> String {
 }
 
 async fn get_connection(args: &Args) -> Client {
-    let mut connection_request = ConnectionRequest::new();
-    connection_request.tls_mode = if args.tls {
-        TlsMode::SecureTls
-    } else {
-        TlsMode::NoTls
-    }
-    .into();
-    let mut address_info: NodeAddress = NodeAddress::new();
-    address_info.host = args.host.clone().into();
-    address_info.port = args.port;
-    connection_request.addresses.push(address_info);
-    connection_request.request_timeout = 2000;
-    connection_request.cluster_mode_enabled = args.cluster_mode_enabled;
+    let address_info: NodeAddress = NodeAddress {
+        host: args.host.clone(),
+        port: args.port as u16,
+    };
+    let connection_request = ConnectionRequest {
+        addresses: vec![address_info],
+        cluster_mode_enabled: args.cluster_mode_enabled,
+        request_timeout: Some(2000),
+        tls_mode: if args.tls {
+            Some(TlsMode::SecureTls)
+        } else {
+            Some(TlsMode::NoTls)
+        },
+        ..Default::default()
+    };
 
     glide_core::client::Client::new(connection_request)
         .await

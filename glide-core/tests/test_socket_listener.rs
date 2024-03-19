@@ -1,6 +1,8 @@
-/**
+/*
  * Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0
  */
+
+#![cfg(feature = "socket-layer")]
 use glide_core::*;
 use rsevents::{Awaitable, EventState, ManualResetEvent};
 use std::io::prelude::*;

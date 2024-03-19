@@ -3,13 +3,12 @@
  */
 use super::get_redis_connection_info;
 use super::reconnecting_connection::ReconnectingConnection;
-use crate::connection_request::{ConnectionRequest, NodeAddress, TlsMode};
+use super::{ConnectionRequest, NodeAddress, TlsMode};
 use crate::retry_strategies::RetryStrategy;
 use futures::{future, stream, StreamExt};
 #[cfg(standalone_heartbeat)]
 use logger_core::log_debug;
 use logger_core::log_warn;
-use protobuf::EnumOrUnknown;
 use redis::cluster_routing::{self, is_readonly_cmd, ResponsePolicy, Routable, RoutingInfo};
 use redis::{RedisError, RedisResult, Value};
 use std::sync::atomic::AtomicUsize;
@@ -92,10 +91,10 @@ impl StandaloneClient {
         if connection_request.addresses.is_empty() {
             return Err(StandaloneClientConnectionError::NoAddressesProvided);
         }
-        let retry_strategy = RetryStrategy::new(&connection_request.connection_retry_strategy.0);
         let redis_connection_info = get_redis_connection_info(&connection_request);
+        let retry_strategy = RetryStrategy::new(connection_request.connection_retry_strategy);
 
-        let tls_mode = connection_request.tls_mode.enum_value_or_default();
+        let tls_mode = connection_request.tls_mode;
         let node_count = connection_request.addresses.len();
         let mut stream = stream::iter(connection_request.addresses.iter())
             .map(|address| async {
@@ -103,7 +102,7 @@ impl StandaloneClient {
                     address,
                     &retry_strategy,
                     &redis_connection_info,
-                    tls_mode,
+                    tls_mode.unwrap_or(TlsMode::NoTls),
                 )
                 .await
                 .map_err(|err| (format!("{}:{}", address.host, address.port), err))
@@ -153,7 +152,7 @@ impl StandaloneClient {
                 ),
             );
         }
-        let read_from = get_read_from(&connection_request.read_from);
+        let read_from = get_read_from(connection_request.read_from);
 
         #[cfg(standalone_heartbeat)]
         for node in nodes.iter() {
@@ -405,13 +404,12 @@ async fn get_connection_and_replication_info(
     }
 }
 
-fn get_read_from(read_from: &EnumOrUnknown<crate::connection_request::ReadFrom>) -> ReadFrom {
-    match read_from.enum_value_or_default() {
-        crate::connection_request::ReadFrom::Primary => ReadFrom::Primary,
-        crate::connection_request::ReadFrom::PreferReplica => ReadFrom::PreferReplica {
+fn get_read_from(read_from: Option<super::ReadFrom>) -> ReadFrom {
+    match read_from {
+        Some(super::ReadFrom::Primary) => ReadFrom::Primary,
+        Some(super::ReadFrom::PreferReplica) => ReadFrom::PreferReplica {
             latest_read_replica_index: Default::default(),
         },
-        crate::connection_request::ReadFrom::LowestLatency => todo!(),
-        crate::connection_request::ReadFrom::AZAffinity => todo!(),
+        None => ReadFrom::Primary,
     }
 }

@@ -1,9 +1,8 @@
 /**
  * Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0
  */
-use crate::connection_request::{
-    connection_request, ConnectionRequest, NodeAddress, ProtocolVersion, ReadFrom, TlsMode,
-};
+mod types;
+
 use crate::scripts_container::get_script;
 use futures::FutureExt;
 use logger_core::log_info;
@@ -16,6 +15,7 @@ pub use standalone_client::StandaloneClient;
 use std::io;
 use std::ops::Deref;
 use std::time::Duration;
+pub use types::*;
 
 use self::value_conversion::{convert_to_expected_type, expected_type_for_cmd};
 mod reconnecting_connection;
@@ -34,41 +34,28 @@ pub(super) fn get_port(address: &NodeAddress) -> u16 {
     if address.port == 0 {
         DEFAULT_PORT
     } else {
-        address.port as u16
-    }
-}
-
-fn chars_to_string_option(chars: &::protobuf::Chars) -> Option<String> {
-    if chars.is_empty() {
-        None
-    } else {
-        Some(chars.to_string())
-    }
-}
-
-pub fn convert_to_redis_protocol(protocol: ProtocolVersion) -> redis::ProtocolVersion {
-    match protocol {
-        ProtocolVersion::RESP3 => redis::ProtocolVersion::RESP3,
-        ProtocolVersion::RESP2 => redis::ProtocolVersion::RESP2,
+        address.port
     }
 }
 
 pub(super) fn get_redis_connection_info(
     connection_request: &ConnectionRequest,
 ) -> redis::RedisConnectionInfo {
-    let protocol = convert_to_redis_protocol(connection_request.protocol.enum_value_or_default());
-    match connection_request.authentication_info.0.as_ref() {
+    let protocol = connection_request.protocol.unwrap_or_default();
+    let db = connection_request.database_id;
+    let client_name = connection_request.client_name.clone();
+    match &connection_request.authentication_info {
         Some(info) => redis::RedisConnectionInfo {
-            db: connection_request.database_id as i64,
-            username: chars_to_string_option(&info.username),
-            password: chars_to_string_option(&info.password),
+            db,
+            username: info.username.clone(),
+            password: info.password.clone(),
             protocol,
-            client_name: chars_to_string_option(&connection_request.client_name),
+            client_name,
         },
         None => redis::RedisConnectionInfo {
-            db: connection_request.database_id as i64,
+            db,
             protocol,
-            client_name: chars_to_string_option(&connection_request.client_name),
+            client_name,
             ..Default::default()
         },
     }
@@ -264,34 +251,29 @@ fn eval_cmd<T: Deref<Target = str>>(hash: &str, keys: Vec<T>, args: Vec<T>) -> C
     cmd
 }
 
-fn to_duration(time_in_millis: u32, default: Duration) -> Duration {
-    if time_in_millis > 0 {
-        Duration::from_millis(time_in_millis as u64)
-    } else {
-        default
-    }
+fn to_duration(time_in_millis: Option<u32>, default: Duration) -> Duration {
+    time_in_millis
+        .map(|val| Duration::from_millis(val as u64))
+        .unwrap_or(default)
 }
 
 async fn create_cluster_client(
     request: ConnectionRequest,
 ) -> RedisResult<redis::cluster_async::ClusterConnection> {
     // TODO - implement timeout for each connection attempt
-    let tls_mode = request.tls_mode.enum_value_or_default();
+    let tls_mode = request.tls_mode.unwrap_or_default();
     let redis_connection_info = get_redis_connection_info(&request);
     let initial_nodes: Vec<_> = request
         .addresses
         .into_iter()
         .map(|address| get_connection_info(&address, tls_mode, redis_connection_info.clone()))
         .collect();
-    let read_from = request.read_from.enum_value().unwrap_or(ReadFrom::Primary);
-    let read_from_replicas = !matches!(read_from, ReadFrom::Primary,); // TODO - implement different read from replica strategies.
+    let read_from = request.read_from.unwrap_or_default();
+    let read_from_replicas = !matches!(read_from, ReadFrom::Primary); // TODO - implement different read from replica strategies.
     let periodic_checks = match request.periodic_checks {
-        Some(periodic_checks) => match periodic_checks {
-            connection_request::Periodic_checks::PeriodicChecksManualInterval(interval) => {
-                Some(Duration::from_secs(interval.duration_in_sec.into()))
-            }
-            connection_request::Periodic_checks::PeriodicChecksDisabled(_) => None,
-        },
+        Some(PeriodicCheck::Disabled) => None,
+        Some(PeriodicCheck::Enabled) => Some(DEFAULT_PERIODIC_CHECKS_INTERVAL),
+        Some(PeriodicCheck::ManualInterval(interval)) => Some(interval),
         None => Some(DEFAULT_PERIODIC_CHECKS_INTERVAL),
     };
     let mut builder = redis::cluster::ClusterClientBuilder::new(initial_nodes)
@@ -302,9 +284,7 @@ async fn create_cluster_client(
     if let Some(interval_duration) = periodic_checks {
         builder = builder.periodic_topology_checks(interval_duration);
     }
-    builder = builder.use_protocol(convert_to_redis_protocol(
-        request.protocol.enum_value_or_default(),
-    ));
+    builder = builder.use_protocol(request.protocol.unwrap_or_default());
     if let Some(client_name) = redis_connection_info.client_name {
         builder = builder.client_name(client_name);
     }
@@ -347,8 +327,11 @@ impl std::fmt::Display for ConnectionError {
     }
 }
 
-fn format_non_zero_value(name: &'static str, value: u32) -> String {
-    if value > 0 {
+fn format_optional_value<T>(name: &'static str, value: Option<T>) -> String
+where
+    T: std::fmt::Display,
+{
+    if let Some(value) = value {
         format!("\n{name}: {value}")
     } else {
         String::new()
@@ -364,7 +347,6 @@ fn sanitized_request_string(request: &ConnectionRequest) -> String {
         .join(", ");
     let tls_mode = request
         .tls_mode
-        .enum_value()
         .map(|tls_mode| {
             format!(
                 "\nTLS mode: {}",
@@ -381,54 +363,47 @@ fn sanitized_request_string(request: &ConnectionRequest) -> String {
     } else {
         "\nStandalone mode"
     };
-    let request_timeout = format_non_zero_value("Request timeout", request.request_timeout);
-    let database_id = format_non_zero_value("database ID", request.database_id);
+    let request_timeout = format_optional_value("Request timeout", request.request_timeout);
+    let database_id = format!("\ndatabase ID: {}", request.database_id);
     let rfr_strategy = request
         .read_from
-        .enum_value()
         .map(|rfr| {
             format!(
                 "\nRead from Replica mode: {}",
                 match rfr {
                     ReadFrom::Primary => "Only primary",
                     ReadFrom::PreferReplica => "Prefer replica",
-                    ReadFrom::LowestLatency => "Lowest latency",
-                    ReadFrom::AZAffinity => "Availability zone affinity",
                 }
             )
         })
         .unwrap_or_default();
-    let connection_retry_strategy = request.connection_retry_strategy.0.as_ref().map(|strategy|
+    let connection_retry_strategy = request.connection_retry_strategy.as_ref().map(|strategy|
             format!("\nreconnect backoff strategy: number of increasing duration retries: {}, base: {}, factor: {}",
         strategy.number_of_retries, strategy.exponent_base, strategy.factor)).unwrap_or_default();
     let protocol = request
         .protocol
-        .enum_value()
         .map(|protocol| format!("\nProtocol: {protocol:?}"))
         .unwrap_or_default();
-    let client_name = chars_to_string_option(&request.client_name)
+    let client_name = request
+        .client_name
+        .as_ref()
         .map(|client_name| format!("\nClient name: {client_name}"))
         .unwrap_or_default();
     let periodic_checks = if request.cluster_mode_enabled {
         match request.periodic_checks {
-            Some(ref periodic_checks) => match periodic_checks {
-                connection_request::Periodic_checks::PeriodicChecksManualInterval(interval) => {
-                    format!(
-                        "\nPeriodic Checks: Enabled with manual interval of {:?}s",
-                        interval.duration_in_sec
-                    )
-                }
-                connection_request::Periodic_checks::PeriodicChecksDisabled(_) => {
-                    "\nPeriodic Checks: Disabled".to_string()
-                }
-            },
-            None => format!(
+            Some(PeriodicCheck::Disabled) => "\nPeriodic Checks: Disabled".to_string(),
+            Some(PeriodicCheck::Enabled) => format!(
                 "\nPeriodic Checks: Enabled with default interval of {:?}",
                 DEFAULT_PERIODIC_CHECKS_INTERVAL
             ),
+            Some(PeriodicCheck::ManualInterval(interval)) => format!(
+                "\nPeriodic Checks: Enabled with manual interval of {:?}s",
+                interval.as_secs()
+            ),
+            None => String::new(),
         }
     } else {
-        "".to_string()
+        String::new()
     };
 
     format!(

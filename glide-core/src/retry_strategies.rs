@@ -1,7 +1,7 @@
 /**
  * Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0
  */
-use crate::connection_request::ConnectionRetryStrategy;
+use crate::client::ConnectionRetryStrategy;
 use std::time::Duration;
 use tokio_retry::strategy::{jitter, ExponentialBackoff};
 
@@ -13,7 +13,7 @@ pub(super) struct RetryStrategy {
 }
 
 impl RetryStrategy {
-    pub(super) fn new(data: &Option<Box<ConnectionRetryStrategy>>) -> Self {
+    pub(super) fn new(data: Option<ConnectionRetryStrategy>) -> Self {
         match data {
             Some(ref strategy) => get_exponential_backoff(
                 strategy.exponent_base,
@@ -55,6 +55,7 @@ pub(crate) fn get_exponential_backoff(
     }
 }
 
+#[cfg(feature = "socket-layer")]
 pub(crate) fn get_fixed_interval_backoff(
     fixed_interval: u32,
     number_of_retries: u32,
@@ -66,6 +67,7 @@ pub(crate) fn get_fixed_interval_backoff(
 mod tests {
     use super::*;
 
+    #[cfg(feature = "socket-layer")]
     #[test]
     fn test_fixed_intervals_with_jitter() {
         let retries = 3;

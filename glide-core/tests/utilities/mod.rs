@@ -689,7 +689,7 @@ pub(crate) async fn setup_test_basics_internal(configuration: &TestConfiguration
     let mut connection_request = create_connection_request(&[connection_addr], configuration);
     connection_request.cluster_mode_enabled = false;
     connection_request.protocol = configuration.protocol.into();
-    let client = StandaloneClient::create_client(connection_request)
+    let client = StandaloneClient::create_client(connection_request.into())
         .await
         .unwrap();
 

@@ -1,8 +1,8 @@
 /**
  * Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0
  */
-use glide_core::connection_request;
-use glide_core::{client::Client as GlideClient, connection_request::NodeAddress};
+use glide_core::client;
+use glide_core::client::Client as GlideClient;
 use redis::{Cmd, FromRedisValue, RedisResult};
 use std::{
     ffi::{c_void, CStr, CString},
@@ -26,25 +26,21 @@ pub struct Client {
     runtime: Runtime,
 }
 
-fn create_connection_request(
-    host: String,
-    port: u32,
-    use_tls: bool,
-) -> connection_request::ConnectionRequest {
-    let mut address_info = NodeAddress::new();
-    address_info.host = host.to_string().into();
-    address_info.port = port;
-    let addresses_info = vec![address_info];
-    let mut connection_request = connection_request::ConnectionRequest::new();
-    connection_request.addresses = addresses_info;
-    connection_request.tls_mode = if use_tls {
-        connection_request::TlsMode::SecureTls
-    } else {
-        connection_request::TlsMode::NoTls
+fn create_connection_request(host: String, port: u32, use_tls: bool) -> client::ConnectionRequest {
+    let address_info = client::NodeAddress {
+        host,
+        port: port as u16,
+    };
+    let addresses = vec![address_info];
+    client::ConnectionRequest {
+        addresses,
+        tls_mode: if use_tls {
+            Some(client::TlsMode::SecureTls)
+        } else {
+            Some(client::TlsMode::NoTls)
+        },
+        ..Default::default()
     }
-    .into();
-
-    connection_request
 }
 
 fn create_client_internal(

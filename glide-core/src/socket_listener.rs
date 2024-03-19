@@ -578,7 +578,7 @@ async fn create_client(
     writer: &Rc<Writer>,
     request: ConnectionRequest,
 ) -> Result<Client, ClientCreationError> {
-    let client = match Client::new(request).await {
+    let client = match Client::new(request.into()).await {
         Ok(client) => client,
         Err(err) => return Err(ClientCreationError::ConnectionError(err)),
     };

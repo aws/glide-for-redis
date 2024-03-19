@@ -234,6 +234,35 @@ async function testWithClusterResources(
     }
 }
 
+async function testSentValueMatches(config: {
+    sendRequest: (client: RedisClient | RedisClusterClient) => Promise<unknown>;
+    expectedRequestType: redis_request.RequestType | null | undefined;
+    expectedValue: unknown;
+}) {
+    let counter = 0;
+    await testWithResources(async (connection, socket) => {
+        socket.on("data", (data) => {
+            const reader = Reader.create(data);
+            const request = redis_request.RedisRequest.decodeDelimited(reader);
+            expect(request.singleCommand?.requestType).toEqual(
+                config.expectedRequestType,
+            );
+
+            expect(request.singleCommand?.argsArray?.args).toEqual(
+                config.expectedValue,
+            );
+
+            counter = counter + 1;
+
+            sendResponse(socket, ResponseType.Null, request.callbackIdx);
+        });
+
+        await config.sendRequest(connection);
+
+        expect(counter).toEqual(1);
+    });
+}
+
 describe("SocketConnectionInternals", () => {
     it("Test setup returns values", async () => {
         await testWithResources((connection, socket) => {
@@ -628,210 +657,137 @@ describe("SocketConnectionInternals", () => {
         });
     });
 
-    it("should set arguments according to xadd options", async () => {
-        let counter = 0;
-        await testWithClusterResources(async (connection, socket) => {
-            socket.on("data", (data) => {
-                const reader = Reader.create(data);
-                const request =
-                    redis_request.RedisRequest.decodeDelimited(reader);
-                expect(request.singleCommand?.requestType).toEqual(
-                    RequestType.XAdd,
-                );
+    it("should set arguments according to xadd request", async () => {
+        await testSentValueMatches({
+            sendRequest: (client) =>
+                client.xadd("foo", [
+                    ["a", "1"],
+                    ["b", "2"],
+                ]),
+            expectedRequestType: RequestType.XAdd,
+            expectedValue: ["foo", "*", "a", "1", "b", "2"],
+        });
+    });
 
-                if (counter === 0) {
-                    expect(request.singleCommand?.argsArray?.args).toEqual([
-                        "foo",
-                        "*",
-                        "a",
-                        "1",
-                        "b",
-                        "2",
-                    ]);
-                } else if (counter === 1) {
-                    expect(request.singleCommand?.argsArray?.args).toEqual([
-                        "bar",
-                        "YOLO",
-                        "a",
-                        "1",
-                    ]);
-                } else if (counter === 2) {
-                    expect(request.singleCommand?.argsArray?.args).toEqual([
-                        "baz",
-                        "MAXLEN",
-                        "=",
-                        "1000",
-                        "*",
-                        "c",
-                        "3",
-                    ]);
-                } else if (counter === 3) {
-                    expect(request.singleCommand?.argsArray?.args).toEqual([
-                        "foobar",
-                        "NOMKSTREAM",
-                        "MINID",
-                        "~",
-                        "foo",
-                        "LIMIT",
-                        "1000",
-                        "*",
-                        "d",
-                        "4",
-                    ]);
-                } else {
-                    throw new Error("too many requests! " + counter);
-                }
+    it("should set arguments according to xadd options with makeStream: true", async () => {
+        await testSentValueMatches({
+            sendRequest: (client) =>
+                client.xadd("bar", [["a", "1"]], {
+                    id: "YOLO",
+                    makeStream: true,
+                }),
+            expectedRequestType: RequestType.XAdd,
+            expectedValue: ["bar", "YOLO", "a", "1"],
+        });
+    });
 
-                counter = counter + 1;
+    it("should set arguments according to xadd options with trim", async () => {
+        await testSentValueMatches({
+            sendRequest: (client) =>
+                client.xadd("baz", [["c", "3"]], {
+                    trim: {
+                        method: "maxlen",
+                        threshold: 1000,
+                        exact: true,
+                    },
+                }),
+            expectedRequestType: RequestType.XAdd,
+            expectedValue: ["baz", "MAXLEN", "=", "1000", "*", "c", "3"],
+        });
+    });
 
-                sendResponse(socket, ResponseType.Null, request.callbackIdx);
-            });
-            await connection.xadd("foo", [
-                ["a", "1"],
-                ["b", "2"],
-            ]);
+    it("should set arguments according to xadd options with makeStream: false and inexact trim", async () => {
+        await testSentValueMatches({
+            sendRequest: (client) =>
+                client.xadd("foobar", [["d", "4"]], {
+                    makeStream: false,
+                    trim: {
+                        method: "minid",
+                        threshold: "foo",
+                        exact: false,
+                        limit: 1000,
+                    },
+                }),
+            expectedRequestType: RequestType.XAdd,
+            expectedValue: [
+                "foobar",
+                "NOMKSTREAM",
+                "MINID",
+                "~",
+                "foo",
+                "LIMIT",
+                "1000",
+                "*",
+                "d",
+                "4",
+            ],
+        });
+    });
 
-            await connection.xadd("bar", [["a", "1"]], {
-                id: "YOLO",
-                makeStream: true,
-            });
-
-            await connection.xadd("baz", [["c", "3"]], {
-                trim: {
+    it("should set arguments according to xtrim request", async () => {
+        await testSentValueMatches({
+            sendRequest: (client) =>
+                client.xtrim("foo", {
                     method: "maxlen",
                     threshold: 1000,
                     exact: true,
-                },
-            });
+                }),
+            expectedRequestType: RequestType.XTrim,
+            expectedValue: ["foo", "MAXLEN", "=", "1000"],
+        });
+    });
 
-            await connection.xadd("foobar", [["d", "4"]], {
-                makeStream: false,
-                trim: {
+    it("should set arguments according to inexact xtrim request", async () => {
+        await testSentValueMatches({
+            sendRequest: (client) =>
+                client.xtrim("bar", {
                     method: "minid",
                     threshold: "foo",
                     exact: false,
                     limit: 1000,
-                },
-            });
-
-            expect(counter).toEqual(4);
+                }),
+            expectedRequestType: RequestType.XTrim,
+            expectedValue: ["bar", "MINID", "~", "foo", "LIMIT", "1000"],
         });
     });
 
-    it("should set arguments according to xtrim options", async () => {
-        let counter = 0;
-        await testWithClusterResources(async (connection, socket) => {
-            socket.on("data", (data) => {
-                const reader = Reader.create(data);
-                const request =
-                    redis_request.RedisRequest.decodeDelimited(reader);
-                expect(request.singleCommand?.requestType).toEqual(
-                    RequestType.XTrim,
-                );
-
-                if (counter === 0) {
-                    expect(request.singleCommand?.argsArray?.args).toEqual([
-                        "foo",
-                        "MAXLEN",
-                        "=",
-                        "1000",
-                    ]);
-                } else if (counter === 1) {
-                    expect(request.singleCommand?.argsArray?.args).toEqual([
-                        "bar",
-                        "MINID",
-                        "~",
-                        "foo",
-                        "LIMIT",
-                        "1000",
-                    ]);
-                } else {
-                    throw new Error("too many requests! " + counter);
-                }
-
-                counter = counter + 1;
-
-                sendResponse(socket, ResponseType.Null, request.callbackIdx);
-            });
-
-            await connection.xtrim("foo", {
-                method: "maxlen",
-                threshold: 1000,
-                exact: true,
-            });
-
-            await connection.xtrim("bar", {
-                method: "minid",
-                threshold: "foo",
-                exact: false,
-                limit: 1000,
-            });
-
-            expect(counter).toEqual(2);
+    it("should set arguments according to xread request", async () => {
+        await testSentValueMatches({
+            sendRequest: (client) =>
+                client.xread({
+                    foo: "bar",
+                    foobar: "baz",
+                }),
+            expectedRequestType: RequestType.XRead,
+            expectedValue: ["STREAMS", "foo", "foobar", "bar", "baz"],
         });
     });
 
-    it("should set arguments according to xread options", async () => {
-        let counter = 0;
-        await testWithClusterResources(async (connection, socket) => {
-            socket.on("data", (data) => {
-                const reader = Reader.create(data);
-                const request =
-                    redis_request.RedisRequest.decodeDelimited(reader);
-                expect(request.singleCommand?.requestType).toEqual(
-                    RequestType.XRead,
-                );
+    it("should set arguments according to xread request with block clause", async () => {
+        await testSentValueMatches({
+            sendRequest: (client) =>
+                client.xread(
+                    { foo: "bar" },
+                    {
+                        block: 100,
+                    },
+                ),
+            expectedRequestType: RequestType.XRead,
+            expectedValue: ["BLOCK", "100", "STREAMS", "foo", "bar"],
+        });
+    });
 
-                if (counter === 0) {
-                    expect(request.singleCommand?.argsArray?.args).toEqual([
-                        "STREAMS",
-                        "foo",
-                        "foobar",
-                        "bar",
-                        "baz",
-                    ]);
-                } else if (counter === 1) {
-                    expect(request.singleCommand?.argsArray?.args).toEqual([
-                        "BLOCK",
-                        "100",
-                        "STREAMS",
-                        "foo",
-                        "bar",
-                    ]);
-                } else if (counter === 2) {
-                    expect(request.singleCommand?.argsArray?.args).toEqual([
-                        "COUNT",
-                        "2",
-                        "STREAMS",
-                        "bar",
-                        "baz",
-                    ]);
-                } else {
-                    throw new Error("too many requests! " + counter);
-                }
-
-                counter = counter + 1;
-
-                sendResponse(socket, ResponseType.Null, request.callbackIdx);
-            });
-
-            await connection.xread({ foo: "bar", foobar: "baz" });
-
-            await connection.xread(
-                { foo: "bar" },
-                {
-                    block: 100,
-                },
-            );
-
-            await connection.xread(
-                { bar: "baz" },
-                {
-                    count: 2,
-                },
-            );
-
-            expect(counter).toEqual(3);
+    it("should set arguments according to xread request with count clause", async () => {
+        await testSentValueMatches({
+            sendRequest: (client) =>
+                client.xread(
+                    { bar: "baz" },
+                    {
+                        count: 2,
+                    },
+                ),
+            expectedRequestType: RequestType.XRead,
+            expectedValue: ["COUNT", "2", "STREAMS", "bar", "baz"],
         });
     });
 });

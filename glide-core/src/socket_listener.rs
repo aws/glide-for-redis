@@ -359,8 +359,6 @@ fn get_command(request: &Command) -> Option<Cmd> {
         RequestType::PTTL => Some(cmd("PTTL")),
         RequestType::ZRemRangeByRank => Some(cmd("ZREMRANGEBYRANK")),
         RequestType::Persist => Some(cmd("PERSIST")),
-        RequestType::JsonSet => Some(cmd("JSON.SET")),
-        RequestType::JsonGet => Some(cmd("JSON.GET")),
         RequestType::ZRemRangeByScore => Some(cmd("ZREMRANGEBYSCORE")),
         RequestType::Time => Some(cmd("TIME")),
         RequestType::Zrank => Some(cmd("ZRANK")),

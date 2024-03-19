@@ -87,11 +87,11 @@ async def set(
         >>> await redisJson.set(client, "doc", "$", json_str)
             'OK'  # Indicates successful setting of the value at path '$' in the key stored at `doc`.
     """
-    args = [key, path, value]
+    args = ["JSON.SET", key, path, value]
     if set_condition:
         args.append(set_condition.value)
 
-    return cast(Optional[TOK], await client._execute_command(RequestType.JsonSet, args))
+    return cast(Optional[TOK], await client.custom_command(args))
 
 
 async def get(
@@ -128,7 +128,7 @@ async def get(
         >>> await redisJson.get(client, "doc", "$.non_existing_path")
             "[]"  # Returns an empty array since the path '$.non_existing_path' does not exist in the JSON document stored at `doc`.
     """
-    args = [key]
+    args = ["JSON.GET", key]
     if options:
         args.extend(options.get_options())
     if paths:
@@ -136,4 +136,4 @@ async def get(
             paths = [paths]
         args.extend(paths)
 
-    return cast(str, await client._execute_command(RequestType.JsonGet, args))
+    return cast(str, await client.custom_command(args))

@@ -129,12 +129,10 @@ enum RequestType {
     PTTL = 85;
     ZRemRangeByRank = 86;
     Persist = 87;
-    JsonSet = 88;
-    JsonGet = 89;
-    ZRemRangeByScore = 90;
-    Time = 91;
-    Zrank = 92;
-    Rename = 93;
+    ZRemRangeByScore = 88;
+    Time = 89;
+    Zrank = 90;
+    Rename = 91;
 }
 
 message Command {

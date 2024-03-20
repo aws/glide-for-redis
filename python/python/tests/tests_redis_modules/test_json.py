@@ -148,3 +148,41 @@ class TestJson:
             '[\n~{\n~~"a":*1.0,\n~~"b":*2,\n~~"c":*{\n~~~"d":*3,\n~~~"e":*4\n~~}\n~}\n]'
         )
         assert result == expected_result
+
+    @pytest.mark.parametrize("cluster_mode", [True, False])
+    @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
+    async def test_del(self, redis_client: TRedisClient):
+        key = get_random_string(5)
+
+        json_value = {"a": 1.0, "b": {"a": 1, "b": 2.5, "c": True}}
+        assert await json.set(redis_client, key, "$", OuterJson.dumps(json_value)) == OK
+
+        assert await json.delete(redis_client, key, "$..a") == 2
+        assert await json.get(redis_client, key, "$..a") == "[]"
+
+        result = await json.get(redis_client, key, "$")
+        assert isinstance(result, str)
+        assert OuterJson.loads(result) == [{"b": {"b": 2.5, "c": True}}]
+
+        assert await json.delete(redis_client, key, "$") == 1
+        assert await json.delete(redis_client, key) == 0
+        assert await json.get(redis_client, key, "$") == None
+
+    @pytest.mark.parametrize("cluster_mode", [True, False])
+    @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
+    async def test_forget(self, redis_client: TRedisClient):
+        key = get_random_string(5)
+
+        json_value = {"a": 1.0, "b": {"a": 1, "b": 2.5, "c": True}}
+        assert await json.set(redis_client, key, "$", OuterJson.dumps(json_value)) == OK
+
+        assert await json.forget(redis_client, key, "$..a") == 2
+        assert await json.get(redis_client, key, "$..a") == "[]"
+
+        result = await json.get(redis_client, key, "$")
+        assert isinstance(result, str)
+        assert OuterJson.loads(result) == [{"b": {"b": 2.5, "c": True}}]
+
+        assert await json.forget(redis_client, key, "$") == 1
+        assert await json.forget(redis_client, key) == 0
+        assert await json.get(redis_client, key, "$") == None

@@ -181,35 +181,12 @@ async def forget(
     client: TRedisClient,
     key: str,
     path: Optional[str] = None,
-) -> Optional[int]:
+) -> int:
     """
-    Deletes the JSON value at the specified `path` stored at `key`.
-
-    See https://redis.io/commands/json.forget/ for more details.
-
-    Args:
-        client (TRedisClient): The Redis client to execute the command.
-        key (str): The key of the JSON document.
-        path (Optional[str]): Represents the path within the JSON document where the value will be deleted.
-            If None, deletes the entire JSON document at `key`. Defaults to None.
-
-    Returns:
-        int: The number of elements removed.
-        If `key` or path doesn't exist, returns 0.
-
-    Examples:
-        >>> from glide import json as redisJson
-        >>> await redisJson.set(client, "doc", "$", '{"a": 1, "nested": {"a": 2, "b": 3}}')
-            'OK'  # Indicates successful setting of the value at path '$' in the key stored at `doc`.
-        >>> await redisJson.forget(client, "doc", "$..a")
-            2  # Indicates successful deletion of the specific values in the key stored at `doc`.
-        >>> await redisJson.get(client, "doc", "$")
-            "[{\"nested\":{\"b\":3}}]"  # Returns the value at path '$' in the JSON document stored at `doc`.
-        >>> await redisJson.forget(client, "doc")
-            1  # Deletes the entire JSON document stored at `doc`.
+    See `delete`.
     """
     args = ["JSON.FORGET", key]
     if path:
         args.append(path)
 
-    return cast(Optional[int], await client.custom_command(args))
+    return cast(int, await client.custom_command(args))

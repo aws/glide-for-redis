@@ -1,7 +1,6 @@
 name: Go CI
 
 on:
-    workflow_dispatch:
     push:
         branches: [ "main" ]
         paths:
@@ -23,7 +22,7 @@ concurrency:
 
 jobs:
     build-and-test-go-client:
-        timeout-minutes: 20
+        timeout-minutes: 35
         strategy:
             # Run all jobs
             fail-fast: false
@@ -69,6 +68,10 @@ jobs:
               working-directory: ./go
               run: make install-tools-go${{ matrix.go }}
 
+            - name: Set LD_LIBRARY_PATH
+              if: ${{ matrix.os == 'ubuntu-latest' }}
+              run: echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GITHUB_WORKSPACE/go/target/release/deps/" >> $GITHUB_ENV
+
             - name: Build client
               working-directory: ./go
               run: make build
@@ -79,16 +82,7 @@ jobs:
 
             - name: Run tests
               working-directory: ./go
-              run: make test-and-report
-
-            - name: Upload test reports
-              if: always()
-              continue-on-error: true
-              uses: actions/upload-artifact@v4
-              with:
-                  name: test-reports-go-${{ matrix.go }}-redis-${{ matrix.redis }}-${{ matrix.os }}
-                  path: |
-                      go/reports/test-report.html
+              run: make test
 
     build-amazonlinux-latest:
         if: github.repository_owner == 'aws'
@@ -154,15 +148,7 @@ jobs:
 
             - name: Run tests
               working-directory: ./go
-              run: make test-and-report
-
-            - name: Upload test reports
-              if: always()
-              continue-on-error: true
-              uses: actions/upload-artifact@v4
-              with:
-                  name: test-reports-go-${{ matrix.go }}-amazon-linux-latest
-                  path: go/reports/test-report.html
+              run: make test
 
     lint-rust:
         timeout-minutes: 15

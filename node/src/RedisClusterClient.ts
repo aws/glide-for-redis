@@ -397,8 +397,10 @@ export class RedisClusterClient extends BaseClient {
      * @returns - The current server time as a two items `array`:
      * A Unix timestamp and the amount of microseconds already elapsed in the current second.
      * The returned `array` is in a [Unix timestamp, Microseconds already elapsed] format.
+     * When specifying a route other than a single node, it returns a dictionary where each address is the key and
+     * its corresponding node response is the value.
      */
-    public time(route?: Routes): Promise<[string, string]> {
+    public time(route?: Routes): Promise<ClusterResponse<[string, string]>> {
         return this.createWritePromise(createTime(), toProtobufRoute(route));
     }
 }

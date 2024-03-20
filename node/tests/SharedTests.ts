@@ -1895,7 +1895,7 @@ export function runBaseTests<Context>(config: {
             await runTest(async (client: BaseClient) => {
                 // Take the time now, convert to 10 digits and subtract 1 second
                 const now = Math.floor(new Date().getTime() / 1000 - 1);
-                const result = await client.time();
+                const result = (await client.time()) as [string, string];
                 expect(result?.length).toEqual(2);
                 expect(Number(result?.at(0))).toBeGreaterThan(now);
                 // Test its not more than 1 second

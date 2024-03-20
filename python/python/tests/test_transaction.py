@@ -36,6 +36,9 @@ async def transaction_test(
     value2 = get_random_string(5)
     args: List[TResult] = []
 
+    transaction.dbsize()
+    args.append(0)
+
     transaction.set(key, value)
     args.append(OK)
     transaction.get(key)
@@ -256,6 +259,7 @@ class TestTransaction:
     @pytest.mark.parametrize("cluster_mode", [True])
     @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
     async def test_cluster_transaction(self, redis_client: RedisClusterClient):
+        assert await redis_client.custom_command(["FLUSHALL"]) == OK
         keyslot = get_random_string(3)
         transaction = ClusterTransaction()
         transaction.info()
@@ -293,6 +297,7 @@ class TestTransaction:
     @pytest.mark.parametrize("cluster_mode", [False])
     @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
     async def test_standalone_transaction(self, redis_client: RedisClient):
+        assert await redis_client.custom_command(["FLUSHALL"]) == OK
         keyslot = get_random_string(3)
         key = "{{{}}}:{}".format(keyslot, get_random_string(3))  # to get the same slot
         value = get_random_string(5)

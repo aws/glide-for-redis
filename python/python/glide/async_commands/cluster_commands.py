@@ -237,6 +237,7 @@ class ClusterCommands(CoreCommands):
         """
         Get the name of the connection to which the request is routed.
         See https://redis.io/commands/client-getname/ for more details.
+
         Args:
             route (Optional[Route]): The command will be routed to a random node, unless `route` is provided,
             in which case the client will route the command to the nodes defined by `route`.
@@ -257,3 +258,22 @@ class ClusterCommands(CoreCommands):
             TClusterResponse[Optional[str]],
             await self._execute_command(RequestType.ClientGetName, [], route),
         )
+
+    async def dbsize(self, route: Optional[Route] = None) -> int:
+        """
+        Returns the number of keys in the database.
+        See https://redis.io/commands/dbsize for more details.
+
+        Args:
+            route (Optional[Route]): The command will be routed to all primaries, unless `route` is provided,
+            in which case the client will route the command to the nodes defined by `route`.
+
+        Returns:
+            int: The number of keys in the database.
+            In the case of routing the query to multiple nodes, returns the aggregated number of keys across the different nodes.
+
+        Examples:
+            >>> await client.dbsize()
+                10  # Indicates there are 10 keys in the cluster.
+        """
+        return cast(int, await self._execute_command(RequestType.DBSize, [], route))

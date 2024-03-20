@@ -1376,6 +1376,16 @@ class BaseTransaction:
         """
         return self.append_command(RequestType.ZScore, [key, member])
 
+    def dbsize(self: TTransaction) -> TTransaction:
+        """
+        Returns the number of keys in the currently selected database.
+        See https://redis.io/commands/dbsize for more details.
+
+        Commands response:
+            int: The number of keys in the database.
+        """
+        return self.append_command(RequestType.DBSize, [])
+
 
 class Transaction(BaseTransaction):
     """

@@ -133,6 +133,7 @@ enum RequestType {
     Time = 89;
     Zrank = 90;
     Rename = 91;
+    DBSize = 92;
 }
 
 message Command {

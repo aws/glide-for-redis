@@ -192,3 +192,17 @@ class StandaloneCommands(CoreCommands):
         return cast(
             Optional[str], await self._execute_command(RequestType.ClientGetName, [])
         )
+
+    async def dbsize(self) -> int:
+        """
+        Returns the number of keys in the currently selected database.
+        See https://redis.io/commands/dbsize for more details.
+
+        Returns:
+            int: The number of keys in the currently selected database.
+
+        Examples:
+            >>> await client.dbsize()
+                10  # Indicates there are 10 keys in the current database.
+        """
+        return cast(int, await self._execute_command(RequestType.DBSize, []))

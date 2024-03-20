@@ -131,6 +131,22 @@ class BaseTransaction:
         """
         return self.append_command(RequestType.CustomCommand, command_args)
 
+    def append(self: TTransaction, key: str, value: str) -> TTransaction:
+        """
+        Appends a value to a key.
+        If `key` does not exist it is created and set as an empty string, so `APPEND` will be similar to SET in this special case.
+
+        See https://redis.io/commands/append for more details.
+
+        Args:
+            key (str): The key to which the value will be appended.
+            value (str): The value to append.
+
+        Commands response:
+            int: The length of the string after appending the value.
+        """
+        return self.append_command(RequestType.Append, [key, value])
+
     def info(
         self: TTransaction,
         sections: Optional[List[InfoSection]] = None,

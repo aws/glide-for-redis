@@ -1580,6 +1580,15 @@ class TestCommands:
             assert await redis_client.select(1) == OK
             assert await redis_client.dbsize() == 0
 
+    @pytest.mark.parametrize("cluster_mode", [True, False])
+    @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
+    async def test_append(self, redis_client: TRedisClient):
+        key, value = get_random_string(10), get_random_string(5)
+        assert await redis_client.append(key, value) == 5
+
+        assert await redis_client.append(key, value) == 10
+        assert await redis_client.get(key) == value * 2
+
 
 class TestCommandsUnitTests:
     def test_expiry_cmd_args(self):

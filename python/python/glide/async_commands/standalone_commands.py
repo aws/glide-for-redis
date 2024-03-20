@@ -206,3 +206,23 @@ class StandaloneCommands(CoreCommands):
                 10  # Indicates there are 10 keys in the current database.
         """
         return cast(int, await self._execute_command(RequestType.DBSize, []))
+
+    async def time(self) -> List[str]:
+        """
+        Returns the server time.
+
+        See https://redis.io/commands/time/ for more details.
+
+        Returns:
+            List[str]:  The current server time as a two items `array`:
+            A Unix timestamp and the amount of microseconds already elapsed in the current second.
+            The returned `array` is in a [Unix timestamp, Microseconds already elapsed] format.
+
+        Examples:
+            >>> await client.time()
+            ['1710925775', '913580']
+        """
+        return cast(
+            List[str],
+            await self._execute_command(RequestType.Time, []),
+        )

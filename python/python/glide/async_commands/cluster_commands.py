@@ -252,7 +252,7 @@ class ClusterCommands(CoreCommands):
             >>> await client.client_getname()
             'Connection Name'
             >>> await client.client_getname(AllNodes())
-            {'addr': 'Connection Name'', 'addr2': 'Connection Name', 'addr3': 'Connection Name'}
+            {'addr': 'Connection Name', 'addr2': 'Connection Name', 'addr3': 'Connection Name'}
         """
         return cast(
             TClusterResponse[Optional[str]],
@@ -277,3 +277,31 @@ class ClusterCommands(CoreCommands):
                 10  # Indicates there are 10 keys in the cluster.
         """
         return cast(int, await self._execute_command(RequestType.DBSize, [], route))
+
+    async def time(self, route: Optional[Route] = None) -> TClusterResponse[List[str]]:
+        """
+        Returns the server time.
+
+        See https://redis.io/commands/time/ for more details.
+
+        Args:
+            route (Optional[Route]): The command will be routed to a random node, unless `route` is provided,
+            in which case the client will route the command to the nodes defined by `route`.
+
+        Returns:
+            TClusterResponse[Optional[str]]:  The current server time as a two items `array`:
+            A Unix timestamp and the amount of microseconds already elapsed in the current second.
+            The returned `array` is in a [Unix timestamp, Microseconds already elapsed] format.
+            When specifying a route other than a single node, response will be:
+            {Address (str) : response (List[str]) , ... } with type of Dict[str, List[str]].
+
+        Examples:
+            >>> await client.time()
+            ['1710925775', '913580']
+            >>> await client.client_getname(AllNodes())
+            {'addr': ['1710925775', '913580'], 'addr2': ['1710925775', '913580'], 'addr3': ['1710925775', '913580']}
+        """
+        return cast(
+            TClusterResponse[List[str]],
+            await self._execute_command(RequestType.Time, [], route),
+        )

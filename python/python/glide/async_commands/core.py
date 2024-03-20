@@ -1713,14 +1713,62 @@ class CoreCommands(Protocol):
             If `key` does not exist, it is treated as an empty sorted set, and the command returns 0.
 
         Examples:
-            >>> await zrem("my_sorted_set", ["member1", "member2"])
+            >>> await client.zrem("my_sorted_set", ["member1", "member2"])
                 2  # Indicates that two members have been removed from the sorted set "my_sorted_set."
-            >>> await zrem("non_existing_sorted_set", ["member1", "member2"])
+            >>> await client.zrem("non_existing_sorted_set", ["member1", "member2"])
                 0  # Indicates that no members were removed as the sorted set "non_existing_sorted_set" does not exist.
         """
         return cast(
             int,
             await self._execute_command(RequestType.Zrem, [key] + members),
+        )
+
+    async def zremrangebyscore(
+        self,
+        key: str,
+        min_score: Union[InfBound, ScoreBoundary],
+        max_score: Union[InfBound, ScoreBoundary],
+    ) -> int:
+        """
+        Removes all elements in the sorted set stored at `key` with a score between `min_score` and `max_score`.
+
+        See https://redis.io/commands/zremrangebyscore/ for more details.
+
+        Args:
+            key (str): The key of the sorted set.
+            min_score (Union[InfBound, ScoreBoundary]): The minimum score to remove from.
+                Can be an instance of InfBound representing positive/negative infinity,
+                or ScoreBoundary representing a specific score and inclusivity.
+            max_score (Union[InfBound, ScoreBoundary]): The maximum score to remove up to.
+                Can be an instance of InfBound representing positive/negative infinity,
+                or ScoreBoundary representing a specific score and inclusivity.
+        Returns:
+            int: The number of members that were removed from the sorted set.
+            If `key` does not exist, it is treated as an empty sorted set, and the command returns 0.
+            If `min_score` is greater than `max_score`, 0 is returned.
+
+        Examples:
+            >>> await client.zremrangebyscore("my_sorted_set",  ScoreBoundary(5.0 , is_inclusive=true) , InfBound.POS_INF)
+                2  # Indicates that  2 members with scores between 5.0 (not exclusive) and +inf have been removed from the sorted set "my_sorted_set".
+            >>> await client.zremrangebyscore("non_existing_sorted_set", ScoreBoundary(5.0 , is_inclusive=true) , ScoreBoundary(10.0 , is_inclusive=false))
+                0  # Indicates that no members were removed as the sorted set "non_existing_sorted_set" does not exist.
+        """
+        score_min = (
+            min_score.value["score_arg"]
+            if type(min_score) == InfBound
+            else min_score.value
+        )
+        score_max = (
+            max_score.value["score_arg"]
+            if type(max_score) == InfBound
+            else max_score.value
+        )
+
+        return cast(
+            int,
+            await self._execute_command(
+                RequestType.ZRemRangeByScore, [key, score_min, score_max]
+            ),
         )
 
     async def zscore(self, key: str, member: str) -> Optional[float]:

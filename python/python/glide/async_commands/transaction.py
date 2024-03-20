@@ -1359,6 +1359,45 @@ class BaseTransaction:
         """
         return self.append_command(RequestType.Zrem, [key] + members)
 
+    def zremrangebyscore(
+        self: TTransaction,
+        key: str,
+        min_score: Union[InfBound, ScoreBoundary],
+        max_score: Union[InfBound, ScoreBoundary],
+    ) -> TTransaction:
+        """
+        Removes all elements in the sorted set stored at `key` with a score between `min_score` and `max_score`.
+
+        See https://redis.io/commands/zremrangebyscore/ for more details.
+
+        Args:
+            key (str): The key of the sorted set.
+            min_score (Union[InfBound, ScoreBoundary]): The minimum score to remove from.
+                Can be an instance of InfBound representing positive/negative infinity,
+                or ScoreBoundary representing a specific score and inclusivity.
+            max_score (Union[InfBound, ScoreBoundary]): The maximum score to remove up to.
+                Can be an instance of InfBound representing positive/negative infinity,
+                or ScoreBoundary representing a specific score and inclusivity.
+
+        Commands response:
+            int: The number of members that were removed from the sorted set.
+            If `key` does not exist, it is treated as an empty sorted set, and the command returns 0.
+            If `min_score` is greater than `max_score`, 0 is returned.
+        """
+        score_min = (
+            min_score.value["score_arg"]
+            if type(min_score) == InfBound
+            else min_score.value
+        )
+        score_max = (
+            max_score.value["score_arg"]
+            if type(max_score) == InfBound
+            else max_score.value
+        )
+        return self.append_command(
+            RequestType.ZRemRangeByScore, [key, score_min, score_max]
+        )
+
     def zscore(self: TTransaction, key: str, member: str) -> TTransaction:
         """
         Returns the score of `member` in the sorted set stored at `key`.

@@ -1217,6 +1217,34 @@ class TestCommands:
 
     @pytest.mark.parametrize("cluster_mode", [True, False])
     @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
+    async def test_zremrangebyscore(self, redis_client: TRedisClient):
+        key = get_random_string(10)
+        members_scores = {"one": 1, "two": 2, "three": 3}
+        assert await redis_client.zadd(key, members_scores) == 3
+
+        assert (
+            await redis_client.zremrangebyscore(
+                key, ScoreBoundary(1, False), ScoreBoundary(2)
+            )
+            == 1
+        )
+        assert (
+            await redis_client.zremrangebyscore(key, ScoreBoundary(1), InfBound.NEG_INF)
+            == 0
+        )
+        assert (
+            await redis_client.zremrangebyscore(
+                "non_existing_set", InfBound.NEG_INF, InfBound.POS_INF
+            )
+            == 0
+        )
+
+        assert await redis_client.set(key, "value") == OK
+        with pytest.raises(RequestError):
+            await redis_client.zremrangebyscore(key, InfBound.NEG_INF, InfBound.POS_INF)
+
+    @pytest.mark.parametrize("cluster_mode", [True, False])
+    @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
     async def test_zcard(self, redis_client: TRedisClient):
         key = get_random_string(10)
         members_scores = {"one": 1, "two": 2, "three": 3}

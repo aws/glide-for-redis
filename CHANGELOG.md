@@ -15,7 +15,7 @@
 * Python, Node: Added PTTL command ([#1036](https://github.com/aws/glide-for-redis/pull/1036), [#1082](https://github.com/aws/glide-for-redis/pull/1082))
 * Python, Node: Added HVAL command ([#1130](https://github.com/aws/glide-for-redis/pull/1130)), ([#1022](https://github.com/aws/glide-for-redis/pull/1022))
 * Python, Node: Added PERSIST command ([#1129](https://github.com/aws/glide-for-redis/pull/1129)), ([#1023](https://github.com/aws/glide-for-redis/pull/1023))
-* Node: Added ZREMRANGEBYSCORE command ([#926](https://github.com/aws/glide-for-redis/pull/926))
+* Python, Node: Added ZREMRANGEBYSCORE command ([#1151](https://github.com/aws/glide-for-redis/pull/1151)), ([#926](https://github.com/aws/glide-for-redis/pull/926))
 * Node: Added ZREMRANGEBYRANK command ([#924](https://github.com/aws/glide-for-redis/pull/924))
 * Node: Added Xadd, Xtrim commands. ([#1057](https://github.com/aws/glide-for-redis/pull/1057))
 * Python: Added json module and JSON.SET JSON.GET commands  ([#1056](https://github.com/aws/glide-for-redis/pull/1056))

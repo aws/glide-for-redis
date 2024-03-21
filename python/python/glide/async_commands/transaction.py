@@ -262,7 +262,7 @@ class BaseTransaction:
         See https://redis.io/commands/incr/ for more details.
 
         Args:
-          key (str): The key to increment it's value.
+          key (str): The key to increment its value.
 
         Command response:
             int: the value of `key` after the increment.
@@ -276,7 +276,7 @@ class BaseTransaction:
         See https://redis.io/commands/incrby/ for more details.
 
         Args:
-          key (str): The key to increment it's value.
+          key (str): The key to increment its value.
           amount (int) : The amount to increment.
 
         Command response:
@@ -292,7 +292,7 @@ class BaseTransaction:
         See https://redis.io/commands/incrbyfloat/ for more details.
 
         Args:
-          key (str): The key to increment it's value.
+          key (str): The key to increment its value.
           amount (float) : The amount to increment.
 
         Command response:
@@ -322,7 +322,7 @@ class BaseTransaction:
         See https://redis.io/commands/decr/ for more details.
 
         Args:
-          key (str): The key to decrement it's value.
+          key (str): The key to decrement its value.
 
         Command response:
             int: the value of `key` after the decrement.
@@ -336,7 +336,7 @@ class BaseTransaction:
         See https://redis.io/commands/decrby/ for more details.
 
         Args:
-          key (str): The key to decrement it's value.
+          key (str): The key to decrement its value.
          amount (int) : The amount to decrement.
 
         Command response:
@@ -1306,7 +1306,7 @@ class BaseTransaction:
 
         See https://redis.io/commands/zrank for more details.
 
-        To get the rank of `member` with it's score, see `zrank_withscore`.
+        To get the rank of `member` with its score, see `zrank_withscore`.
 
         Args:
             key (str): The key of the sorted set.
@@ -1324,7 +1324,7 @@ class BaseTransaction:
         member: str,
     ) -> TTransaction:
         """
-        Returns the rank of `member` in the sorted set stored at `key` with it's score, where scores are ordered from the lowest to highest.
+        Returns the rank of `member` in the sorted set stored at `key` with its score, where scores are ordered from the lowest to highest.
 
         See https://redis.io/commands/zrank for more details.
 
@@ -1335,6 +1335,8 @@ class BaseTransaction:
         Commands response:
             Optional[List[Union[int, float]]]: A list containing the rank and score of `member` in the sorted set.
             If `key` doesn't exist, or if `member` is not present in the set, None will be returned.
+
+        Since: Redis version 7.2.0.
         """
         return self.append_command(RequestType.Zrank, [key, member, "WITHSCORE"])
 

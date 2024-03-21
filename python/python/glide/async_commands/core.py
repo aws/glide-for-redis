@@ -190,13 +190,15 @@ class CoreCommands(Protocol):
         request_type: RequestType.ValueType,
         args: List[str],
         route: Optional[Route] = ...,
-    ) -> TResult: ...
+    ) -> TResult:
+        ...
 
     async def _execute_transaction(
         self,
         commands: List[Tuple[RequestType.ValueType, List[str]]],
         route: Optional[Route] = None,
-    ) -> List[TResult]: ...
+    ) -> List[TResult]:
+        ...
 
     async def _execute_script(
         self,
@@ -204,7 +206,8 @@ class CoreCommands(Protocol):
         keys: Optional[List[str]] = None,
         args: Optional[List[str]] = None,
         route: Optional[Route] = None,
-    ) -> TResult: ...
+    ) -> TResult:
+        ...
 
     async def set(
         self,
@@ -285,7 +288,7 @@ class CoreCommands(Protocol):
         See https://redis.io/commands/incr/ for more details.
 
         Args:
-          key (str): The key to increment it's value.
+          key (str): The key to increment its value.
 
         Returns:
             int: The value of `key` after the increment.
@@ -298,7 +301,7 @@ class CoreCommands(Protocol):
         the operation. See https://redis.io/commands/incrby/ for more details.
 
         Args:
-          key (str): The key to increment it's value.
+          key (str): The key to increment its value.
           amount (int) : The amount to increment.
 
         Returns:
@@ -316,7 +319,7 @@ class CoreCommands(Protocol):
         See https://redis.io/commands/incrbyfloat/ for more details.
 
         Args:
-          key (str): The key to increment it's value.
+          key (str): The key to increment its value.
           amount (float) : The amount to increment.
 
         Returns:
@@ -366,7 +369,7 @@ class CoreCommands(Protocol):
         See https://redis.io/commands/decr/ for more details.
 
         Args:
-          key (str): The key to increment it's value.
+          key (str): The key to increment its value.
 
         Returns:
             int: The value of key after the decrement.
@@ -380,7 +383,7 @@ class CoreCommands(Protocol):
         See https://redis.io/commands/decrby/ for more details.
 
         Args:
-          key (str): The key to decrement it's value.
+          key (str): The key to decrement its value.
           amount (int) : The amount to decrement.
 
         Returns:
@@ -1644,7 +1647,7 @@ class CoreCommands(Protocol):
 
         See https://redis.io/commands/zrank for more details.
 
-        To get the rank of `member` with it's score, see `zrank_withscore`.
+        To get the rank of `member` with its score, see `zrank_withscore`.
 
         Args:
             key (str): The key of the sorted set.
@@ -1670,7 +1673,7 @@ class CoreCommands(Protocol):
         member: str,
     ) -> Optional[List[Union[int, float]]]:
         """
-        Returns the rank of `member` in the sorted set stored at `key` with it's score, where scores are ordered from the lowest to highest.
+        Returns the rank of `member` in the sorted set stored at `key` with its score, where scores are ordered from the lowest to highest.
 
         See https://redis.io/commands/zrank for more details.
 
@@ -1687,6 +1690,8 @@ class CoreCommands(Protocol):
                 [1 , 6.0]  # Indicates that "member2" with score 6.0 has the second-lowest score in the sorted set "my_sorted_set".
             >>> await client.zrank_withscore("my_sorted_set", "non_existing_member")
                 None  # Indicates that "non_existing_member" is not present in the sorted set "my_sorted_set".
+
+        Since: Redis version 7.2.0.
         """
         return cast(
             Optional[List[Union[int, float]]],

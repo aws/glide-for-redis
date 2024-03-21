@@ -5,7 +5,10 @@
 import {
     ExpireOptions,
     InfoOptions,
-    ScoreLimit,
+    RangeByIndex,
+    RangeByLex,
+    RangeByScore,
+    ScoreBoundary,
     SetOptions,
     StreamAddOptions,
     StreamReadOptions,
@@ -78,6 +81,8 @@ import {
     createZcount,
     createZpopmax,
     createZpopmin,
+    createZrange,
+    createZrangeWithScores,
     createZrank,
     createZrem,
     createZremRangeByRank,
@@ -897,8 +902,60 @@ export class BaseTransaction<T extends BaseTransaction<T>> {
      * If `key` does not exist, it is treated as an empty sorted set, and the command returns 0.
      * If `minScore` is greater than `maxScore`, 0 is returned.
      */
-    public zcount(key: string, minScore: ScoreLimit, maxScore: ScoreLimit): T {
+    public zcount(
+        key: string,
+        minScore: ScoreBoundary<number>,
+        maxScore: ScoreBoundary<number>,
+    ): T {
         return this.addAndReturn(createZcount(key, minScore, maxScore));
+    }
+
+    /** Returns the specified range of elements in the sorted set stored at `key`.
+     * ZRANGE can perform different types of range queries: by index (rank), by the score, or by lexicographical order.
+     *
+     * See https://redis.io/commands/zrange/ for more details.
+     * To get the elements with their scores, see `zrangeWithScores`.
+     *
+     * @param key - The key of the sorted set.
+     * @param rangeQuery - The range query object representing the type of range query to perform.
+     * For range queries by index (rank), use RangeByIndex.
+     * For range queries by lexicographical order, use RangeByLex.
+     * For range queries by score, use RangeByScore.
+     * @param reverse - If true, reverses the sorted set, with index 0 as the element with the highest score.
+     *
+     * Command Response - A list of elements within the specified range.
+     * If `key` does not exist, it is treated as an empty sorted set, and the command returns an empty array.
+     */
+    public zrange(
+        key: string,
+        rangeQuery: RangeByScore | RangeByLex | RangeByIndex,
+        reverse: boolean = false,
+    ): T {
+        return this.addAndReturn(createZrange(key, rangeQuery, reverse));
+    }
+
+    /** Returns the specified range of elements with their scores in the sorted set stored at `key`.
+     * Similar to ZRANGE but with a WITHSCORE flag.
+     * See https://redis.io/commands/zrange/ for more details.
+     *
+     * @param key - The key of the sorted set.
+     * @param rangeQuery - The range query object representing the type of range query to perform.
+     * For range queries by index (rank), use RangeByIndex.
+     * For range queries by lexicographical order, use RangeByLex.
+     * For range queries by score, use RangeByScore.
+     * @param reverse - If true, reverses the sorted set, with index 0 as the element with the highest score.
+     *
+     * Command Response - A map of elements and their scores within the specified range.
+     * If `key` does not exist, it is treated as an empty sorted set, and the command returns an empty map.
+     */
+    public zrangeWithScores(
+        key: string,
+        rangeQuery: RangeByScore | RangeByLex | RangeByIndex,
+        reverse: boolean = false,
+    ): T {
+        return this.addAndReturn(
+            createZrangeWithScores(key, rangeQuery, reverse),
+        );
     }
 
     /** Returns the string representation of the type of the value stored at `key`.
@@ -1009,8 +1066,8 @@ export class BaseTransaction<T extends BaseTransaction<T>> {
      */
     public zremRangeByScore(
         key: string,
-        minScore: ScoreLimit,
-        maxScore: ScoreLimit,
+        minScore: ScoreBoundary<number>,
+        maxScore: ScoreBoundary<number>,
     ): T {
         return this.addAndReturn(
             createZremRangeByScore(key, minScore, maxScore),

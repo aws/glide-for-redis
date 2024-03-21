@@ -7,6 +7,7 @@ on:
       paths:
         - .github/workflows/npm-cd.yml
         - .github/workflows/build-node-wrapper/action.yml
+        - .github/workflows/start-self-hosted-runner/action.yml
     push:
         tags:
             - "v*.*"
@@ -16,7 +17,21 @@ concurrency:
     cancel-in-progress: true
 
 jobs:
+    start-self-hosted-runner:
+      runs-on: ubuntu-latest
+      steps:
+        - name: Checkout
+          uses: actions/checkout@v4
+        - name: Start self hosted EC2 runner
+          uses: ./.github/workflows/start-self-hosted-runner
+          with:
+              aws-access-key-id: ${{ secrets.AWS_EC2_ACCESS_KEY_ID }}
+              aws-secret-access-key: ${{ secrets.AWS_EC2_SECRET_ACCESS_KEY }}
+              aws-region: ${{ secrets.AWS_REGION }}
+              ec2-instance-id: ${{ secrets.AWS_EC2_INSTANCE_ID }}
+
     publish-binaries:
+        needs: start-self-hosted-runner
         if: github.repository_owner == 'aws'
         name: Publish packages to NPM
         runs-on: ${{ matrix.build.RUNNER }}
@@ -54,6 +69,10 @@ jobs:
                           TARGET: aarch64-apple-darwin,
                       }
         steps:
+            - name: Setup self-hosted runner access
+              if: ${{ contains(matrix.build.RUNNER, 'self-hosted') }}
+              run: sudo chown -R $USER:$USER /home/ubuntu/actions-runner/_work/glide-for-redis
+
             - name: Checkout
               uses: actions/checkout@v4
               with:

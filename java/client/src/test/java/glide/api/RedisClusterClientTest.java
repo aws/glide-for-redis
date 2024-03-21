@@ -20,6 +20,7 @@ import static redis_request.RedisRequestOuterClass.RequestType.ConfigRewrite;
 import static redis_request.RedisRequestOuterClass.RequestType.ConfigSet;
 import static redis_request.RedisRequestOuterClass.RequestType.Info;
 import static redis_request.RedisRequestOuterClass.RequestType.Ping;
+import static redis_request.RedisRequestOuterClass.RequestType.Time;
 
 import glide.api.models.ClusterValue;
 import glide.api.models.commands.InfoOptions;
@@ -621,5 +622,46 @@ public class RedisClusterClientTest {
         // verify
         assertEquals(testResponse, response);
         assertEquals(OK, response.get());
+    }
+
+    @SneakyThrows
+    @Test
+    public void time_returns_success() {
+        // setup
+        CompletableFuture<String[]> testResponse = mock(CompletableFuture.class);
+        String[] payload = new String[] {"UnixTime", "ms"};
+        when(testResponse.get()).thenReturn(payload);
+
+        // match on protobuf request
+        when(commandManager.<String[]>submitNewCommand(eq(Time), eq(new String[0]), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<String[]> response = service.time();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(payload, response.get());
+    }
+
+    @SneakyThrows
+    @Test
+    public void time_returns_with_route_success() {
+        // setup
+        CompletableFuture<ClusterValue<String[]>> testResponse = mock(CompletableFuture.class);
+        String[] payload = new String[] {"UnixTime", "ms"};
+        when(testResponse.get()).thenReturn(ClusterValue.ofSingleValue(payload));
+
+        // match on protobuf request
+        when(commandManager.<ClusterValue<String[]>>submitNewCommand(
+                        eq(Time), eq(new String[0]), eq(RANDOM), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<ClusterValue<String[]>> response = service.time(RANDOM);
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(payload, response.get().getSingleValue());
     }
 }

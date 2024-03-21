@@ -24,6 +24,7 @@ import glide.api.models.commands.InfoOptions;
 import glide.api.models.configuration.NodeAddress;
 import glide.api.models.configuration.RedisClientConfiguration;
 import glide.api.models.exceptions.RequestException;
+import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
@@ -241,5 +242,20 @@ public class CommandTests {
 
         response = regularClient.configSet(Map.of("maxclients", oldValue)).get();
         assertEquals(OK, response);
+    }
+
+    @Test
+    @SneakyThrows
+    public void time() {
+        // Take the time now, convert to 10 digits and subtract 1 second
+        long now = Instant.now().getEpochSecond() - 1L;
+        String[] result = regularClient.time().get();
+
+        assertEquals(2, result.length);
+
+        assertTrue(
+                Long.parseLong(result[0]) > now,
+                "Time() result (" + result[0] + ") should be greater than now (" + now + ")");
+        assertTrue(Long.parseLong(result[1]) < 1000000);
     }
 }

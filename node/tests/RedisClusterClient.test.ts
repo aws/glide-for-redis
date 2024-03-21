@@ -232,7 +232,7 @@ describe("RedisClusterClient", () => {
                 getOptions(cluster.ports(), protocol),
             );
             const transaction = new ClusterTransaction();
-            const expectedRes = transactionTest(transaction);
+            const expectedRes = await transactionTest(transaction);
             const result = await client.exec(transaction);
             expect(result).toEqual(expectedRes);
             client.close();

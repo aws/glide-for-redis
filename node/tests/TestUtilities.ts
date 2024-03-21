@@ -6,6 +6,7 @@ import { beforeAll, expect } from "@jest/globals";
 import { exec } from "child_process";
 import { v4 as uuidv4 } from "uuid";
 import { ClusterTransaction, Logger, ReturnType, Transaction } from "..";
+import { checkIfServerVersionLessThan } from "./SharedTests";
 
 beforeAll(() => {
     Logger.init("info");
@@ -50,9 +51,9 @@ export function getFirstResult(
     return Object.values(res).at(0);
 }
 
-export function transactionTest(
+export async function transactionTest(
     baseTransaction: Transaction | ClusterTransaction,
-): ReturnType[] {
+): Promise<ReturnType[]> {
     const key1 = "{key}" + uuidv4();
     const key2 = "{key}" + uuidv4();
     const key3 = "{key}" + uuidv4();
@@ -151,6 +152,14 @@ export function transactionTest(
         member5: 5,
     });
     args.push(5);
+    baseTransaction.zrank(key8, "member1");
+    args.push(0);
+
+    if (!(await checkIfServerVersionLessThan("7.2.0"))) {
+        baseTransaction.zrankWithScore(key8, "member1");
+        args.push([0, 1]);
+    }
+
     baseTransaction.zaddIncr(key8, "member2", 1);
     args.push(3);
     baseTransaction.zrem(key8, ["member1"]);

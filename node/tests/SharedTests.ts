@@ -37,6 +37,19 @@ async function getVersion(): Promise<[number, number, number]> {
     return [parseInt(numbers[0]), parseInt(numbers[1]), parseInt(numbers[2])];
 }
 
+export async function checkIfServerVersionLessThan(
+    minVersion: string,
+): Promise<boolean> {
+    const version = await getVersion();
+    const versionToCompare =
+        version[0].toString() +
+        "." +
+        version[1].toString() +
+        "." +
+        version[2].toString();
+    return versionToCompare < minVersion;
+}
+
 export type BaseClient = RedisClient | RedisClusterClient;
 
 export function runBaseTests<Context>(config: {
@@ -76,9 +89,7 @@ export function runBaseTests<Context>(config: {
         `should register client library name and version_%p`,
         async (protocol) => {
             await runTest(async (client: BaseClient) => {
-                const version = await getVersion();
-
-                if (version[0] < 7 || (version[0] === 7 && version[1] < 2)) {
+                if (await checkIfServerVersionLessThan("7.2.0")) {
                     return;
                 }
 
@@ -1158,9 +1169,10 @@ export function runBaseTests<Context>(config: {
                 expect(await client.ttl(key)).toBeLessThanOrEqual(10);
                 /// set command clears the timeout.
                 expect(await client.set(key, "bar")).toEqual("OK");
-                const version = await getVersion();
+                const versionLessThan =
+                    await checkIfServerVersionLessThan("7.0.0");
 
-                if (version[0] < 7) {
+                if (versionLessThan) {
                     expect(await client.pexpire(key, 10000)).toEqual(true);
                 } else {
                     expect(
@@ -1175,7 +1187,7 @@ export function runBaseTests<Context>(config: {
                 expect(await client.ttl(key)).toBeLessThanOrEqual(10);
 
                 /// TTL will be updated to the new value = 15
-                if (version[0] < 7) {
+                if (versionLessThan) {
                     expect(await client.expire(key, 15)).toEqual(true);
                 } else {
                     expect(
@@ -1206,9 +1218,10 @@ export function runBaseTests<Context>(config: {
                     ),
                 ).toEqual(true);
                 expect(await client.ttl(key)).toBeLessThanOrEqual(10);
-                const version = await getVersion();
+                const versionLessThan =
+                    await checkIfServerVersionLessThan("7.0.0");
 
-                if (version[0] < 7) {
+                if (versionLessThan) {
                     expect(
                         await client.expireAt(
                             key,
@@ -1230,7 +1243,7 @@ export function runBaseTests<Context>(config: {
                 /// set command clears the timeout.
                 expect(await client.set(key, "bar")).toEqual("OK");
 
-                if (version[0] >= 7) {
+                if (!versionLessThan) {
                     expect(
                         await client.pexpireAt(
                             key,
@@ -1746,6 +1759,42 @@ export function runBaseTests<Context>(config: {
                 expect(
                     await client.zremRangeByRank("nonExistingKey", 0, -1),
                 ).toEqual(0);
+            }, protocol);
+        },
+        config.timeout,
+    );
+
+    it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
+        `zrank test_%p`,
+        async (protocol) => {
+            await runTest(async (client: BaseClient) => {
+                const key1 = uuidv4();
+                const key2 = uuidv4();
+                const membersScores = { one: 1.5, two: 2, three: 3 };
+                expect(await client.zadd(key1, membersScores)).toEqual(3);
+                expect(await client.zrank(key1, "one")).toEqual(0);
+
+                if (!(await checkIfServerVersionLessThan("7.2.0"))) {
+                    expect(await client.zrankWithScore(key1, "one")).toEqual([
+                        0, 1.5,
+                    ]);
+                    expect(
+                        await client.zrankWithScore(key1, "nonExistingMember"),
+                    ).toEqual(null);
+                    expect(
+                        await client.zrankWithScore("nonExistingKey", "member"),
+                    ).toEqual(null);
+                }
+
+                expect(await client.zrank(key1, "nonExistingMember")).toEqual(
+                    null,
+                );
+                expect(await client.zrank("nonExistingKey", "member")).toEqual(
+                    null,
+                );
+
+                expect(await client.set(key2, "value")).toEqual("OK");
+                await expect(client.zrank(key2, "member")).rejects.toThrow();
             }, protocol);
         },
         config.timeout,

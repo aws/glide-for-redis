@@ -78,6 +78,7 @@ import {
     createZcount,
     createZpopmax,
     createZpopmin,
+    createZrank,
     createZrem,
     createZremRangeByRank,
     createZremRangeByScore,
@@ -1014,6 +1015,35 @@ export class BaseTransaction<T extends BaseTransaction<T>> {
         return this.addAndReturn(
             createZremRangeByScore(key, minScore, maxScore),
         );
+    }
+
+    /** Returns the rank of `member` in the sorted set stored at `key`, with scores ordered from low to high.
+     * See https://redis.io/commands/zrank for more details.
+     * To get the rank of `member` with its score, see `zrankWithScore`.
+     *
+     * @param key - The key of the sorted set.
+     * @param member - The member whose rank is to be retrieved.
+     *
+     * Command Response - The rank of `member` in the sorted set.
+     * If `key` doesn't exist, or if `member` is not present in the set, null will be returned.
+     */
+    public zrank(key: string, member: string): T {
+        return this.addAndReturn(createZrank(key, member));
+    }
+
+    /** Returns the rank of `member` in the sorted set stored at `key` with its score, where scores are ordered from the lowest to highest.
+     * See https://redis.io/commands/zrank for more details.
+     *
+     * @param key - The key of the sorted set.
+     * @param member - The member whose rank is to be retrieved.
+     *
+     * Command Response - A list containing the rank and score of `member` in the sorted set.
+     * If `key` doesn't exist, or if `member` is not present in the set, null will be returned.
+     *
+     * since - Redis version 7.2.0.
+     */
+    public zrankWithScore(key: string, member: string): T {
+        return this.addAndReturn(createZrank(key, member, true));
     }
 
     /** Remove the existing timeout on `key`, turning the key from volatile (a key with an expire set) to

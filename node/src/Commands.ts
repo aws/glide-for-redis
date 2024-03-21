@@ -932,6 +932,20 @@ export function createPersist(key: string): redis_request.Command {
     return createCommand(RequestType.Persist, [key]);
 }
 
+export function createZrank(
+    key: string,
+    member: string,
+    withScores?: boolean,
+): redis_request.Command {
+    const args = [key, member];
+
+    if (withScores) {
+        args.push("WITHSCORE");
+    }
+
+    return createCommand(RequestType.Zrank, args);
+}
+
 export type StreamTrimOptions = (
     | {
           /**

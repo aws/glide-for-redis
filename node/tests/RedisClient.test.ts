@@ -155,7 +155,7 @@ describe("RedisClient", () => {
                 getOptions(port, protocol),
             );
             const transaction = new Transaction();
-            const expectedRes = transactionTest(transaction);
+            const expectedRes = await transactionTest(transaction);
             transaction.select(0);
             const result = await client.exec(transaction);
             expectedRes.push("OK");

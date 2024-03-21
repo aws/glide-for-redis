@@ -611,6 +611,46 @@ describe("SocketConnectionInternals", () => {
         closeTestResources(connection, server, socket);
     });
 
+    it("should pass periodic checks disabled", async () => {
+        const { connection, server, socket } = await getConnectionAndSocket(
+            (request: connection_request.ConnectionRequest) =>
+                request.periodicChecksDisabled != null,
+            {
+                addresses: [{ host: "foo" }],
+                periodicChecks: "disabled",
+            },
+            true,
+        );
+        closeTestResources(connection, server, socket);
+    });
+
+    it("should pass periodic checks with manual interval", async () => {
+        const { connection, server, socket } = await getConnectionAndSocket(
+            (request: connection_request.ConnectionRequest) =>
+                request.periodicChecksManualInterval?.durationInSec === 20,
+            {
+                addresses: [{ host: "foo" }],
+                periodicChecks: { duration_in_sec: 20 },
+            },
+            true,
+        );
+        closeTestResources(connection, server, socket);
+    });
+
+    it("shouldn't pass periodic checks parameter when set to default", async () => {
+        const { connection, server, socket } = await getConnectionAndSocket(
+            (request: connection_request.ConnectionRequest) =>
+                request.periodicChecksManualInterval === null &&
+                request.periodicChecksDisabled === null,
+            {
+                addresses: [{ host: "foo" }],
+                periodicChecks: "enabledDefaultConfigs",
+            },
+            true,
+        );
+        closeTestResources(connection, server, socket);
+    });
+
     it("should pass routing information from user", async () => {
         const route1 = "allPrimaries";
         const route2 = {

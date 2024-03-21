@@ -21,7 +21,41 @@ import { RequestError } from "./Errors";
 import { connection_request, redis_request } from "./ProtobufMessage";
 import { ClusterTransaction } from "./Transaction";
 
-export type ClusterClientConfiguration = BaseClientConfiguration;
+/**
+ * Represents a manually configured interval for periodic checks.
+ */
+export type PeriodicChecksManualInterval = {
+    /**
+     * The duration in seconds for the interval between periodic checks.
+     */
+    duration_in_sec: number;
+};
+
+/**
+ * Periodic checks configuration.
+ */
+export type PeriodicChecks =
+    /**
+     * Enables the periodic checks with the default configurations.
+     */
+    | "enabledDefaultConfigs"
+    /**
+     * Disables the periodic checks.
+     */
+    | "disabled"
+    /**
+     * Manually configured interval for periodic checks.
+     */
+    | PeriodicChecksManualInterval;
+export type ClusterClientConfiguration = BaseClientConfiguration & {
+    /**
+     * Configure the periodic topology checks.
+     * These checks evaluate changes in the cluster's topology, triggering a slot refresh when detected.
+     * Periodic checks ensure a quick and efficient process by querying a limited number of nodes.
+     * If not set, `enabledDefaultConfigs` will be used.
+     */
+    periodicChecks?: PeriodicChecks;
+};
 
 /**
  * If the command's routing is to one node we will get T as a response type,
@@ -178,6 +212,23 @@ export class RedisClusterClient extends BaseClient {
     ): connection_request.IConnectionRequest {
         const configuration = super.createClientRequest(options);
         configuration.clusterModeEnabled = true;
+
+        // "enabledDefaultConfigs" is the default configuration and doesn't need setting
+        if (
+            options.periodicChecks !== undefined &&
+            options.periodicChecks !== "enabledDefaultConfigs"
+        ) {
+            if (options.periodicChecks === "disabled") {
+                configuration.periodicChecksDisabled =
+                    connection_request.PeriodicChecksDisabled.create();
+            } else {
+                configuration.periodicChecksManualInterval =
+                    connection_request.PeriodicChecksManualInterval.create({
+                        durationInSec: options.periodicChecks.duration_in_sec,
+                    });
+            }
+        }
+
         return configuration;
     }
 

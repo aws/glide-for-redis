@@ -262,11 +262,29 @@ public interface GenericBaseCommands {
      * @example
      *     <pre>{@code
      * Long timeRemaining = client.ttl("my_key").get()
-     * assert timeRemaining == 3600L //Indicates that "my_key" has a remaining time to live of 3600 seconds.
+     * assert timeRemaining == 3600L // Indicates that "my_key" has a remaining time to live of 3600 seconds.
      *
      * Long timeRemaining = client.ttl("nonexistent_key").get();
-     * assert timeRemaining == -2L; //Returns -2 for a non-existing key.
+     * assert timeRemaining == -2L; // Returns -2 for a non-existing key.
      * }</pre>
      */
     CompletableFuture<Long> ttl(String key);
+
+    /**
+     * Returns the remaining time to live of <code>key</code> that has a timeout, in milliseconds.
+     *
+     * @see <a href="https://redis.io/commands/pttl/">redis.io</a> for details.
+     * @param key The key to return its timeout.
+     * @return TTL in milliseconds. <code>-2</code> if <code>key</code> does not exist, <code>-1
+     *     </code> if <code>key</code> exists but has no associated expire.
+     * @example
+     *     <pre>{@code
+     * Long timeRemainingMS = client.pttl("my_key").get()
+     * assert timeRemainingMS == 5000L // Indicates that "my_key" has a remaining time to live of 5000 milliseconds.
+     *
+     * Long timeRemainingMS = client.pttl("nonexistent_key").get();
+     * assert timeRemainingMS == -2L; // Returns -2 for a non-existing key.
+     * }</pre>
+     */
+    CompletableFuture<Long> pttl(String key);
 }

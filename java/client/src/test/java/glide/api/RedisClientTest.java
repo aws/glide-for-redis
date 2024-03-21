@@ -51,6 +51,7 @@ import static redis_request.RedisRequestOuterClass.RequestType.MGet;
 import static redis_request.RedisRequestOuterClass.RequestType.MSet;
 import static redis_request.RedisRequestOuterClass.RequestType.PExpire;
 import static redis_request.RedisRequestOuterClass.RequestType.PExpireAt;
+import static redis_request.RedisRequestOuterClass.RequestType.PTTL;
 import static redis_request.RedisRequestOuterClass.RequestType.Ping;
 import static redis_request.RedisRequestOuterClass.RequestType.RPop;
 import static redis_request.RedisRequestOuterClass.RequestType.RPush;
@@ -549,6 +550,28 @@ public class RedisClientTest {
         // verify
         assertEquals(testResponse, response);
         assertEquals(ttl, response.get());
+    }
+
+    @SneakyThrows
+    @Test
+    public void pttl_returns_success() {
+        // setup
+        String key = "testKey";
+        long pttl = 999000L;
+
+        CompletableFuture<Long> testResponse = mock(CompletableFuture.class);
+        when(testResponse.get()).thenReturn(pttl);
+
+        // match on protobuf request
+        when(commandManager.<Long>submitNewCommand(eq(PTTL), eq(new String[] {key}), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<Long> response = service.pttl(key);
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(pttl, response.get());
     }
 
     @SneakyThrows

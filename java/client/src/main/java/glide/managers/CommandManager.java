@@ -2,6 +2,7 @@
 package glide.managers;
 
 import glide.api.models.ClusterTransaction;
+import glide.api.models.Script;
 import glide.api.models.Transaction;
 import glide.api.models.configuration.RequestRoutingConfiguration.ByAddressRoute;
 import glide.api.models.configuration.RequestRoutingConfiguration.Route;
@@ -12,6 +13,7 @@ import glide.api.models.exceptions.ClosingException;
 import glide.api.models.exceptions.RequestException;
 import glide.connectors.handlers.CallbackDispatcher;
 import glide.connectors.handlers.ChannelHandler;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import lombok.RequiredArgsConstructor;
@@ -82,6 +84,25 @@ public class CommandManager {
             Transaction transaction, RedisExceptionCheckedFunction<Response, T> responseHandler) {
 
         RedisRequest.Builder command = prepareRedisRequest(transaction);
+        return submitCommandToChannel(command, responseHandler);
+    }
+
+    /**
+     * Build a Script (by hash) request to send to Redis.
+     *
+     * @param script
+     * @param keys
+     * @param args
+     * @param responseHandler The handler for the response object
+     * @return A result promise of type T
+     */
+    public <T> CompletableFuture<T> submitNewCommand(
+            Script script,
+            List<String> keys,
+            List<String> args,
+            RedisExceptionCheckedFunction<Response, T> responseHandler) {
+
+        RedisRequest.Builder command = prepareRedisRequest(script, keys, args);
         return submitCommandToChannel(command, responseHandler);
     }
 
@@ -164,6 +185,29 @@ public class CommandManager {
 
         RedisRequest.Builder builder =
                 RedisRequest.newBuilder().setTransaction(transaction.getProtobufTransaction().build());
+
+        return builder;
+    }
+
+    /**
+     * Build a protobuf Script Invoke request.
+     *
+     * @param script Redis Script
+     * @param keys keys for the Script
+     * @param args args for the Script
+     * @return An uncompleted request. {@link CallbackDispatcher} is responsible to complete it by
+     *     adding a callback id.
+     */
+    protected RedisRequest.Builder prepareRedisRequest(
+            Script script, List<String> keys, List<String> args) {
+        RedisRequest.Builder builder =
+                RedisRequest.newBuilder()
+                        .setScriptInvocation(
+                                RedisRequestOuterClass.ScriptInvocation.newBuilder()
+                                        .setHash(script.getHash())
+                                        .addAllKeys(keys)
+                                        .addAllArgs(args)
+                                        .build());
 
         return builder;
     }

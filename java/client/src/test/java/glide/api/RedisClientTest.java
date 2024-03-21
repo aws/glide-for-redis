@@ -66,16 +66,20 @@ import static redis_request.RedisRequestOuterClass.RequestType.Zadd;
 import static redis_request.RedisRequestOuterClass.RequestType.Zcard;
 import static redis_request.RedisRequestOuterClass.RequestType.Zrem;
 
+import glide.api.models.Script;
 import glide.api.models.commands.ExpireOptions;
 import glide.api.models.commands.InfoOptions;
+import glide.api.models.commands.ScriptOptions;
 import glide.api.models.commands.SetOptions;
 import glide.api.models.commands.SetOptions.Expiry;
 import glide.api.models.commands.ZaddOptions;
 import glide.managers.CommandManager;
 import glide.managers.ConnectionManager;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.ArrayUtils;
@@ -549,6 +553,58 @@ public class RedisClientTest {
         // verify
         assertEquals(testResponse, response);
         assertEquals(ttl, response.get());
+    }
+
+    @SneakyThrows
+    @Test
+    public void invokeScript_returns_success() {
+        // setup
+        Script script = mock(Script.class);
+        String hash = UUID.randomUUID().toString();
+        when(script.getHash()).thenReturn(hash);
+        String payload = "hello";
+
+        CompletableFuture<Object> testResponse = mock(CompletableFuture.class);
+        when(testResponse.get()).thenReturn(payload);
+
+        // match on protobuf request
+        when(commandManager.<Object>submitNewCommand(eq(script), eq(List.of()), eq(List.of()), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<Object> response = service.invokeScript(script);
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(payload, response.get());
+    }
+
+    @SneakyThrows
+    @Test
+    public void invokeScript_with_ScriptOptions_returns_success() {
+        // setup
+        Script script = mock(Script.class);
+        String hash = UUID.randomUUID().toString();
+        when(script.getHash()).thenReturn(hash);
+        String payload = "hello";
+
+        ScriptOptions options =
+                ScriptOptions.builder().key("key1").key("key2").arg("arg1").arg("arg2").build();
+
+        CompletableFuture<Object> testResponse = mock(CompletableFuture.class);
+        when(testResponse.get()).thenReturn(payload);
+
+        // match on protobuf request
+        when(commandManager.<Object>submitNewCommand(
+                        eq(script), eq(List.of("key1", "key2")), eq(List.of("arg1", "arg2")), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<Object> response = service.invokeScript(script, options);
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(payload, response.get());
     }
 
     @SneakyThrows

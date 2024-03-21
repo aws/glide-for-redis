@@ -144,6 +144,10 @@ export async function transactionTest(
     args.push(true);
     baseTransaction.smembers(key7);
     args.push(["bar"]);
+    baseTransaction.spop(key7);
+    args.push("bar");
+    baseTransaction.scard(key7);
+    args.push(0);
     baseTransaction.zadd(key8, {
         member1: 1,
         member2: 2,

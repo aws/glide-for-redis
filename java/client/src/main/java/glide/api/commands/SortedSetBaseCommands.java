@@ -183,4 +183,24 @@ public interface SortedSetBaseCommands {
      * }</pre>
      */
     CompletableFuture<Long> zcard(String key);
+
+    /**
+     * Returns the score of <code>member</code> in the sorted set stored at <code>key</code>.
+     *
+     * @see <a href="https://redis.io/commands/zscore/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param member The member whose score is to be retrieved.
+     * @return The score of the member.<br>
+     *     If <code>member</code> does not exist in the sorted set, <code>null</code> is returned.<br>
+     *     If <code>key</code> does not exist, <code>null</code> is returned.
+     * @example
+     *     <pre>{@code
+     * Double num1 = client.zscore("mySortedSet", "member").get();
+     * assert num1 == 10.5; // Indicates that the score of "member" in the sorted set "mySortedSet" is 10.5.
+     *
+     * Double num2 = client.zscore("mySortedSet", "nonExistingMember").get();
+     * assert num2 == null;
+     * }</pre>
+     */
+    CompletableFuture<Double> zscore(String key, String member);
 }

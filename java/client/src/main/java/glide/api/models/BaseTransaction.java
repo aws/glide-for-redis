@@ -50,6 +50,7 @@ import static redis_request.RedisRequestOuterClass.RequestType.SRem;
 import static redis_request.RedisRequestOuterClass.RequestType.SetString;
 import static redis_request.RedisRequestOuterClass.RequestType.TTL;
 import static redis_request.RedisRequestOuterClass.RequestType.Unlink;
+import static redis_request.RedisRequestOuterClass.RequestType.ZScore;
 import static redis_request.RedisRequestOuterClass.RequestType.Zadd;
 import static redis_request.RedisRequestOuterClass.RequestType.Zcard;
 import static redis_request.RedisRequestOuterClass.RequestType.Zrem;
@@ -1238,6 +1239,22 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
     public T zcard(@NonNull String key) {
         ArgsArray commandArgs = buildArgs(new String[] {key});
         protobufTransaction.addCommands(buildCommand(Zcard, commandArgs));
+        return getThis();
+    }
+
+    /**
+     * Returns the score of <code>member</code> in the sorted set stored at <code>key</code>.
+     *
+     * @see <a href="https://redis.io/commands/zscore/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param member The member whose score is to be retrieved.
+     * @return Command Response - The score of the member.<br>
+     *     If <code>member</code> does not exist in the sorted set, <code>null</code> is returned.<br>
+     *     If <code>key</code> does not exist, <code>null</code> is returned.
+     */
+    public T zscore(@NonNull String key, @NonNull String member) {
+        ArgsArray commandArgs = buildArgs(new String[] {key, member});
+        protobufTransaction.addCommands(buildCommand(ZScore, commandArgs));
         return getThis();
     }
 

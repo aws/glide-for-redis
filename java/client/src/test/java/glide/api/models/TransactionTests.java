@@ -48,6 +48,7 @@ import static redis_request.RedisRequestOuterClass.RequestType.SRem;
 import static redis_request.RedisRequestOuterClass.RequestType.SetString;
 import static redis_request.RedisRequestOuterClass.RequestType.TTL;
 import static redis_request.RedisRequestOuterClass.RequestType.Unlink;
+import static redis_request.RedisRequestOuterClass.RequestType.ZPopMax;
 import static redis_request.RedisRequestOuterClass.RequestType.Zadd;
 import static redis_request.RedisRequestOuterClass.RequestType.Zcard;
 import static redis_request.RedisRequestOuterClass.RequestType.Zrem;
@@ -371,6 +372,12 @@ public class TransactionTests {
 
         transaction.zcard("key");
         results.add(Pair.of(Zcard, ArgsArray.newBuilder().addArgs("key").build()));
+
+        transaction.zpopmax("key");
+        results.add(Pair.of(ZPopMax, ArgsArray.newBuilder().addArgs("key").build()));
+
+        transaction.zpopmax("key", 2);
+        results.add(Pair.of(ZPopMax, ArgsArray.newBuilder().addArgs("key").addArgs("2").build()));
 
         var protobufTransaction = transaction.getProtobufTransaction().build();
 

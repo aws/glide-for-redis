@@ -50,6 +50,7 @@ import static redis_request.RedisRequestOuterClass.RequestType.SRem;
 import static redis_request.RedisRequestOuterClass.RequestType.SetString;
 import static redis_request.RedisRequestOuterClass.RequestType.TTL;
 import static redis_request.RedisRequestOuterClass.RequestType.Unlink;
+import static redis_request.RedisRequestOuterClass.RequestType.ZPopMax;
 import static redis_request.RedisRequestOuterClass.RequestType.Zadd;
 import static redis_request.RedisRequestOuterClass.RequestType.Zcard;
 import static redis_request.RedisRequestOuterClass.RequestType.Zrem;
@@ -1238,6 +1239,42 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
     public T zcard(@NonNull String key) {
         ArgsArray commandArgs = buildArgs(new String[] {key});
         protobufTransaction.addCommands(buildCommand(Zcard, commandArgs));
+        return getThis();
+    }
+
+    /**
+     * Removes and returns up to <code>count</code> members with the highest scores from the sorted
+     * set stored at the specified <code>key</code>.
+     *
+     * @see <a href="https://redis.io/commands/zpopmax/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param count Specifies the quantity of members to pop.<br>
+     *     If <code>count</code> is higher than the sorted set's cardinality, returns all members and
+     *     their scores, ordered from highest to lowest.
+     * @return Command Response - A map of the removed members and their scores, ordered from the one
+     *     with the highest score to the one with the lowest.<br>
+     *     If <code>key</code> doesn't exist, it will be treated as an empty sorted set and the
+     *     command returns an empty <code>Map</code>.
+     */
+    public T zpopmax(@NonNull String key, long count) {
+        ArgsArray commandArgs = buildArgs(new String[] {key, Long.toString(count)});
+        protobufTransaction.addCommands(buildCommand(ZPopMax, commandArgs));
+        return getThis();
+    }
+
+    /**
+     * Removes and returns the member with the highest score from the sorted set stored at the
+     * specified <code>key</code>.
+     *
+     * @see <a href="https://redis.io/commands/zpopmax/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @return Command Response - A map containing the removed member and its corresponding score.<br>
+     *     If <code>key</code> doesn't exist, it will be treated as an empty sorted set and the
+     *     command returns an empty <code>Map</code>.
+     */
+    public T zpopmax(@NonNull String key) {
+        ArgsArray commandArgs = buildArgs(new String[] {key});
+        protobufTransaction.addCommands(buildCommand(ZPopMax, commandArgs));
         return getThis();
     }
 

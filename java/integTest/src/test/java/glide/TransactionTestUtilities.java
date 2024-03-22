@@ -85,6 +85,7 @@ public class TransactionTestUtilities {
         baseTransaction.zaddIncr(key8, "one", 3);
         baseTransaction.zrem(key8, new String[] {"one"});
         baseTransaction.zcard(key8);
+        baseTransaction.zpopmax(key8);
 
         baseTransaction.configSet(Map.of("timeout", "1000"));
         baseTransaction.configGet(new String[] {"timeout"});
@@ -139,6 +140,7 @@ public class TransactionTestUtilities {
             4.0,
             1L,
             2L,
+            Map.of("three", 3.0),
             OK,
             Map.of("timeout", "1000"),
             OK

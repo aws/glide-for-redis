@@ -64,10 +64,19 @@ import static redis_request.RedisRequestOuterClass.RequestType.TTL;
 import static redis_request.RedisRequestOuterClass.RequestType.Unlink;
 import static redis_request.RedisRequestOuterClass.RequestType.Zadd;
 import static redis_request.RedisRequestOuterClass.RequestType.Zcard;
+import static redis_request.RedisRequestOuterClass.RequestType.Zrange;
 import static redis_request.RedisRequestOuterClass.RequestType.Zrem;
 
 import glide.api.models.commands.ExpireOptions;
 import glide.api.models.commands.InfoOptions;
+import glide.api.models.commands.RangeOptions;
+import glide.api.models.commands.RangeOptions.InfLexBound;
+import glide.api.models.commands.RangeOptions.InfScoreBound;
+import glide.api.models.commands.RangeOptions.LexBoundary;
+import glide.api.models.commands.RangeOptions.RangeByIndex;
+import glide.api.models.commands.RangeOptions.RangeByLex;
+import glide.api.models.commands.RangeOptions.RangeByScore;
+import glide.api.models.commands.RangeOptions.ScoreBoundary;
 import glide.api.models.commands.SetOptions;
 import glide.api.models.commands.SetOptions.Expiry;
 import glide.api.models.commands.ZaddOptions;
@@ -1631,6 +1640,151 @@ public class RedisClientTest {
         // exercise
         CompletableFuture<Long> response = service.zcard(key);
         Long payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(value, payload);
+    }
+
+    @SneakyThrows
+    @Test
+    public void zrange_by_index_returns_success() {
+        // setup
+        String key = "testKey";
+        RangeByIndex rangeByIndex = new RangeByIndex(0, 1);
+        String[] arguments = new String[] {key, rangeByIndex.getStart(), rangeByIndex.getEnd()};
+        String[] value = new String[] {"one", "two"};
+
+        CompletableFuture<String[]> testResponse = mock(CompletableFuture.class);
+        when(testResponse.get()).thenReturn(value);
+
+        // match on protobuf request
+        when(commandManager.<String[]>submitNewCommand(eq(Zrange), eq(arguments), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<String[]> response = service.zrange(key, rangeByIndex);
+        String[] payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(value, payload);
+    }
+
+    @SneakyThrows
+    @Test
+    public void zrange_by_score_with_reverse_returns_success() {
+        // setup
+        String key = "testKey";
+        RangeByScore rangeByScore =
+                new RangeByScore(new ScoreBoundary(3, false), InfScoreBound.NEGATIVE_INFINITY);
+        boolean reversed = true;
+        String[] arguments =
+                new String[] {key, rangeByScore.getStart(), rangeByScore.getEnd(), "BYSCORE", "REV"};
+        String[] value = new String[] {"two", "one"};
+
+        CompletableFuture<String[]> testResponse = mock(CompletableFuture.class);
+        when(testResponse.get()).thenReturn(value);
+
+        // match on protobuf request
+        when(commandManager.<String[]>submitNewCommand(eq(Zrange), eq(arguments), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<String[]> response = service.zrange(key, rangeByScore, true);
+        String[] payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(value, payload);
+    }
+
+    @SneakyThrows
+    @Test
+    public void zrange_by_lex_returns_success() {
+        // setup
+        String key = "testKey";
+        RangeByLex rangeByLex =
+                new RangeByLex(InfLexBound.NEGATIVE_INFINITY, new LexBoundary("c", false));
+        String[] arguments = new String[] {key, rangeByLex.getStart(), rangeByLex.getEnd(), "BYLEX"};
+        String[] value = new String[] {"a", "b"};
+
+        CompletableFuture<String[]> testResponse = mock(CompletableFuture.class);
+        when(testResponse.get()).thenReturn(value);
+
+        // match on protobuf request
+        when(commandManager.<String[]>submitNewCommand(eq(Zrange), eq(arguments), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<String[]> response = service.zrange(key, rangeByLex);
+        String[] payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(value, payload);
+    }
+
+    @SneakyThrows
+    @Test
+    public void zrangeWithScores_by_index_returns_success() {
+        // setup
+        String key = "testKey";
+        RangeByIndex rangeByIndex = new RangeByIndex(0, 4);
+        String[] arguments =
+                new String[] {key, rangeByIndex.getStart(), rangeByIndex.getEnd(), "WITHSCORES"};
+        Map<String, Double> value = Map.of("one", 1.0, "two", 2.0, "three", 3.0);
+
+        CompletableFuture<Map<String, Double>> testResponse = mock(CompletableFuture.class);
+        when(testResponse.get()).thenReturn(value);
+
+        // match on protobuf request
+        when(commandManager.<Map<String, Double>>submitNewCommand(eq(Zrange), eq(arguments), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<Map<String, Double>> response = service.zrangeWithScores(key, rangeByIndex);
+        Map<String, Double> payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(value, payload);
+    }
+
+    @SneakyThrows
+    @Test
+    public void zrangeWithScores_by_score_returns_success() {
+        // setup
+        String key = "testKey";
+        RangeByScore rangeByScore =
+                new RangeByScore(
+                        InfScoreBound.NEGATIVE_INFINITY,
+                        InfScoreBound.POSITIVE_INFINITY,
+                        new RangeOptions.Limit(1, 2));
+        String[] arguments =
+                new String[] {
+                    key,
+                    rangeByScore.getStart(),
+                    rangeByScore.getEnd(),
+                    "BYSCORE",
+                    "LIMIT",
+                    "1",
+                    "2",
+                    "WITHSCORES"
+                };
+        Map<String, Double> value = Map.of("two", 2.0, "three", 3.0);
+
+        CompletableFuture<Map<String, Double>> testResponse = mock(CompletableFuture.class);
+        when(testResponse.get()).thenReturn(value);
+
+        // match on protobuf request
+        when(commandManager.<Map<String, Double>>submitNewCommand(eq(Zrange), eq(arguments), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<Map<String, Double>> response =
+                service.zrangeWithScores(key, rangeByScore, false);
+        Map<String, Double> payload = response.get();
 
         // verify
         assertEquals(testResponse, response);

@@ -1,6 +1,7 @@
 /** Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0 */
 package glide.api.models;
 
+import static glide.api.models.commands.RangeOptions.createZrangeArgs;
 import static glide.utils.ArrayTransformUtils.concatenateArrays;
 import static glide.utils.ArrayTransformUtils.convertMapToKeyValueStringArray;
 import static glide.utils.ArrayTransformUtils.convertMapToValueKeyStringArray;
@@ -52,11 +53,13 @@ import static redis_request.RedisRequestOuterClass.RequestType.TTL;
 import static redis_request.RedisRequestOuterClass.RequestType.Unlink;
 import static redis_request.RedisRequestOuterClass.RequestType.Zadd;
 import static redis_request.RedisRequestOuterClass.RequestType.Zcard;
+import static redis_request.RedisRequestOuterClass.RequestType.Zrange;
 import static redis_request.RedisRequestOuterClass.RequestType.Zrem;
 
 import glide.api.models.commands.ExpireOptions;
 import glide.api.models.commands.InfoOptions;
 import glide.api.models.commands.InfoOptions.Section;
+import glide.api.models.commands.RangeOptions;
 import glide.api.models.commands.SetOptions;
 import glide.api.models.commands.SetOptions.ConditionalSet;
 import glide.api.models.commands.SetOptions.SetOptionsBuilder;
@@ -1239,6 +1242,91 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
         ArgsArray commandArgs = buildArgs(new String[] {key});
         protobufTransaction.addCommands(buildCommand(Zcard, commandArgs));
         return getThis();
+    }
+
+    /**
+     * Returns the specified range of elements in the sorted set stored at <code>key</code>.<br>
+     * ZRANGE can perform different types of range queries: by index (rank), by the score, or by
+     * lexicographical order.<br>
+     * To get the elements with their scores, see {@link #zrangeWithScores}.
+     *
+     * @see <a href="https://redis.io/commands/zrange/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param rangeQuery The range query object representing the type of range query to perform.<br>
+     *     - For range queries by index (rank), use {@link RangeOptions.RangeByIndex}.<br>
+     *     - For range queries by lexicographical order, use {@link RangeOptions.RangeByLex}.<br>
+     *     - For range queries by score, use {@link RangeOptions.RangeByScore}.
+     * @param reverse If true, reverses the sorted set, with index 0 as the element with the highest
+     *     score.
+     * @return Command Response - An array of elements within the specified range. If <code>key</code>
+     *     does not exist, it is treated as an empty sorted set, and the command returns an empty
+     *     array.
+     */
+    public T zrange(
+            @NonNull String key, @NonNull RangeOptions.RangeQuery rangeQuery, boolean reverse) {
+        ArgsArray commandArgs = buildArgs(createZrangeArgs(key, rangeQuery, reverse, false));
+        protobufTransaction.addCommands(buildCommand(Zrange, commandArgs));
+        return getThis();
+    }
+
+    /**
+     * Returns the specified range of elements in the sorted set stored at <code>key</code>.<br>
+     * ZRANGE can perform different types of range queries: by index (rank), by the score, or by
+     * lexicographical order.<br>
+     * To get the elements with their scores, see {@link #zrangeWithScores}.
+     *
+     * @see <a href="https://redis.io/commands/zrange/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param rangeQuery The range query object representing the type of range query to perform.<br>
+     *     - For range queries by index (rank), use {@link RangeOptions.RangeByIndex}.<br>
+     *     - For range queries by lexicographical order, use {@link RangeOptions.RangeByLex}.<br>
+     *     - For range queries by score, use {@link RangeOptions.RangeByScore}.
+     * @return Command Response - An array of elements within the specified range. If <code>key</code>
+     *     does not exist, it is treated as an empty sorted set, and the command returns an empty
+     *     array.
+     */
+    public T zrange(@NonNull String key, @NonNull RangeOptions.RangeQuery rangeQuery) {
+        return getThis().zrange(key, rangeQuery, false);
+    }
+
+    /**
+     * Returns the specified range of elements with their scores in the sorted set stored at <code>key
+     * </code>. Similar to ZRANGE but with a WITHSCORE flag.
+     *
+     * @see <a href="https://redis.io/commands/zrange/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param rangeQuery The range query object representing the type of range query to perform.<br>
+     *     - For range queries by index (rank), use {@link RangeOptions.RangeByIndex}.<br>
+     *     - For range queries by score, use {@link RangeOptions.RangeByScore}.
+     * @param reverse If true, reverses the sorted set, with index 0 as the element with the highest
+     *     score.
+     * @return Command Response - A <code>Map</code> of elements and their scores within the specified
+     *     range. If <code>key</code> does not exist, it is treated as an empty sorted set, and the
+     *     command returns an empty <code>Map</code>.
+     */
+    public T zrangeWithScores(
+            @NonNull String key, @NonNull RangeOptions.ScoredRangeQuery rangeQuery, boolean reverse) {
+        ArgsArray commandArgs = buildArgs(createZrangeArgs(key, rangeQuery, reverse, true));
+        protobufTransaction.addCommands(buildCommand(Zrange, commandArgs));
+        return getThis();
+    }
+
+    /**
+     * Returns the specified range of elements with their scores in the sorted set stored at <code>key
+     * </code>. Similar to ZRANGE but with a WITHSCORE flag.
+     *
+     * @see <a href="https://redis.io/commands/zrange/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param rangeQuery The range query object representing the type of range query to perform.<br>
+     *     - For range queries by index (rank), use {@link RangeOptions.RangeByIndex}.<br>
+     *     - For range queries by score, use {@link RangeOptions.RangeByScore}.
+     * @return Command Response - A <code>Map</code> of elements and their scores within the specified
+     *     range. If <code>key</code> does not exist, it is treated as an empty sorted set, and the
+     *     command returns an empty <code>Map</code>.
+     */
+    public T zrangeWithScores(
+            @NonNull String key, @NonNull RangeOptions.ScoredRangeQuery rangeQuery) {
+        return getThis().zrangeWithScores(key, rangeQuery, false);
     }
 
     /** Build protobuf {@link Command} object for given command and arguments. */

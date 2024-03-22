@@ -20,6 +20,14 @@ import glide.api.BaseClient;
 import glide.api.RedisClient;
 import glide.api.RedisClusterClient;
 import glide.api.models.commands.ExpireOptions;
+import glide.api.models.commands.RangeOptions.InfLexBound;
+import glide.api.models.commands.RangeOptions.InfScoreBound;
+import glide.api.models.commands.RangeOptions.LexBoundary;
+import glide.api.models.commands.RangeOptions.Limit;
+import glide.api.models.commands.RangeOptions.RangeByIndex;
+import glide.api.models.commands.RangeOptions.RangeByLex;
+import glide.api.models.commands.RangeOptions.RangeByScore;
+import glide.api.models.commands.RangeOptions.ScoreBoundary;
 import glide.api.models.commands.SetOptions;
 import glide.api.models.commands.ZaddOptions;
 import glide.api.models.configuration.NodeAddress;
@@ -1009,6 +1017,184 @@ public class SharedCommandTests {
         assertEquals(OK, client.set("foo", "bar").get());
         ExecutionException executionException =
                 assertThrows(ExecutionException.class, () -> client.zcard("foo").get());
+        assertTrue(executionException.getCause() instanceof RequestException);
+    }
+
+    @SneakyThrows
+    @ParameterizedTest
+    @MethodSource("getClients")
+    public void zrange_by_index(BaseClient client) {
+        String key = UUID.randomUUID().toString();
+        Map<String, Double> membersScores = Map.of("one", 1.0, "two", 2.0, "three", 3.0);
+        assertEquals(3, client.zadd(key, membersScores).get());
+
+        assertArrayEquals(
+                new String[] {"one", "two"}, client.zrange(key, new RangeByIndex(0, 1)).get());
+
+        assertEquals(
+                Map.of("one", 1.0, "two", 2.0, "three", 3.0),
+                client.zrangeWithScores(key, new RangeByIndex(0, -1)).get());
+
+        assertArrayEquals(
+                new String[] {"three", "two"}, client.zrange(key, new RangeByIndex(0, 1), true).get());
+
+        assertArrayEquals(new String[] {}, client.zrange(key, new RangeByIndex(3, 1), true).get());
+
+        assertTrue(client.zrangeWithScores(key, new RangeByIndex(3, 1)).get().isEmpty());
+    }
+
+    @SneakyThrows
+    @ParameterizedTest
+    @MethodSource("getClients")
+    public void zrange_by_score(BaseClient client) {
+        String key = UUID.randomUUID().toString();
+        Map<String, Double> membersScores = Map.of("one", 1.0, "two", 2.0, "three", 3.0);
+        assertEquals(3, client.zadd(key, membersScores).get());
+
+        assertArrayEquals(
+                new String[] {"one", "two"},
+                client
+                        .zrange(
+                                key, new RangeByScore(InfScoreBound.NEGATIVE_INFINITY, new ScoreBoundary(3, false)))
+                        .get());
+
+        assertEquals(
+                Map.of("one", 1.0, "two", 2.0, "three", 3.0),
+                client
+                        .zrangeWithScores(
+                                key,
+                                new RangeByScore(InfScoreBound.NEGATIVE_INFINITY, InfScoreBound.POSITIVE_INFINITY))
+                        .get());
+
+        assertArrayEquals(
+                new String[] {"two", "one"},
+                client
+                        .zrange(
+                                key,
+                                new RangeByScore(new ScoreBoundary(3, false), InfScoreBound.NEGATIVE_INFINITY),
+                                true)
+                        .get());
+
+        assertArrayEquals(
+                new String[] {"two", "three"},
+                client
+                        .zrange(
+                                key,
+                                new RangeByScore(
+                                        InfScoreBound.NEGATIVE_INFINITY,
+                                        InfScoreBound.POSITIVE_INFINITY,
+                                        new Limit(1, 2)))
+                        .get());
+
+        assertArrayEquals(
+                new String[] {},
+                client
+                        .zrange(
+                                key,
+                                new RangeByScore(InfScoreBound.NEGATIVE_INFINITY, new ScoreBoundary(3, false)),
+                                true)
+                        .get()); // stop is greater than start with reverse set to True
+
+        assertArrayEquals(
+                new String[] {},
+                client
+                        .zrange(
+                                key,
+                                new RangeByScore(InfScoreBound.POSITIVE_INFINITY, new ScoreBoundary(3, false)),
+                                true)
+                        .get()); // start is greater than stop
+
+        assertTrue(
+                client
+                        .zrangeWithScores(
+                                key, new RangeByScore(InfScoreBound.POSITIVE_INFINITY, new ScoreBoundary(3, false)))
+                        .get()
+                        .isEmpty()); // start is greater than stop
+
+        assertTrue(
+                client
+                        .zrangeWithScores(
+                                key,
+                                new RangeByScore(InfScoreBound.NEGATIVE_INFINITY, new ScoreBoundary(3, false)),
+                                true)
+                        .get()
+                        .isEmpty()); // stop is greater than start with reverse set to True
+    }
+
+    @SneakyThrows
+    @ParameterizedTest
+    @MethodSource("getClients")
+    public void zrange_by_lex(BaseClient client) {
+        String key = UUID.randomUUID().toString();
+        Map<String, Double> membersScores = Map.of("a", 1.0, "b", 2.0, "c", 3.0);
+        assertEquals(3, client.zadd(key, membersScores).get());
+
+        assertArrayEquals(
+                new String[] {"a", "b"},
+                client
+                        .zrange(key, new RangeByLex(InfLexBound.NEGATIVE_INFINITY, new LexBoundary("c", false)))
+                        .get());
+
+        assertArrayEquals(
+                new String[] {"b", "c"},
+                client
+                        .zrange(
+                                key,
+                                new RangeByLex(
+                                        InfLexBound.NEGATIVE_INFINITY, InfLexBound.POSITIVE_INFINITY, new Limit(1, 2)))
+                        .get());
+
+        assertArrayEquals(
+                new String[] {"b", "a"},
+                client
+                        .zrange(
+                                key,
+                                new RangeByLex(new LexBoundary("c", false), InfLexBound.NEGATIVE_INFINITY),
+                                true)
+                        .get());
+
+        assertArrayEquals(
+                new String[] {},
+                client
+                        .zrange(
+                                key,
+                                new RangeByLex(InfLexBound.NEGATIVE_INFINITY, new LexBoundary("c", false)),
+                                true)
+                        .get()); // stop is greater than start with reverse set to True
+
+        assertArrayEquals(
+                new String[] {},
+                client
+                        .zrange(key, new RangeByLex(InfLexBound.POSITIVE_INFINITY, new LexBoundary("c", false)))
+                        .get()); // start is greater than stop
+    }
+
+    @SneakyThrows
+    @ParameterizedTest
+    @MethodSource("getClients")
+    public void zrange_with_different_types_of_keys(BaseClient client) {
+        String key = UUID.randomUUID().toString();
+
+        assertArrayEquals(
+                new String[] {}, client.zrange("non_existing_key", new RangeByIndex(0, 1)).get());
+
+        assertTrue(
+                client
+                        .zrangeWithScores("non_existing_key", new RangeByIndex(0, 1))
+                        .get()
+                        .isEmpty()); // start is greater than stop
+
+        // Key exists, but it is not a set
+        assertEquals(OK, client.set(key, "value").get());
+        ExecutionException executionException =
+                assertThrows(
+                        ExecutionException.class, () -> client.zrange(key, new RangeByIndex(0, 1)).get());
+        assertTrue(executionException.getCause() instanceof RequestException);
+
+        executionException =
+                assertThrows(
+                        ExecutionException.class,
+                        () -> client.zrangeWithScores(key, new RangeByIndex(0, 1)).get());
         assertTrue(executionException.getCause() instanceof RequestException);
     }
 }

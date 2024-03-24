@@ -134,6 +134,7 @@ enum RequestType {
     Zrank = 90;
     Rename = 91;
     DBSize = 92;
+    Brpop = 93;
 }
 
 message Command {

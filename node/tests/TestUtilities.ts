@@ -205,6 +205,10 @@ export async function transactionTest(
     args.push("OK");
     baseTransaction.exists([key10]);
     args.push(1);
+    baseTransaction.rpush(key6, [field + "1", field + "2", field + "3"]);
+    args.push(3);
+    baseTransaction.brpop([key6], 0.1);
+    args.push([key6, field + "3"]);
     return args;
 }
 

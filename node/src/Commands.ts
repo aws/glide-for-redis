@@ -1063,6 +1063,17 @@ export function createTime(): redis_request.Command {
     return createCommand(RequestType.Time, []);
 }
 
+/**
+ * @internal
+ */
+export function createBrpop(
+    keys: string[],
+    timeout: number,
+): redis_request.Command {
+    const args = [...keys, timeout.toString()];
+    return createCommand(RequestType.Brpop, args);
+}
+
 export type StreamReadOptions = {
     /**
      * If set, the read request will block for the set amount of milliseconds or until the server has the required number of entries.

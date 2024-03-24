@@ -18,6 +18,7 @@ import {
     StreamReadOptions,
     StreamTrimOptions,
     ZaddOptions,
+    createBrpop,
     createDecr,
     createDecrBy,
     createDel,
@@ -1371,6 +1372,30 @@ export class BaseClient {
      */
     public rename(key: string, newKey: string): Promise<"OK"> {
         return this.createWritePromise(createRename(key, newKey));
+    }
+
+    /** Blocking list pop primitive.
+     * Pop an element from the tail of the first list that is non-empty,
+     * with the given keys being checked in the order that they are given.
+     * Blocks the connection when there are no elements to pop from any of the given lists.
+     * See https://redis.io/commands/brpop/ for more details.
+     * Note: BRPOP is a blocking command,
+     * see [Blocking Commands](https://github.com/aws/glide-for-redis/wiki/General-Concepts#blocking-commands) for more details and best practices.
+     *
+     * @param keys - The `keys` of the lists to pop from.
+     * @param timeout - The `timeout` in seconds.
+     * @returns - An `array` containing the `key` from which the element was popped and the value of the popped element,
+     * formatted as [key, value]. If no element could be popped and the timeout expired, returns Null.
+     *
+     * @example
+     *     await client.brpop(["list1", "list2"], 5);
+     *    ["list1", "element"]
+     */
+    public brpop(
+        keys: string[],
+        timeout: number,
+    ): Promise<[string, string] | null> {
+        return this.createWritePromise(createBrpop(keys, timeout));
     }
 
     /**

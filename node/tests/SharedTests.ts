@@ -1797,6 +1797,26 @@ export function runBaseTests<Context>(config: {
                 await expect(client.zrank(key2, "member")).rejects.toThrow();
             }, protocol);
         },
+    );
+
+    it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
+        `test brpop test_%p`,
+        async (protocol) => {
+            await runTest(async (client: BaseClient) => {
+                expect(
+                    await client.rpush("brpop-test", ["foo", "bar", "baz"]),
+                ).toEqual(3);
+                // Test basic usage
+                expect(await client.brpop(["brpop-test"], 0.1)).toEqual([
+                    "brpop-test",
+                    "baz",
+                ]);
+                // Delete all values from list
+                expect(await client.del(["brpop-test"])).toEqual(1);
+                // Test null return when key doesn't exist
+                expect(await client.brpop(["brpop-test"], 0.1)).toEqual(null);
+            }, protocol);
+        },
         config.timeout,
     );
 

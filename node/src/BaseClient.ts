@@ -59,6 +59,7 @@ import {
     createSAdd,
     createSCard,
     createSMembers,
+    createSPop,
     createSRem,
     createSet,
     createSismember,
@@ -862,6 +863,30 @@ export class BaseClient {
      */
     public sismember(key: string, member: string): Promise<boolean> {
         return this.createWritePromise(createSismember(key, member));
+    }
+
+    /** Removes and returns one random member from the set value store at `key`.
+     * See https://redis.io/commands/spop/ for details.
+     * To pop multiple members, see `spopCount`.
+     *
+     * @param key - The key of the set.
+     * @returns the value of the popped member.
+     * If `key` does not exist, null will be returned.
+     */
+    public spop(key: string): Promise<string | null> {
+        return this.createWritePromise(createSPop(key));
+    }
+
+    /** Removes and returns up to `count` random members from the set value store at `key`, depending on the set's length.
+     * See https://redis.io/commands/spop/ for details.
+     *
+     * @param key - The key of the set.
+     * @param count - The count of the elements to pop from the set.
+     * @returns A list of popped elements will be returned depending on the set's length.
+     * If `key` does not exist, empty list will be returned.
+     */
+    public spopCount(key: string, count: number): Promise<string[]> {
+        return this.createWritePromise(createSPop(key, count));
     }
 
     /** Returns the number of keys in `keys` that exist in the database.

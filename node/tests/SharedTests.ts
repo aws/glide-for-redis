@@ -1122,6 +1122,29 @@ export function runBaseTests<Context>(config: {
     );
 
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
+        `spop and spopCount test_%p`,
+        async (protocol) => {
+            await runTest(async (client: BaseClient) => {
+                const key = uuidv4();
+                const members = ["member1", "member2", "member3"];
+                expect(await client.sadd(key, members)).toEqual(3);
+
+                const result1 = await client.spop(key);
+                expect(members).toContain(result1);
+
+                const result2 = await client.spopCount(key, 2);
+                expect(members).toContain(result2?.[0]);
+                expect(members).toContain(result2?.[1]);
+                expect(result2).not.toContain(result1);
+
+                expect(await client.spop("nonExistingKey")).toEqual(null);
+                expect(await client.spopCount("nonExistingKey", 1)).toEqual([]);
+            }, protocol);
+        },
+        config.timeout,
+    );
+
+    it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `exists with existing keys, an non existing key_%p`,
         async (protocol) => {
             await runTest(async (client: BaseClient) => {

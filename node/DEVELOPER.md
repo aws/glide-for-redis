@@ -177,7 +177,7 @@ In this project we are using hybrid method for building the package for NodeJS, 
 Hybrid method -
 In order to build the package for usage in either module system, we use three different tsconfig files:
 
--   `tsconfig-base` is the general tsconfig file, which the others will extend.
+-   `tsconfig` is the general tsconfig file, which the others will extend.
 -   `tsconfig-cjs` for `commonJS` build with `CommonJS` as the target of translation.
 -   `tsconfig` for `ECMA` build with `ECMA` as the target of translation.
 

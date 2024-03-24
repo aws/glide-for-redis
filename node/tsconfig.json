@@ -21,7 +21,8 @@
         "traceResolution": false /* true to have TypeScript print information about its resolution process for each processed file */,
         "lib": [
             "esnext"
-        ] /* Specify a set of bundled library declaration files that describe the target runtime environment. */
+        ] /* Specify a set of bundled library declaration files that describe the target runtime environment. */,
+        "outDir": "./build-ts/mjs" /* Specify an output folder for all emitted files. Ovrride in tsconfig-cjs */
     },
     "compileOnSave": false,
     "include": ["./*.ts", "src/*.ts", "src/*.js"],

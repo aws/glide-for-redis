@@ -14,9 +14,4 @@ module.exports = {
         "mjs",
     ],
     testTimeout: 20000,
-    globals: {
-        "ts-jest": {
-            tsconfig: "tsconfig-mjs.json",
-        },
-    },
 };

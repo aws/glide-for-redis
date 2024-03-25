@@ -265,7 +265,7 @@ pub(crate) mod shared_client_tests {
                 .unwrap_err();
             assert!(
                 get_result.is_connection_dropped()
-                    || get_result.kind() == redis::ErrorKind::ConnectionNotFound
+                    || get_result.kind() == redis::ErrorKind::ClusterConnectionNotFound
             );
         });
     }

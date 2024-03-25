@@ -193,8 +193,8 @@ Run from the main `/python` folder
     > Note: make sure to [generate protobuf with interface files]("#protobuf-interface-files") before running mypy linter
     ```bash
     pip install -r dev_requirements.txt
-    isort . --profile black --skip-glob python/glide/protobuf
-    black . --exclude python/glide/protobuf
+    isort . --profile black --skip-glob python/glide/protobuf --extend-skip-glob .env
+    black . --exclude "python/glide/protobuf|.env"
     flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=python/glide/protobuf,.env/* --extend-ignore=E230
     flake8 . --count --exit-zero --max-complexity=12 --max-line-length=127 --statistics --exclude=python/glide/protobuf,.env/* --extend-ignore=E230
     # run type check

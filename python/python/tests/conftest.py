@@ -62,6 +62,13 @@ def pytest_addoption(parser):
         default=[],
     )
 
+    parser.addoption(
+        "--mock-pubsub",
+        default=True,
+        action="store_true",
+        help="Use PUBUSB mock implementation, defaults to `%(default)s`",
+    )
+
 
 @pytest.fixture(autouse=True, scope="session")
 def call_before_all_pytests(request):

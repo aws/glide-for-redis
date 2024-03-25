@@ -2,16 +2,15 @@
 const { AsyncClient } = require("glide-rs");
 const RedisServer = require("redis-server");
 const FreePort = require("find-free-port");
-const PORT_NUMBER = 4001;
+const { execFile } = require("child_process");
 
+const PORT_NUMBER = 4001;
 let server;
 let port;
 
-const { exec } = require("child_process");
-
 function flushallOnPort(port) {
     return new Promise((resolve, reject) => {
-        exec(`redis-cli -p ${port} FLUSHALL`, (error, _, stderr) => {
+        execFile("redis-cli", ["-p", port, "FLUSHALL"], (error, _, stderr) => {
             if (error) {
                 console.error(stderr);
                 reject(error);

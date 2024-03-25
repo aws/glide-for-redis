@@ -1,4 +1,4 @@
-import { exec } from "child_process";
+import { execFile } from "child_process";
 import findFreePorts from "find-free-ports";
 import { AsyncClient } from "glide-rs";
 import RedisServer from "redis-server";
@@ -7,9 +7,9 @@ const PORT_NUMBER = 4001;
 let server;
 let port;
 
-export function flushallOnPort(port) {
+function flushallOnPort(port) {
     return new Promise((resolve, reject) => {
-        exec(`redis-cli -p ${port} FLUSHALL`, (error, _, stderr) => {
+        execFile("redis-cli", ["-p", port, "FLUSHALL"], (error, _, stderr) => {
             if (error) {
                 console.error(stderr);
                 reject(error);

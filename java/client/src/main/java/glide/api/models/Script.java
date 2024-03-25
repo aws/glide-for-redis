@@ -26,7 +26,7 @@ public class Script implements AutoCloseable {
     /**
      * Retrieve the stored hash
      *
-     * @return hash
+     * @return the hash of the script
      */
     public String getHash() {
         return this.hash;

@@ -16,9 +16,9 @@ import lombok.Singular;
 @Builder
 public final class ScriptOptions {
 
-    /** The keys that are accessed by the script. */
+    /** The keys that are used in the script. */
     @Singular @Getter private final List<String> keys;
 
-    /** The arguments provided to the script. */
+    /** The arguments for the script. */
     @Singular @Getter private final List<String> args;
 }

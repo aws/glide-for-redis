@@ -9,7 +9,7 @@ public class ScriptResolver {
     }
 
     /**
-     * Loads a Lua script object to Redis
+     * Loads a Lua script into the scripts cache, without executing it.
      *
      * @param code The Lua script
      * @return String representing the saved hash
@@ -17,7 +17,7 @@ public class ScriptResolver {
     public static native String storeScript(String code);
 
     /**
-     * Unload or drop the stored Lua script from Redis by hash
+     * Unload or drop the stored Lua script from the script cache.
      *
      * @param hash
      */

@@ -90,9 +90,9 @@ public class CommandManager {
     /**
      * Build a Script (by hash) request to send to Redis.
      *
-     * @param script
-     * @param keys
-     * @param args
+     * @param script Lua script hash object
+     * @param keys The keys that are used in the script
+     * @param args The arguments for the script
      * @param responseHandler The handler for the response object
      * @return A result promise of type T
      */

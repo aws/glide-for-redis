@@ -190,7 +190,7 @@ jobs:
             - name: Create pull request
               if: ${{ env.FOUND_DIFF  == 'true' && github.event_name != 'pull_request' }}
               run: |
-                export BRANCH_NAME=`if [ "$EVENT_NAME" == 'schedule' || "$EVENT_NAME" == 'pull_request' ]; then echo 'scheduled-ort'; else echo 'ort-v"$INPUT_VERSION"'; fi`
+                export BRANCH_NAME=`if [ "$EVENT_NAME" == 'schedule' ] || [ "$EVENT_NAME" == 'pull_request' ]; then echo 'scheduled-ort'; else echo "ort-v$INPUT_VERSION"; fi`
                 echo "Creating pull request from branch ${BRANCH_NAME} to branch ${{ env.BASE_BRANCH }}"
                 git config --global user.email "glide-for-redis@amazon.com"
                 git config --global user.name "ort-bot"

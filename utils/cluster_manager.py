@@ -237,7 +237,7 @@ def next_free_port(
         try:
             port = random.randint(min_port, max_port)
             logging.debug(f"Trying port {port}")
-            sock.bind(("", port))
+            sock.bind(("127.0.0.1", port))
             sock.close()
             toc = time.perf_counter()
             logging.debug(f"next_free_port() is {port} Elapsed time: {toc - tic:0.4f}")

@@ -3,13 +3,14 @@ package glide.api.models.commands;
 
 import static glide.utils.ArrayTransformUtils.concatenateArrays;
 
+import glide.api.commands.SortedSetBaseCommands;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 
 /**
- * Arguments for {@link glide.api.commands.SortedSetBaseCommands#zrange} and {@link
- * glide.api.commands.SortedSetBaseCommands#zrangeWithScores}
+ * Arguments for {@link SortedSetBaseCommands#zrange} and {@link
+ * SortedSetBaseCommands#zrangeWithScores}
  *
  * @see <a href="https://redis.io/commands/zrange/">redis.io</a>
  */
@@ -46,13 +47,12 @@ public class RangeOptions {
         }
 
         public ScoreBoundary(double bound) {
-            this.bound = bound;
-            this.isInclusive = true;
+            this(bound, true);
         }
 
         /** Convert the score boundary to the Redis protocol format. */
         public String toArgs() {
-            return this.isInclusive ? String.valueOf(this.bound) : "(" + this.bound;
+            return (isInclusive ? "" : "(") + bound;
         }
     }
 
@@ -90,14 +90,13 @@ public class RangeOptions {
         }
 
         public LexBoundary(@NonNull String value) {
-            this.value = value;
-            this.isInclusive = true;
+            this(value, true);
         }
 
         /** Convert the lex boundary to the Redis protocol format. */
         @Override
         public String toArgs() {
-            return this.isInclusive ? "[" + this.value : "(" + this.value;
+            return (isInclusive ? "[" : "(") + value;
         }
     }
 

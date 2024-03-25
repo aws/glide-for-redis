@@ -286,10 +286,10 @@ public interface GenericBaseCommands {
      * @return a value that depends on the script that was executed.
      * @example
      *     <pre>{@code
-     * Script luaScript = new Script("return 'Hello'");
-     * String result = (String) client.invokeScript(luaScript).get();
-     * assert result == "Hello";
-     * luaScript.close(); // drops the lua script
+     * try(Script luaScript = new Script("return 'Hello'")) {
+     *     String result = (String) client.invokeScript(luaScript).get();
+     *     assert result == "Hello";
+     * }
      * }</pre>
      */
     CompletableFuture<Object> invokeScript(Script script);
@@ -309,13 +309,12 @@ public interface GenericBaseCommands {
      * @return a value that depends on the script that was executed.
      * @example
      *     <pre>{@code
-     * try(Script luaScript = new Script("return \{ KEYS[1], ARGV[1] \}")) {
+     * try(Script luaScript = new Script("return { KEYS[1], ARGV[1] }")) {
      *     ScriptOptions scriptOptions = ScriptOptions.builder().key("foo").arg("bar").build();
      *     Object[] result = (Object[]) client.invokeScript(luaScript, scriptOptions).get();
      *     assert result[0] == "foo";
      *     assert result[1] == "bar";
      * }
-     * // lua script is dropped
      * }</pre>
      */
     CompletableFuture<Object> invokeScript(Script script, ScriptOptions options);

@@ -4,10 +4,13 @@ package glide.api.models;
 import static glide.ffi.resolvers.ScriptResolver.dropScript;
 import static glide.ffi.resolvers.ScriptResolver.storeScript;
 
+import glide.api.commands.GenericBaseCommands;
+
 /**
- * A wrapper for a Script object for {@link
- * glide.api.commands.GenericBaseCommands#invokeScript(Script)} As long as this object is not
- * closed, the script's code is saved in memory, and can be resent to the server.
+ * A wrapper for a Script object for {@link GenericBaseCommands#invokeScript(Script)} As long as
+ * this object is not closed, the script's code is saved in memory, and can be resent to the server.
+ * Script should be enclosed with a try-with-resource block or {@link Script#close()} must be called
+ * to invalidate the code hash.
  */
 public class Script implements AutoCloseable {
 
@@ -36,5 +39,17 @@ public class Script implements AutoCloseable {
     @Override
     public void close() throws Exception {
         dropScript(this.hash);
+    }
+
+    @Override
+    public void finalize() throws Throwable {
+        try {
+            if (this.getHash() != null) {
+                // Drop the linked script on garbage collection
+                this.close();
+            }
+        } finally {
+            super.finalize();
+        }
     }
 }

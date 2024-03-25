@@ -42,7 +42,7 @@ public class Script implements AutoCloseable {
     }
 
     @Override
-    public void finalize() throws Throwable {
+    protected void finalize() throws Throwable {
         try {
             if (this.getHash() != null) {
                 // Drop the linked script on garbage collection

@@ -1250,16 +1250,19 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
 
     /**
      * Returns the specified range of elements in the sorted set stored at <code>key</code>.<br>
-     * ZRANGE can perform different types of range queries: by index (rank), by the score, or by
-     * lexicographical order.<br>
+     * <code>ZRANGE</code> can perform different types of range queries: by index (rank), by the
+     * score, or by lexicographical order.<br>
      * To get the elements with their scores, see {@link #zrangeWithScores}.
      *
      * @see <a href="https://redis.io/commands/zrange/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param rangeQuery The range query object representing the type of range query to perform.<br>
-     *     - For range queries by index (rank), use {@link RangeByIndex}.<br>
-     *     - For range queries by lexicographical order, use {@link RangeByLex}.<br>
-     *     - For range queries by score, use {@link RangeByScore}.
+     *     <ul>
+     *       <li>For range queries by index (rank), use {@link RangeByIndex}.
+     *       <li>For range queries by lexicographical order, use {@link RangeByLex}.
+     *       <li>For range queries by score, use {@link RangeByScore}.
+     *     </ul>
+     *
      * @param reverse If true, reverses the sorted set, with index 0 as the element with the highest
      *     score.
      * @return Command Response - An array of elements within the specified range. If <code>key</code>
@@ -1274,16 +1277,19 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
 
     /**
      * Returns the specified range of elements in the sorted set stored at <code>key</code>.<br>
-     * ZRANGE can perform different types of range queries: by index (rank), by the score, or by
-     * lexicographical order.<br>
+     * <code>ZRANGE</code> can perform different types of range queries: by index (rank), by the
+     * score, or by lexicographical order.<br>
      * To get the elements with their scores, see {@link #zrangeWithScores}.
      *
      * @see <a href="https://redis.io/commands/zrange/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param rangeQuery The range query object representing the type of range query to perform.<br>
-     *     - For range queries by index (rank), use {@link RangeByIndex}.<br>
-     *     - For range queries by lexicographical order, use {@link RangeByLex}.<br>
-     *     - For range queries by score, use {@link RangeByScore}.
+     *     <ul>
+     *       <li>For range queries by index (rank), use {@link RangeByIndex}.
+     *       <li>For range queries by lexicographical order, use {@link RangeByLex}.
+     *       <li>For range queries by score, use {@link RangeByScore}.
+     *     </ul>
+     *
      * @return Command Response - An array of elements within the specified range. If <code>key</code>
      *     does not exist, it is treated as an empty sorted set, and the command returns an empty
      *     array.
@@ -1294,13 +1300,16 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
 
     /**
      * Returns the specified range of elements with their scores in the sorted set stored at <code>key
-     * </code>. Similar to ZRANGE but with a WITHSCORE flag.
+     * </code>. Similar to {@link #zrange} but with a <code>WITHSCORE</code> flag.
      *
      * @see <a href="https://redis.io/commands/zrange/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param rangeQuery The range query object representing the type of range query to perform.<br>
-     *     - For range queries by index (rank), use {@link RangeByIndex}.<br>
-     *     - For range queries by score, use {@link RangeByScore}.
+     *     <ul>
+     *       <li>For range queries by index (rank), use {@link RangeByIndex}.
+     *       <li>For range queries by score, use {@link RangeByScore}.
+     *     </ul>
+     *
      * @param reverse If true, reverses the sorted set, with index 0 as the element with the highest
      *     score.
      * @return Command Response - A <code>Map</code> of elements and their scores within the specified
@@ -1316,13 +1325,16 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
 
     /**
      * Returns the specified range of elements with their scores in the sorted set stored at <code>key
-     * </code>. Similar to ZRANGE but with a WITHSCORE flag.
+     * </code>. Similar to {@link #zrange} but with a <code>WITHSCORE</code> flag.
      *
      * @see <a href="https://redis.io/commands/zrange/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param rangeQuery The range query object representing the type of range query to perform.<br>
-     *     - For range queries by index (rank), use {@link RangeByIndex}.<br>
-     *     - For range queries by score, use {@link RangeByScore}.
+     *     <ul>
+     *       <li>For range queries by index (rank), use {@link RangeByIndex}.
+     *       <li>For range queries by score, use {@link RangeByScore}.
+     *     </ul>
+     *
      * @return Command Response - A <code>Map</code> of elements and their scores within the specified
      *     range. If <code>key</code> does not exist, it is treated as an empty sorted set, and the
      *     command returns an empty <code>Map</code>.

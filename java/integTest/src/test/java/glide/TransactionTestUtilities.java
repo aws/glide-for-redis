@@ -82,6 +82,7 @@ public class TransactionTestUtilities {
         baseTransaction.smembers(key7);
 
         baseTransaction.zadd(key8, Map.of("one", 1.0, "two", 2.0, "three", 3.0));
+        baseTransaction.zrank(key8, "one");
         baseTransaction.zaddIncr(key8, "one", 3);
         baseTransaction.zrem(key8, new String[] {"one"});
         baseTransaction.zcard(key8);
@@ -135,7 +136,8 @@ public class TransactionTestUtilities {
             1L,
             1L,
             Set.of("baz"),
-            3L,
+            3L, // Zadd
+            0L, // Zrank
             4.0,
             1L,
             2L,

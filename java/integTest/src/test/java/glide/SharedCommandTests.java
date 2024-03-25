@@ -1011,4 +1011,28 @@ public class SharedCommandTests {
                 assertThrows(ExecutionException.class, () -> client.zcard("foo").get());
         assertTrue(executionException.getCause() instanceof RequestException);
     }
+
+    @SneakyThrows
+    @ParameterizedTest
+    @MethodSource("getClients")
+    public void zrank(BaseClient client) {
+        String key = UUID.randomUUID().toString();
+        Map<String, Double> membersScores = Map.of("one", 1.5, "two", 2.0, "three", 3.0);
+        assertEquals(3, client.zadd(key, membersScores).get());
+        assertEquals(0, client.zrank(key, "one").get());
+
+        if (REDIS_VERSION.isGreaterThanOrEqualTo("7.2.0")) {
+            assertArrayEquals(new Object[] {0L, 1.5}, client.zrankWithScore(key, "one").get());
+            assertNull(client.zrankWithScore(key, "nonExistingMember").get());
+            assertNull(client.zrankWithScore("nonExistingKey", "nonExistingMember").get());
+        }
+        assertNull(client.zrank(key, "nonExistingMember").get());
+        assertNull(client.zrank("nonExistingKey", "nonExistingMember").get());
+
+        // Key exists, but it is not a set
+        assertEquals(OK, client.set(key, "value").get());
+        ExecutionException executionException =
+                assertThrows(ExecutionException.class, () -> client.zrank(key, "one").get());
+        assertTrue(executionException.getCause() instanceof RequestException);
+    }
 }

@@ -1,3 +1,5 @@
+## 0.3.0 (2024-03-25)
+
 #### Changes
 
 * Python Node: Allow routing Cluster requests by address. ([#1021](https://github.com/aws/glide-for-redis/pull/1021))

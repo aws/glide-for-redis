@@ -273,12 +273,12 @@ public interface GenericBaseCommands {
     CompletableFuture<Long> ttl(String key);
 
     /**
-     * Invokes a Lua script with its keys and arguments. <br>
+     * Invokes a Lua script with its keys and arguments.<br>
      * This method simplifies the process of invoking scripts on a Redis server by using an object
-     * that represents a Lua script. The script loading, argument preparation, and execution will all
-     * be handled internally. If the script has not already been loaded, it will be loaded
-     * automatically using the Redis <code>SCRIPT LOAD</code> command. After that, it will be invoked
-     * using the Redis <code>EVALSHA</code> command.
+     * that represents a Lua script. The script loading and execution will all be handled internally.
+     * If the script has not already been loaded, it will be loaded automatically using the Redis
+     * <code>SCRIPT LOAD</code> command. After that, it will be invoked using the Redis <code>EVALSHA
+     * </code> command.
      *
      * @see <a href="https://redis.io/commands/script-load/">SCRIPT LOAD</a> and <a
      *     href="https://redis.io/commands/evalsha/">EVALSHA</a> for details.
@@ -295,7 +295,7 @@ public interface GenericBaseCommands {
     CompletableFuture<Object> invokeScript(Script script);
 
     /**
-     * Invokes a Lua script with its keys and arguments. <br>
+     * Invokes a Lua script with its keys and arguments.<br>
      * This method simplifies the process of invoking scripts on a Redis server by using an object
      * that represents a Lua script. The script loading, argument preparation, and execution will all
      * be handled internally. If the script has not already been loaded, it will be loaded

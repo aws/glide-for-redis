@@ -5,6 +5,7 @@ import static glide.ffi.resolvers.ScriptResolver.dropScript;
 import static glide.ffi.resolvers.ScriptResolver.storeScript;
 
 import glide.api.commands.GenericBaseCommands;
+import lombok.Getter;
 
 /**
  * A wrapper for a Script object for {@link GenericBaseCommands#invokeScript(Script)} As long as
@@ -14,40 +15,29 @@ import glide.api.commands.GenericBaseCommands;
  */
 public class Script implements AutoCloseable {
 
-    /** hash string representing the code */
-    private final String hash;
+    /** Hash string representing the code. */
+    @Getter private final String hash;
 
     /**
      * Wraps around creating a Script object from <code>code</code>.
      *
-     * @param code To execute with a ScriptInvoke call
+     * @param code To execute with a ScriptInvoke call.
      */
     public Script(String code) {
-        this.hash = storeScript(code);
-    }
-
-    /**
-     * Retrieve the stored hash
-     *
-     * @return the hash of the script
-     */
-    public String getHash() {
-        return this.hash;
+        hash = storeScript(code);
     }
 
     /** Drop the linked script from glide-rs <code>code</code>. */
     @Override
     public void close() throws Exception {
-        dropScript(this.hash);
+        dropScript(hash);
     }
 
     @Override
     protected void finalize() throws Throwable {
         try {
-            if (this.getHash() != null) {
-                // Drop the linked script on garbage collection
-                this.close();
-            }
+            // Drop the linked script on garbage collection.
+            this.close();
         } finally {
             super.finalize();
         }

@@ -23,6 +23,7 @@ import redis_request.RedisRequestOuterClass.Command.ArgsArray;
 import redis_request.RedisRequestOuterClass.RedisRequest;
 import redis_request.RedisRequestOuterClass.RequestType;
 import redis_request.RedisRequestOuterClass.Routes;
+import redis_request.RedisRequestOuterClass.ScriptInvocation;
 import redis_request.RedisRequestOuterClass.SimpleRoutes;
 import redis_request.RedisRequestOuterClass.SlotTypes;
 import response.ResponseOuterClass.Response;
@@ -96,7 +97,7 @@ public class CommandManager {
      * @param responseHandler The handler for the response object
      * @return A result promise of type T
      */
-    public <T> CompletableFuture<T> submitNewCommand(
+    public <T> CompletableFuture<T> submitScript(
             Script script,
             List<String> keys,
             List<String> args,
@@ -203,7 +204,7 @@ public class CommandManager {
         RedisRequest.Builder builder =
                 RedisRequest.newBuilder()
                         .setScriptInvocation(
-                                RedisRequestOuterClass.ScriptInvocation.newBuilder()
+                                ScriptInvocation.newBuilder()
                                         .setHash(script.getHash())
                                         .addAllKeys(keys)
                                         .addAllArgs(args)

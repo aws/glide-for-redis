@@ -524,14 +524,14 @@ public abstract class BaseClient
 
     @Override
     public CompletableFuture<Object> invokeScript(@NonNull Script script) {
-        return commandManager.submitNewCommand(
+        return commandManager.submitScript(
                 script, List.of(), List.of(), this::handleObjectOrNullResponse);
     }
 
     @Override
     public CompletableFuture<Object> invokeScript(
             @NonNull Script script, @NonNull ScriptOptions options) {
-        return commandManager.submitNewCommand(
+        return commandManager.submitScript(
                 script, options.getKeys(), options.getArgs(), this::handleObjectOrNullResponse);
     }
 

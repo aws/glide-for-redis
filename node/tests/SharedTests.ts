@@ -7,14 +7,14 @@ import { exec } from "child_process";
 import { v4 as uuidv4 } from "uuid";
 import {
     ClosingError,
+    ConditionalChange,
     ExpireOptions,
     InfoOptions,
     ProtocolVersion,
-    RedisClient,
-    RedisClusterClient,
     Script,
     parseInfoResponse,
 } from "../";
+import { TRedisClient } from "../src/Constants";
 import { Client, GetAndSetRandomValue, getFirstResult } from "./TestUtilities";
 
 async function getVersion(): Promise<[number, number, number]> {
@@ -50,15 +50,13 @@ export async function checkIfServerVersionLessThan(
     return versionToCompare < minVersion;
 }
 
-export type BaseClient = RedisClient | RedisClusterClient;
-
 export function runBaseTests<Context>(config: {
     init: (
         protocol: ProtocolVersion,
         clientName?: string,
     ) => Promise<{
         context: Context;
-        client: BaseClient;
+        client: TRedisClient;
     }>;
     close: (context: Context, testSucceeded: boolean) => void;
     timeout?: number;
@@ -70,7 +68,7 @@ export function runBaseTests<Context>(config: {
     });
 
     const runTest = async (
-        test: (client: BaseClient) => Promise<void>,
+        test: (client: TRedisClient) => Promise<void>,
         protocol: ProtocolVersion,
         clientName?: string,
     ) => {
@@ -88,7 +86,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `should register client library name and version_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 if (await checkIfServerVersionLessThan("7.2.0")) {
                     return;
                 }
@@ -105,7 +103,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `closed client raises error_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 client.close();
 
                 try {
@@ -123,7 +121,7 @@ export function runBaseTests<Context>(config: {
     it(
         `Check protocol version is RESP3`,
         async () => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const result = (await client.customCommand(["HELLO"])) as {
                     proto: number;
                 };
@@ -136,7 +134,7 @@ export function runBaseTests<Context>(config: {
     it(
         `Check possible to opt-in to RESP2`,
         async () => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const result = (await client.customCommand(["HELLO"])) as {
                     proto: number;
                 };
@@ -150,7 +148,7 @@ export function runBaseTests<Context>(config: {
         `Check client name is configured correctly_%p`,
         async (protocol) => {
             await runTest(
-                async (client: BaseClient) => {
+                async (client: TRedisClient) => {
                     expect(await client.clientGetName()).toBe("TEST_CLIENT");
                 },
                 protocol,
@@ -163,7 +161,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `set with return of old value works_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key = uuidv4();
                 // Adding random repetition, to prevent the inputs from always having the same alignment.
                 const value = uuidv4() + "0".repeat(Math.random() * 7);
@@ -186,28 +184,28 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `conditional set works_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key = uuidv4();
                 // Adding random repetition, to prevent the inputs from always having the same alignment.
                 const value = uuidv4() + "0".repeat(Math.random() * 7);
                 let result = await client.set(key, value, {
-                    conditionalSet: "onlyIfExists",
+                    conditionalSet: ConditionalChange.OnlyIfExist,
                 });
                 expect(result).toEqual(null);
 
                 result = await client.set(key, value, {
-                    conditionalSet: "onlyIfDoesNotExist",
+                    conditionalSet: ConditionalChange.OnlyIfDoesNotExist,
                 });
                 expect(result).toEqual("OK");
                 expect(await client.get(key)).toEqual(value);
 
                 result = await client.set(key, "foobar", {
-                    conditionalSet: "onlyIfDoesNotExist",
+                    conditionalSet: ConditionalChange.OnlyIfDoesNotExist,
                 });
                 expect(result).toEqual(null);
 
                 result = await client.set(key, "foobar", {
-                    conditionalSet: "onlyIfExists",
+                    conditionalSet: ConditionalChange.OnlyIfExist,
                 });
                 expect(result).toEqual("OK");
 
@@ -220,7 +218,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `custom command works_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key = uuidv4();
                 // Adding random repetition, to prevent the inputs from always having the same alignment.
                 const value = uuidv4() + "0".repeat(Math.random() * 7);
@@ -240,7 +238,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `getting array return value works_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key1 = "{key}" + uuidv4();
                 const key2 = "{key}" + uuidv4();
                 const key3 = "{key}" + uuidv4();
@@ -274,7 +272,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `delete multiple existing keys and an non existing key_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key1 = "{key}" + uuidv4();
                 const key2 = "{key}" + uuidv4();
                 const key3 = "{key}" + uuidv4();
@@ -297,7 +295,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `testing clientGetName_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 expect(await client.clientGetName()).toBeNull();
             }, protocol);
         },
@@ -307,7 +305,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `test config rewrite_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const serverInfo = await client.info([InfoOptions.Server]);
                 const conf_file = parseInfoResponse(
                     getFirstResult(serverInfo).toString(),
@@ -333,7 +331,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `info stats before and after Config ResetStat is different_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 /// we execute set and info so the commandstats will show `cmdstat_set::calls` greater than 1
                 /// after the configResetStat call we initiate an info command and the the commandstats won't contain `cmdstat_set`.
                 await client.set("foo", "bar");
@@ -352,7 +350,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `testing mset and mget with multiple existing keys and one non existing key_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key1 = uuidv4();
                 const key2 = uuidv4();
                 const key3 = uuidv4();
@@ -374,7 +372,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `incr, incrBy and incrByFloat with existing key_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key = uuidv4();
                 expect(await client.set(key, "10")).toEqual("OK");
                 expect(await client.incr(key)).toEqual(11);
@@ -391,7 +389,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `incr, incrBy and incrByFloat with non existing key_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key1 = uuidv4();
                 const key2 = uuidv4();
                 const key3 = uuidv4();
@@ -410,7 +408,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `incr, incrBy and incrByFloat with a key that contains a value of string that can not be represented as integer_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key = uuidv4();
                 expect(await client.set(key, "foo")).toEqual("OK");
 
@@ -445,7 +443,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `ping test_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 expect(await client.ping()).toEqual("PONG");
                 expect(await client.ping("Hello")).toEqual("Hello");
             }, protocol);
@@ -456,7 +454,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `clientId test_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 expect(getFirstResult(await client.clientId())).toBeGreaterThan(
                     0,
                 );
@@ -468,7 +466,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `decr and decrBy existing key_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key = uuidv4();
                 expect(await client.set(key, "10")).toEqual("OK");
                 expect(await client.decr(key)).toEqual(9);
@@ -483,7 +481,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `decr and decrBy with non existing key_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key1 = uuidv4();
                 const key2 = uuidv4();
                 /// key1 and key2 does not exist, so it set to 0 before performing the operation.
@@ -501,7 +499,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `decr and decrBy with a key that contains a value of string that can not be represented as integer_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key = uuidv4();
                 expect(await client.set(key, "foo")).toEqual("OK");
 
@@ -528,7 +526,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `config get and config set with timeout parameter_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const prevTimeout = (await client.configGet([
                     "timeout",
                 ])) as Record<string, string>;
@@ -553,7 +551,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `testing hset and hget with multiple existing fields and one non existing field_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key = uuidv4();
                 const field1 = uuidv4();
                 const field2 = uuidv4();
@@ -576,7 +574,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `hdel multiple existing fields, an non existing field and an non existing key_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key = uuidv4();
                 const field1 = uuidv4();
                 const field2 = uuidv4();
@@ -602,7 +600,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `testing hmget with multiple existing fields, an non existing field and an non existing key_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key = uuidv4();
                 const field1 = uuidv4();
                 const field2 = uuidv4();
@@ -630,7 +628,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `hexists existing field, an non existing field and an non existing key_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key = uuidv4();
                 const field1 = uuidv4();
                 const field2 = uuidv4();
@@ -654,7 +652,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `hgetall with multiple fields in an existing key and one non existing key_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key = uuidv4();
                 const field1 = uuidv4();
                 const field2 = uuidv4();
@@ -677,7 +675,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `hincrBy and hincrByFloat with existing key and field_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key = uuidv4();
                 const field = uuidv4();
                 const fieldValueMap = {
@@ -697,7 +695,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `hincrBy and hincrByFloat with non existing key and non existing field_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key1 = uuidv4();
                 const key2 = uuidv4();
                 const field = uuidv4();
@@ -723,7 +721,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `hincrBy and hincrByFloat with a field that contains a value of string that can not be represented as as integer or float_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key = uuidv4();
                 const field = uuidv4();
                 const fieldValueMap = {
@@ -756,7 +754,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `hlen test_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key1 = uuidv4();
                 const field1 = uuidv4();
                 const field2 = uuidv4();
@@ -778,7 +776,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `hvals test_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key1 = uuidv4();
                 const field1 = uuidv4();
                 const field2 = uuidv4();
@@ -800,7 +798,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `hsetnx test_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key1 = uuidv4();
                 const key2 = uuidv4();
                 const field = uuidv4();
@@ -823,7 +821,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `lpush, lpop and lrange with existing and non existing key_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key = uuidv4();
                 const valueList = ["value4", "value3", "value2", "value1"];
                 expect(await client.lpush(key, valueList)).toEqual(4);
@@ -849,7 +847,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `lpush, lpop and lrange with key that holds a value that is not a list_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key = uuidv4();
                 expect(await client.set(key, "foo")).toEqual("OK");
 
@@ -884,7 +882,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `llen with existing, non-existing key and key that holds a value that is not a list_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key1 = uuidv4();
                 const key2 = uuidv4();
                 const valueList = ["value4", "value3", "value2", "value1"];
@@ -910,7 +908,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `ltrim with existing key and key that holds a value that is not a list_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key = uuidv4();
                 const valueList = ["value4", "value3", "value2", "value1"];
                 expect(await client.lpush(key, valueList)).toEqual(4);
@@ -941,7 +939,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `lrem with existing key and non existing key_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key = uuidv4();
                 const valueList = [
                     "value1",
@@ -975,7 +973,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `rpush and rpop with existing and non existing key_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key = uuidv4();
                 const valueList = ["value1", "value2", "value3", "value4"];
                 expect(await client.rpush(key, valueList)).toEqual(4);
@@ -993,7 +991,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `rpush and rpop with key that holds a value that is not a list_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key = uuidv4();
                 expect(await client.set(key, "foo")).toEqual("OK");
 
@@ -1020,7 +1018,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `sadd, srem, scard and smembers with existing set_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key = uuidv4();
                 const valueList = ["member1", "member2", "member3", "member4"];
                 expect(await client.sadd(key, valueList)).toEqual(4);
@@ -1043,7 +1041,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `srem, scard and smembers with non existing key_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 expect(await client.srem("nonExistingKey", ["member"])).toEqual(
                     0,
                 );
@@ -1057,7 +1055,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `sadd, srem, scard and smembers with with key that holds a value that is not a set_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key = uuidv4();
                 expect(await client.set(key, "foo")).toEqual("OK");
 
@@ -1100,7 +1098,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `sismember test_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key1 = uuidv4();
                 const key2 = uuidv4();
                 expect(await client.sadd(key1, ["member1"])).toEqual(1);
@@ -1124,7 +1122,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `exists with existing keys, an non existing key_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key1 = uuidv4();
                 const key2 = uuidv4();
                 const value = uuidv4();
@@ -1143,7 +1141,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `unlink multiple existing keys and an non existing key_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key1 = "{key}" + uuidv4();
                 const key2 = "{key}" + uuidv4();
                 const key3 = "{key}" + uuidv4();
@@ -1162,7 +1160,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `expire, pexpire and ttl with positive timeout_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key = uuidv4();
                 expect(await client.set(key, "foo")).toEqual("OK");
                 expect(await client.expire(key, 10)).toEqual(true);
@@ -1208,7 +1206,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `expireAt, pexpireAt and ttl with positive timeout_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key = uuidv4();
                 expect(await client.set(key, "foo")).toEqual("OK");
                 expect(
@@ -1260,7 +1258,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `expire, pexpire, expireAt and pexpireAt with timestamp in the past or negative timeout_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key = uuidv4();
                 expect(await client.set(key, "foo")).toEqual("OK");
                 expect(await client.ttl(key)).toEqual(-1);
@@ -1293,7 +1291,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `expire, pexpire, expireAt, pexpireAt and ttl with non-existing key_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key = uuidv4();
                 expect(await client.expire(key, 10)).toEqual(false);
                 expect(await client.pexpire(key, 10000)).toEqual(false);
@@ -1318,7 +1316,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `script test_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key1 = uuidv4();
                 const key2 = uuidv4();
 
@@ -1359,7 +1357,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `zadd and zaddIncr test_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key = uuidv4();
                 const membersScores = { one: 1, two: 2, three: 3 };
 
@@ -1373,30 +1371,30 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `zadd and zaddIncr with NX XX test_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key = uuidv4();
                 const membersScores = { one: 1, two: 2, three: 3 };
                 expect(
                     await client.zadd(key, membersScores, {
-                        conditionalChange: "onlyIfExists",
+                        conditionalChange: ConditionalChange.OnlyIfExist,
                     }),
                 ).toEqual(0);
 
                 expect(
                     await client.zadd(key, membersScores, {
-                        conditionalChange: "onlyIfDoesNotExist",
+                        conditionalChange: ConditionalChange.OnlyIfDoesNotExist,
                     }),
                 ).toEqual(3);
 
                 expect(
                     await client.zaddIncr(key, "one", 5.0, {
-                        conditionalChange: "onlyIfDoesNotExist",
+                        conditionalChange: ConditionalChange.OnlyIfDoesNotExist,
                     }),
                 ).toEqual(null);
 
                 expect(
                     await client.zaddIncr(key, "one", 5.0, {
-                        conditionalChange: "onlyIfExists",
+                        conditionalChange: ConditionalChange.OnlyIfExist,
                     }),
                 ).toEqual(6.0);
             }, protocol);
@@ -1407,7 +1405,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `zadd and zaddIncr with GT LT test_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key = uuidv4();
                 const membersScores = { one: -3, two: 2, three: 3 };
 
@@ -1455,7 +1453,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `zrem test_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key = uuidv4();
                 const membersScores = { one: 1, two: 2, three: 3 };
                 expect(await client.zadd(key, membersScores)).toEqual(3);
@@ -1474,7 +1472,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `zcard test_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key = uuidv4();
                 const membersScores = { one: 1, two: 2, three: 3 };
                 expect(await client.zadd(key, membersScores)).toEqual(3);
@@ -1489,7 +1487,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `zscore test_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key1 = uuidv4();
                 const key2 = uuidv4();
                 const membersScores = { one: 1, two: 2, three: 3 };
@@ -1512,7 +1510,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `zcount test_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key1 = uuidv4();
                 const key2 = uuidv4();
                 const membersScores = { one: 1, two: 2, three: 3 };
@@ -1568,7 +1566,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `type test_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key = uuidv4();
                 expect(await client.set(key, "value")).toEqual("OK");
                 expect(await client.type(key)).toEqual("string");
@@ -1609,7 +1607,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `echo test_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const message = uuidv4();
                 expect(await client.echo(message)).toEqual(message);
             }, protocol);
@@ -1620,7 +1618,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `strlen test_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key1 = uuidv4();
                 const key1Value = uuidv4();
                 const key1ValueLength = key1Value.length;
@@ -1649,7 +1647,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `lindex test_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const listName = uuidv4();
                 const listKey1Value = uuidv4();
                 const listKey2Value = uuidv4();
@@ -1671,7 +1669,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `zpopmin test_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key = uuidv4();
                 const membersScores = { a: 1, b: 2, c: 3 };
                 expect(await client.zadd(key, membersScores)).toEqual(3);
@@ -1692,7 +1690,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `zpopmax test_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key = uuidv4();
                 const membersScores = { a: 1, b: 2, c: 3 };
                 expect(await client.zadd(key, membersScores)).toEqual(3);
@@ -1713,7 +1711,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `Pttl test_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key = uuidv4();
                 expect(await client.pttl(key)).toEqual(-2);
 
@@ -1749,7 +1747,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `zremRangeByRank test_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key = uuidv4();
                 const membersScores = { one: 1, two: 2, three: 3 };
                 expect(await client.zadd(key, membersScores)).toEqual(3);
@@ -1767,7 +1765,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `zrank test_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key1 = uuidv4();
                 const key2 = uuidv4();
                 const membersScores = { one: 1.5, two: 2, three: 3 };
@@ -1823,7 +1821,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `persist test_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key = uuidv4();
                 expect(await client.set(key, "foo")).toEqual("OK");
                 expect(await client.persist(key)).toEqual(false);
@@ -1838,7 +1836,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `streams add and trim test_%p`,
         async () => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key = uuidv4();
                 const field1 = uuidv4();
                 const field2 = uuidv4();
@@ -1925,7 +1923,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `zremRangeByScore test_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key = uuidv4();
                 const membersScores = { one: 1, two: 2, three: 3 };
                 expect(await client.zadd(key, membersScores)).toEqual(3);
@@ -1961,7 +1959,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         "time test_%p",
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 // Take the time now, convert to 10 digits and subtract 1 second
                 const now = Math.floor(new Date().getTime() / 1000 - 1);
                 const result = (await client.time()) as [string, string];
@@ -1977,7 +1975,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `streams read test_%p`,
         async () => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 const key1 = uuidv4();
                 const key2 = `{${key1}}${uuidv4()}`;
                 const field1 = "foo";
@@ -2036,7 +2034,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         "rename test_%p",
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: TRedisClient) => {
                 // Making sure both keys will be oart of the same slot
                 const key = uuidv4() + "{123}";
                 const newKey = uuidv4() + "{123}";

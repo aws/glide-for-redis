@@ -36,10 +36,10 @@
         "build-protobuf": "npm run compile-protobuf-files && npm run fix-protobuf-file",
         "compile-protobuf-files": "cd src && pbjs -t static-module -o ProtobufMessage.js ../../glide-core/src/protobuf/*.proto && pbts -o ProtobufMessage.d.ts ProtobufMessage.js",
         "fix-protobuf-file": "replace 'this\\.encode\\(message, writer\\)\\.ldelim' 'this.encode(message, writer && writer.len ? writer.fork() : writer).ldelim' src/ProtobufMessage.js",
-        "test": "jest --verbose --runInBand --testPathIgnorePatterns='RedisModules'",
+        "test": "jest --verbose --runInBand --testPathIgnorePatterns='redis-modules'",
         "lint": "eslint -f unix \"src/**/*.{ts,tsx}\"",
         "prepack": "npmignore --auto",
-        "test-modules": "jest --verbose --runInBand 'tests/RedisModules.test.ts'",
+        "test-modules": "jest --verbose --runInBand 'redis-modules'",
         "prettier:check:ci": "./node_modules/.bin/prettier --check . --ignore-unknown '!**/*.{js,d.ts}'",
         "prettier:format": "./node_modules/.bin/prettier --write . --ignore-unknown '!**/*.{js,d.ts}'"
     },

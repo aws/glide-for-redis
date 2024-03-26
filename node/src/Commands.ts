@@ -22,6 +22,20 @@ function isLargeCommand(args: string[]) {
 }
 
 /**
+ * Represents a condition to the `SET`, `ZADD` and `JSON.SET` commands.
+ */
+export enum ConditionalChange {
+    OnlyIfExist = "XX",
+    /*
+     * OnlyIfExist: Only update key / elements that already exist. Equivalent to `XX` in the Redis API.
+     */
+    OnlyIfDoesNotExist = "NX",
+    /*
+     * OnlyIfDoesNotExist: Only set key / add elements that does not already exist. Equivalent to `NX` in the Redis API.
+     */
+}
+
+/**
  * @internal
  */
 export function parseInfoResponse(response: string): Record<string, string> {
@@ -75,7 +89,7 @@ export type SetOptions = {
      * if `conditional` is not set the value will be set regardless of prior value existence.
      * If value isn't set because of the condition, return null.
      */
-    conditionalSet?: "onlyIfExists" | "onlyIfDoesNotExist";
+    conditionalSet?: ConditionalChange;
     /**
      * Return the old string stored at key, or nil if key did not exist. An error is returned and SET aborted if the value stored at key is not a string.
      * Equivalent to `GET` in the Redis API.
@@ -120,10 +134,8 @@ export function createSet(
     const args = [key, value];
 
     if (options) {
-        if (options.conditionalSet === "onlyIfExists") {
-            args.push("XX");
-        } else if (options.conditionalSet === "onlyIfDoesNotExist") {
-            args.push("NX");
+        if (options.conditionalSet) {
+            args.push(options.conditionalSet.valueOf());
         }
 
         if (options.returnOldValue) {
@@ -722,7 +734,7 @@ export type ZaddOptions = {
      * `onlyIfDoesNotExist` - Only add new elements. Don't update already existing elements. Equivalent to `NX` in the Redis API.
      * `onlyIfExists` - Only update elements that already exist. Don't add new elements. Equivalent to `XX` in the Redis API.
      */
-    conditionalChange?: "onlyIfExists" | "onlyIfDoesNotExist";
+    conditionalChange?: ConditionalChange;
     /**
      * `scoreLessThanCurrent` - Only update existing elements if the new score is less than the current score.
      *  Equivalent to `LT` in the Redis API.
@@ -744,16 +756,19 @@ export function createZadd(
     let args = [key];
 
     if (options) {
-        if (options.conditionalChange === "onlyIfExists") {
-            args.push("XX");
-        } else if (options.conditionalChange === "onlyIfDoesNotExist") {
-            if (options.updateOptions) {
-                throw new Error(
-                    `The GT, LT, and NX options are mutually exclusive. Cannot choose both ${options.updateOptions} and NX.`,
-                );
+        if (options.conditionalChange) {
+            if (
+                options.conditionalChange ===
+                ConditionalChange.OnlyIfDoesNotExist
+            ) {
+                if (options.updateOptions) {
+                    throw new Error(
+                        `The GT, LT, and NX options are mutually exclusive. Cannot choose both ${options.updateOptions} and NX.`,
+                    );
+                }
             }
 
-            args.push("NX");
+            args.push(options.conditionalChange.valueOf());
         }
 
         if (options.updateOptions === "scoreLessThanCurrent") {

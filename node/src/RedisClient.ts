@@ -3,7 +3,7 @@
  */
 
 import * as net from "net";
-import { BaseClient, BaseClientConfiguration, ReturnType } from "./BaseClient";
+import { BaseClient, BaseClientConfiguration } from "./BaseClient";
 import {
     InfoOptions,
     createClientGetName,
@@ -19,6 +19,7 @@ import {
     createSelect,
     createTime,
 } from "./Commands";
+import { ReturnType } from "./Constants";
 import { connection_request } from "./ProtobufMessage";
 import { Transaction } from "./Transaction";
 

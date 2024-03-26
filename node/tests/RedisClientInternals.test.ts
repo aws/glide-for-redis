@@ -22,16 +22,17 @@ import {
     BaseClientConfiguration,
     ClosingError,
     ClusterClientConfiguration,
+    ConditionalChange,
     InfoOptions,
     Logger,
     RedisClient,
     RedisClientConfiguration,
     RedisClusterClient,
     RequestError,
-    ReturnType,
     SlotKeyTypes,
     Transaction,
 } from "..";
+import { ReturnType } from "../src/Constants";
 import {
     connection_request,
     redis_request,
@@ -533,7 +534,7 @@ describe("SocketConnectionInternals", () => {
                 sendResponse(socket, ResponseType.OK, request.callbackIdx);
             });
             const request1 = connection.set("foo", "bar", {
-                conditionalSet: "onlyIfExists",
+                conditionalSet: ConditionalChange.OnlyIfExist,
                 returnOldValue: true,
                 expiry: { type: "seconds", count: 10 },
             });

@@ -5,7 +5,8 @@
 import { beforeAll, expect } from "@jest/globals";
 import { exec } from "child_process";
 import { v4 as uuidv4 } from "uuid";
-import { ClusterTransaction, Logger, ReturnType, Transaction } from "..";
+import { ClusterTransaction, Logger, Transaction } from "..";
+import { ReturnType } from "../src/Constants";
 import { checkIfServerVersionLessThan } from "./SharedTests";
 
 beforeAll(() => {

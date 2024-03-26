@@ -10,3 +10,4 @@ export * from "./src/Logger";
 export * from "./src/RedisClient";
 export * from "./src/RedisClusterClient";
 export * from "./src/Transaction";
+export * from "./src/redis-modules/Json";

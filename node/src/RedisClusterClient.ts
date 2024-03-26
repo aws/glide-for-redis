@@ -3,7 +3,7 @@
  */
 
 import * as net from "net";
-import { BaseClient, BaseClientConfiguration, ReturnType } from "./BaseClient";
+import { BaseClient, BaseClientConfiguration } from "./BaseClient";
 import {
     InfoOptions,
     createClientGetName,
@@ -18,6 +18,7 @@ import {
     createPing,
     createTime,
 } from "./Commands";
+import { ClusterResponse, ReturnType } from "./Constants";
 import { RequestError } from "./Errors";
 import { connection_request, redis_request } from "./ProtobufMessage";
 import { ClusterTransaction } from "./Transaction";
@@ -57,12 +58,6 @@ export type ClusterClientConfiguration = BaseClientConfiguration & {
      */
     periodicChecks?: PeriodicChecks;
 };
-
-/**
- * If the command's routing is to one node we will get T as a response type,
- * otherwise, we will get a dictionary of address: nodeResponse, address is of type string and nodeResponse is of type T.
- */
-export type ClusterResponse<T> = T | Record<string, T>;
 
 export type SlotIdTypes = {
     /**

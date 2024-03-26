@@ -80,6 +80,7 @@ import {
     createZremRangeByScore,
     createZscore,
 } from "./Commands";
+import { ReturnType } from "./Constants";
 import {
     ClosingError,
     ConnectionError,
@@ -94,28 +95,13 @@ import { connection_request, redis_request, response } from "./ProtobufMessage";
 /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
 type PromiseFunction = (value?: any) => void;
 type ErrorFunction = (error: RedisError) => void;
-export type ReturnTypeMap = { [key: string]: ReturnType };
-export type ReturnTypeAttribute = {
-    value: ReturnType;
-    attributes: ReturnTypeMap;
-};
+
 export enum ProtocolVersion {
     /** Use RESP2 to communicate with the server nodes. */
     RESP2 = connection_request.ProtocolVersion.RESP2,
     /** Use RESP3 to communicate with the server nodes. */
     RESP3 = connection_request.ProtocolVersion.RESP3,
 }
-export type ReturnType =
-    | "OK"
-    | string
-    | number
-    | null
-    | boolean
-    | bigint
-    | Set<ReturnType>
-    | ReturnTypeMap
-    | ReturnTypeAttribute
-    | ReturnType[];
 
 type RedisCredentials = {
     /**

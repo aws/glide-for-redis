@@ -1,6 +1,6 @@
 {
-    "type": "module",
     "name": "${scope}${pkg_name}",
+    "types": "build-ts/mjs/index.d.ts",
     "version": "${package_version}",
     "description": "An AWS-sponsored, open-source Redis client.",
     "main": "build-ts/cjs/index.js",

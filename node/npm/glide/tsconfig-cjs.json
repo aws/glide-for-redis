@@ -1,6 +1,9 @@
 {
-    "extends": "../../tsconfig-cjs.json",
+    "extends": "./tsconfig.json",
     "compilerOptions": {
+        /* Visit https://aka.ms/tsconfig to read more about this file */
+        "module": "commonjs" /* Specify what module code is generated. */,
+        /* Emit */
         "outDir": "./build-ts/cjs" /* Specify an output folder for all emitted files. */
     }
 }

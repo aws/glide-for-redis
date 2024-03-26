@@ -1,0 +1,30 @@
+{
+    "compilerOptions": {
+        "target": "esnext" /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */,
+        "allowJs": true,
+        "esModuleInterop": true,
+        "baseUrl": "./",
+        "outDir": "./build-ts/mjs" /* Specify an output folder for all emitted files. Ovrride in tsconfig-cjs */,
+        "forceConsistentCasingInFileNames": true,
+        "strict": true,
+        "skipLibCheck": true,
+        "module": "ESNext" /* Specify what module code is generated. Ovrride in tsconfig-cjs/mjs */,
+        "moduleResolution": "node" /* Specify module resolution strategy: 'node' (Node.js) or 'classic' (TypeScript pre-1.6). */,
+        "allowSyntheticDefaultImports": true,
+        "declaration": true,
+        "inlineSourceMap": false,
+        "lib": ["esnext"],
+        "listEmittedFiles": false,
+        "listFiles": false,
+        "noFallthroughCasesInSwitch": true,
+        "pretty": true,
+        "resolveJsonModule": true,
+        "traceResolution": false,
+        "types": ["node", "jest"]
+    },
+    "include": ["./*.ts", "src/*.ts", "src/*.js"],
+    "exclude": [
+        "node_modules",
+        "build-ts"
+    ] /* Prevents TypeScript from compiling files in node_modules and build-ts */
+}

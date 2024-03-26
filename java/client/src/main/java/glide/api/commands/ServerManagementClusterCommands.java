@@ -214,7 +214,7 @@ public interface ServerManagementClusterCommands {
     CompletableFuture<String> configSet(Map<String, String> parameters, Route route);
 
     /**
-     * Returns the server time. <br>
+     * Returns the server time.<br>
      * The command will be routed to a random node.
      *
      * @see <a href="https://redis.io/commands/time/">redis.io</a> for details.

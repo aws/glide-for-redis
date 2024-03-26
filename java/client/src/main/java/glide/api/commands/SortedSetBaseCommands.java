@@ -210,10 +210,12 @@ public interface SortedSetBaseCommands {
      *     is treated as an empty sorted set, and the command returns an empty array.
      * @example
      *     <pre>{@code
-     * String[] payload1 = client.zrange("mySortedSet", new RangeByIndex(0, -1), true).get(); // RangeByIndex(0, -1) specifies retrieval of all elements from the start to the end of the sorted set.
+     * RangeByScore query1 = new RangeByScore(new ScoreBoundary(10), new ScoreBoundary(20));
+     * String[] payload1 = client.zrange("mySortedSet", query1, true).get(); // RangeByIndex(0, -1) specifies retrieval of all elements from the start to the end of the sorted set.
      * assert payload1.equals(new String[] {'member3', 'member2', 'member1'}); // Returns all members in descending order.
      *
-     * String[] payload2 = client.zrange("mySortedSet", new RangeByScore(InfScoreBound.NEGATIVE_INFINITY, new ScoreBoundary(3)), false).get();
+     * RangeByScore query2 = new RangeByScore(InfScoreBound.NEGATIVE_INFINITY, new ScoreBoundary(3));
+     * String[] payload2 = client.zrange("mySortedSet", query2, false).get();
      * assert payload2.equals(new String[] {'member2', 'member3'}); // Returns members with scores within the range of negative infinity to 3, in ascending order.
      * }</pre>
      */
@@ -238,10 +240,12 @@ public interface SortedSetBaseCommands {
      *     is treated as an empty sorted set, and the command returns an empty array.
      * @example
      *     <pre>{@code
-     * String[] payload1 = client.zrange("mySortedSet", new RangeByIndex(0, -1)).get();
+     * RangeByScore query1 = new RangeByScore(new ScoreBoundary(10), new ScoreBoundary(20));
+     * String[] payload1 = client.zrange("mySortedSet",query1).get();
      * assert payload1.equals(new String[] {'member1', 'member2', 'member3'}); // Returns all members in ascending order.
      *
-     * String[] payload2 = client.zrange("mySortedSet", new RangeByScore(InfScoreBound.NEGATIVE_INFINITY, new ScoreBoundary(3))).get();
+     * RangeByScore query2 = new RangeByScore(InfScoreBound.NEGATIVE_INFINITY, new ScoreBoundary(3));
+     * String[] payload2 = client.zrange("mySortedSet", query2).get();
      * assert payload2.equals(new String[] {'member2', 'member3'}); // Returns members with scores within the range of negative infinity to 3, in ascending order.
      * }</pre>
      */
@@ -266,10 +270,12 @@ public interface SortedSetBaseCommands {
      *     empty <code>Map</code>.
      * @example
      *     <pre>{@code
-     * Map<String, Double> payload1 = client.zrangeWithScores("mySortedSet", new RangeByScore(new ScoreBoundary(10), new ScoreBoundary(20)), true).get();
+     * RangeByScore query1 = new RangeByScore(new ScoreBoundary(10), new ScoreBoundary(20));
+     * Map<String, Double> payload1 = client.zrangeWithScores("mySortedSet", query1, true).get();
      * assert payload1.equals(Map.of('member2', 15.2, 'member1', 10.5)); // Returns members with scores between 10 and 20 with their scores.
      *
-     * Map<String, Double> payload2 = client.zrangeWithScores("mySortedSet", new RangeByScore(InfScoreBound.NEGATIVE_INFINITY, new ScoreBoundary(3)), false).get();
+     * RangeByScore query2 = new RangeByScore(InfScoreBound.NEGATIVE_INFINITY, new ScoreBoundary(3));
+     * Map<String, Double> payload2 = client.zrangeWithScores("mySortedSet", query2, false).get();
      * assert payload2.equals(Map.of('member4', -2.0, 'member7', 1.5)); // Returns members with with scores within the range of negative infinity to 3, with their scores.
      * }</pre>
      */
@@ -293,10 +299,12 @@ public interface SortedSetBaseCommands {
      *     empty <code>Map</code>.
      * @example
      *     <pre>{@code
-     * Map<String, Double> payload1 = client.zrangeWithScores("mySortedSet", new RangeByScore(new ScoreBoundary(10), new ScoreBoundary(20))).get();
+     * RangeByScore query1 = new RangeByScore(new ScoreBoundary(10), new ScoreBoundary(20));
+     * Map<String, Double> payload1 = client.zrangeWithScores("mySortedSet", query1).get();
      * assert payload1.equals(Map.of('member1', 10.5, 'member2', 15.2)); // Returns members with scores between 10 and 20 with their scores.
      *
-     * Map<String, Double> payload2 = client.zrangeWithScores("mySortedSet", new RangeByScore(InfScoreBound.NEGATIVE_INFINITY, new ScoreBoundary(3))).get();
+     * RangeByScore query2 = new RangeByScore(InfScoreBound.NEGATIVE_INFINITY, new ScoreBoundary(3));
+     * Map<String, Double> payload2 = client.zrangeWithScores("mySortedSet", query2).get();
      * assert payload2.equals(Map.of('member4', -2.0, 'member7', 1.5)); // Returns members with with scores within the range of negative infinity to 3, with their scores.
      * }</pre>
      */

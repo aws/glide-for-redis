@@ -803,26 +803,135 @@ export function createZscore(
     return createCommand(RequestType.ZScore, [key, member]);
 }
 
-export type ScoreLimit =
+export type ScoreBoundary<T> =
+    /**
+     * Positive infinity bound for sorted set.
+     */
     | `positiveInfinity`
+    /**
+     * Negative infinity bound for sorted set.
+     */
     | `negativeInfinity`
+    /**
+     *  Represents a specific numeric score boundary in a sorted set.
+     */
     | {
-          bound: number;
+          /**
+           * The score value.
+           */
+          value: T;
+          /**
+           * Whether the score value is inclusive. Defaults to True.
+           */
           isInclusive?: boolean;
       };
 
-function getScoreLimitArg(score: ScoreLimit): string {
+/**
+ * Represents a range by index (rank) in a sorted set.
+ * The `start` and `stop` arguments represent zero-based indexes.
+ */
+export type RangeByIndex = {
+    /**
+     *  The start index of the range.
+     */
+    start: number;
+    /**
+     * The stop index of the range.
+     */
+    stop: number;
+};
+
+/**
+ * Represents a range by score or a range by lex in a sorted set.
+ * The `start` and `stop` arguments represent score boundaries.
+ */
+type SortedSetRange<T> = {
+    /**
+     * The start boundary.
+     */
+    start: ScoreBoundary<T>;
+    /**
+     * The stop boundary.
+     */
+    stop: ScoreBoundary<T>;
+    /**
+     * The limit argument for a range query.
+     * Represents a limit argument for a range query in a sorted set to
+     * be used in [ZRANGE](https://redis.io/commands/zrange) command.
+     *
+     * The optional LIMIT argument can be used to obtain a sub-range from the matching elements
+     * (similar to SELECT LIMIT offset, count in SQL).
+     */
+    limit?: {
+        /**
+         * The offset from the start of the range.
+         */
+        offset: number;
+        /**
+         * The number of elements to include in the range.
+         * A negative count returns all elements from the offset.
+         */
+        count: number;
+    };
+};
+
+export type RangeByScore = SortedSetRange<number> & { type: "byScore" };
+export type RangeByLex = SortedSetRange<string> & { type: "byLex" };
+
+function getScoreLimitArg(
+    score: ScoreBoundary<number> | ScoreBoundary<string>,
+    isLex: boolean = false,
+): string {
     if (score == "positiveInfinity") {
-        return "+inf";
+        return isLex ? "+" : "+inf";
     } else if (score == "negativeInfinity") {
-        return "-inf";
+        return isLex ? "-" : "-inf";
     }
 
-    const value =
-        score.isInclusive == false
-            ? "(" + score.bound.toString()
-            : score.bound.toString();
+    if (score.isInclusive == false) {
+        return "(" + score.value.toString();
+    }
+
+    const value = isLex ? "[" + score.value.toString() : score.value.toString();
     return value;
+}
+
+function createZrangeArgs(
+    key: string,
+    rangeQuery: RangeByScore | RangeByLex | RangeByIndex,
+    reverse: boolean,
+    withScores: boolean,
+): string[] {
+    const args: string[] = [key];
+
+    if (typeof rangeQuery.start != "number") {
+        rangeQuery = rangeQuery as RangeByScore | RangeByLex;
+        const isLex = rangeQuery.type == "byLex";
+        args.push(getScoreLimitArg(rangeQuery.start, isLex));
+        args.push(getScoreLimitArg(rangeQuery.stop, isLex));
+        args.push(isLex == true ? "BYLEX" : "BYSCORE");
+    } else {
+        args.push(rangeQuery.start.toString());
+        args.push(rangeQuery.stop.toString());
+    }
+
+    if (reverse) {
+        args.push("REV");
+    }
+
+    if ("limit" in rangeQuery && rangeQuery.limit !== undefined) {
+        args.push(
+            "LIMIT",
+            String(rangeQuery.limit.offset),
+            String(rangeQuery.limit.count),
+        );
+    }
+
+    if (withScores) {
+        args.push("WITHSCORES");
+    }
+
+    return args;
 }
 
 /**
@@ -830,13 +939,37 @@ function getScoreLimitArg(score: ScoreLimit): string {
  */
 export function createZcount(
     key: string,
-    minScore: ScoreLimit,
-    maxScore: ScoreLimit,
+    minScore: ScoreBoundary<number>,
+    maxScore: ScoreBoundary<number>,
 ): redis_request.Command {
     const args = [key];
     args.push(getScoreLimitArg(minScore));
     args.push(getScoreLimitArg(maxScore));
     return createCommand(RequestType.Zcount, args);
+}
+
+/**
+ * @internal
+ */
+export function createZrange(
+    key: string,
+    rangeQuery: RangeByIndex | RangeByScore | RangeByLex,
+    reverse: boolean = false,
+): redis_request.Command {
+    const args = createZrangeArgs(key, rangeQuery, reverse, false);
+    return createCommand(RequestType.Zrange, args);
+}
+
+/**
+ * @internal
+ */
+export function createZrangeWithScores(
+    key: string,
+    rangeQuery: RangeByIndex | RangeByScore | RangeByLex,
+    reverse: boolean = false,
+): redis_request.Command {
+    const args = createZrangeArgs(key, rangeQuery, reverse, true);
+    return createCommand(RequestType.Zrange, args);
 }
 
 /**
@@ -919,8 +1052,8 @@ export function createZremRangeByRank(
  */
 export function createZremRangeByScore(
     key: string,
-    minScore: ScoreLimit,
-    maxScore: ScoreLimit,
+    minScore: ScoreBoundary<number>,
+    maxScore: ScoreBoundary<number>,
 ): redis_request.Command {
     const args = [key];
     args.push(getScoreLimitArg(minScore));

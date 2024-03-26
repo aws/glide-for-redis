@@ -12,7 +12,10 @@ import * as net from "net";
 import { Buffer, BufferWriter, Reader, Writer } from "protobufjs";
 import {
     ExpireOptions,
-    ScoreLimit,
+    RangeByIndex,
+    RangeByLex,
+    RangeByScore,
+    ScoreBoundary,
     SetOptions,
     StreamAddOptions,
     StreamReadOptions,
@@ -74,6 +77,8 @@ import {
     createZcount,
     createZpopmax,
     createZpopmin,
+    createZrange,
+    createZrangeWithScores,
     createZrank,
     createZrem,
     createZremRangeByRank,
@@ -1127,10 +1132,86 @@ export class BaseClient {
      */
     public zcount(
         key: string,
-        minScore: ScoreLimit,
-        maxScore: ScoreLimit,
+        minScore: ScoreBoundary<number>,
+        maxScore: ScoreBoundary<number>,
     ): Promise<number> {
         return this.createWritePromise(createZcount(key, minScore, maxScore));
+    }
+
+    /** Returns the specified range of elements in the sorted set stored at `key`.
+     * ZRANGE can perform different types of range queries: by index (rank), by the score, or by lexicographical order.
+     *
+     * See https://redis.io/commands/zrange/ for more details.
+     * To get the elements with their scores, see `zrangeWithScores`.
+     *
+     * @param key - The key of the sorted set.
+     * @param rangeQuery - The range query object representing the type of range query to perform.
+     * For range queries by index (rank), use RangeByIndex.
+     * For range queries by lexicographical order, use RangeByLex.
+     * For range queries by score, use RangeByScore.
+     * @param reverse - If true, reverses the sorted set, with index 0 as the element with the highest score.
+     * @returns A list of elements within the specified range.
+     * If `key` does not exist, it is treated as an empty sorted set, and the command returns an empty array.
+     *
+     * @example
+     *      await client.zadd("mySortedSet", \{ member1: 1.0, member2: 2.0, member3: 3.0 \});
+     *
+     *      await client.zrange("mySortedSet", \{ start: 0, stop: -1 \});
+     *      ['member1', 'member2', 'member3']  (Returns all members in ascending order.)
+     *
+     *      await client.zrange("mySortedSet", \{
+     *              start: "negativeInfinity",
+     *              stop: \{ value: 3, isInclusive: false \},
+     *              type: "byScore",
+     *           \});
+     *      ['member2', 'member3'] (Returns members with scores within the range of negative infinity to 3, in ascending order.)
+     */
+    public zrange(
+        key: string,
+        rangeQuery: RangeByScore | RangeByLex | RangeByIndex,
+        reverse: boolean = false,
+    ): Promise<string[]> {
+        return this.createWritePromise(createZrange(key, rangeQuery, reverse));
+    }
+
+    /** Returns the specified range of elements with their scores in the sorted set stored at `key`.
+     * Similar to ZRANGE but with a WITHSCORE flag.
+     * See https://redis.io/commands/zrange/ for more details.
+     *
+     * @param key - The key of the sorted set.
+     * @param rangeQuery - The range query object representing the type of range query to perform.
+     * For range queries by index (rank), use RangeByIndex.
+     * For range queries by lexicographical order, use RangeByLex.
+     * For range queries by score, use RangeByScore.
+     * @param reverse - If true, reverses the sorted set, with index 0 as the element with the highest score.
+     * @returns A map of elements and their scores within the specified range.
+     * If `key` does not exist, it is treated as an empty sorted set, and the command returns an empty map.
+     * 
+     * @example
+     *      await client.zadd("mySortedSet", \{ member1: 1.0, member2: 2.0, member3: 3.5, member4: -2.0 \});
+
+     *      await client.zrangeWithScores("mySortedSet", \{
+     *              start: \{ value: 0.5, isInclusive: false \},
+     *              stop: \{ value: 3, isInclusive: false \},
+     *              type: "byScore",
+     *           \});
+     *      \{ 'member1': 1.0, 'member2': 2.0 \}  (Returns members with scores between 0.5 and 3 with their scores.)
+     * 
+     *      await client.zrange("mySortedSet", \{
+     *              start: \{ value: 3, isInclusive: false \},
+     *              stop: "positiveInfinity",
+     *              type: "byScore",
+     *           \});
+     *      \{ 'member3': 3.5 \} (Returns members with scores within the range of negative infinity to 3, in ascending order.)
+     */
+    public zrangeWithScores(
+        key: string,
+        rangeQuery: RangeByScore | RangeByLex | RangeByIndex,
+        reverse: boolean = false,
+    ): Promise<Record<string, number>> {
+        return this.createWritePromise(
+            createZrangeWithScores(key, rangeQuery, reverse),
+        );
     }
 
     /** Returns the length of the string value stored at `key`.
@@ -1233,8 +1314,8 @@ export class BaseClient {
      */
     public zremRangeByScore(
         key: string,
-        minScore: ScoreLimit,
-        maxScore: ScoreLimit,
+        minScore: ScoreBoundary<number>,
+        maxScore: ScoreBoundary<number>,
     ): Promise<number> {
         return this.createWritePromise(
             createZremRangeByScore(key, minScore, maxScore),

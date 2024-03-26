@@ -183,4 +183,42 @@ public interface SortedSetBaseCommands {
      * }</pre>
      */
     CompletableFuture<Long> zcard(String key);
+
+    /**
+     * Removes and returns up to <code>count</code> members with the highest scores from the sorted
+     * set stored at the specified <code>key</code>.
+     *
+     * @see <a href="https://redis.io/commands/zpopmax/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param count Specifies the quantity of members to pop.<br>
+     *     If <code>count</code> is higher than the sorted set's cardinality, returns all members and
+     *     their scores, ordered from highest to lowest.
+     * @return A map of the removed members and their scores, ordered from the one with the highest
+     *     score to the one with the lowest.<br>
+     *     If <code>key</code> doesn't exist, it will be treated as an empty sorted set and the
+     *     command returns an empty <code>Map</code>.
+     * @example
+     *     <pre>{@code
+     * Map<String, Double> payload = client.zpopmax("mySortedSet", 2).get();
+     * assert payload.equals(Map.of('member2', 8.0, 'member3', 7.5)); // Indicates that 'member1' with a score of 10.0 has been removed from the sorted set.
+     * }</pre>
+     */
+    CompletableFuture<Map<String, Double>> zpopmax(String key, long count);
+
+    /**
+     * Removes and returns the member with the highest score from the sorted set stored at the
+     * specified <code>key</code>.
+     *
+     * @see <a href="https://redis.io/commands/zpopmax/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @return A map containing the removed member and its corresponding score.<br>
+     *     If <code>key</code> doesn't exist, it will be treated as an empty sorted set and the
+     *     command returns an empty <code>Map</code>.
+     * @example
+     *     <pre>{@code
+     * Map<String, Double> payload = client.zpopmax("mySortedSet").get();
+     * assert payload.equals(Map.of('member1', 10.0)); // Indicates that 'member1' with a score of 10.0 has been removed from the sorted set.
+     * }</pre>
+     */
+    CompletableFuture<Map<String, Double>> zpopmax(String key);
 }

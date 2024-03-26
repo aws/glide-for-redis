@@ -16,6 +16,14 @@ import lombok.RequiredArgsConstructor;
  */
 public class RangeOptions {
 
+    /**
+     * Basic interface. Please use one of the following implementations:
+     *
+     * <ul>
+     *   <li>{@link InfScoreBound}
+     *   <li>{@link ScoreBoundary}
+     * </ul>
+     */
     public interface ScoreRange {
         String toArgs();
     }
@@ -56,6 +64,14 @@ public class RangeOptions {
         }
     }
 
+    /**
+     * Basic interface. Please use one of the following implementations:
+     *
+     * <ul>
+     *   <li>{@link InfLexBound}
+     *   <li>{@link LexBoundary}
+     * </ul>
+     */
     public interface LexRange {
         String toArgs();
     }
@@ -101,10 +117,9 @@ public class RangeOptions {
     }
 
     /**
-     * Represents a limit argument for a range query in a sorted set to be used in <a
-     * href="https://redis.io/commands/zrange">ZRANGE</a> command.<br>
-     * The optional LIMIT argument can be used to obtain a sub-range from the matching elements
-     * (similar to SELECT LIMIT offset, count in SQL).
+     * Represents a limit argument for a range query in a sorted set.<br>
+     * The optional <code>LIMIT</code> argument can be used to obtain a sub-range from the matching
+     * elements (similar to <code>SELECT LIMIT</code> offset, count in SQL).
      */
     @RequiredArgsConstructor
     @Getter
@@ -119,6 +134,15 @@ public class RangeOptions {
         private final long count;
     }
 
+    /**
+     * Basic interface. Please use one of the following implementations:
+     *
+     * <ul>
+     *   <li>{@link RangeByIndex}
+     *   <li>{@link RangeByScore}
+     *   <li>{@link RangeByLex}
+     * </ul>
+     */
     public interface RangeQuery {
         String getStart();
 
@@ -161,6 +185,14 @@ public class RangeOptions {
         }
     }
 
+    /**
+     * Basic interface. Please use one of the following implementations:
+     *
+     * <ul>
+     *   <li>{@link RangeByIndex}
+     *   <li>{@link RangeByScore}
+     * </ul>
+     */
     public interface ScoredRangeQuery extends RangeQuery {}
 
     /**

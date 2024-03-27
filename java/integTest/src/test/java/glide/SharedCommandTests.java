@@ -1011,4 +1011,16 @@ public class SharedCommandTests {
                 assertThrows(ExecutionException.class, () -> client.zcard("foo").get());
         assertTrue(executionException.getCause() instanceof RequestException);
     }
+
+    @SneakyThrows
+    @ParameterizedTest
+    @MethodSource("getClients")
+    public void zscore(BaseClient client) {
+        String key = UUID.randomUUID().toString();
+        Map<String, Double> membersScores = Map.of("one", 1.0, "two", 2.0, "three", 3.0);
+        assertEquals(3, client.zadd(key, membersScores).get());
+        assertEquals(1.0, client.zscore(key, "one").get());
+        assertNull(client.zscore(key, "non_existing_member").get());
+        assertNull(client.zscore("non_existing_key", "non_existing_member").get());
+    }
 }

@@ -2,3 +2,6 @@
 *.pb.go
 
 reports
+
+# cbindgen generated header file
+lib.h

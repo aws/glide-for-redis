@@ -6,12 +6,14 @@ install-dev-tools-go1.18.10:
 	go install mvdan.cc/gofumpt@v0.4.0
 	go install github.com/segmentio/golines@v0.11.0
 	go install honnef.co/go/tools/cmd/staticcheck@v0.3.3
+	cargo install cbindgen
 
 install-dev-tools-go1.22.0:
 	go install github.com/vakenbolt/go-test-report@v0.9.3
 	go install mvdan.cc/gofumpt@v0.6.0
 	go install github.com/segmentio/golines@v0.12.2
 	go install honnef.co/go/tools/cmd/staticcheck@v0.4.6
+	cargo install cbindgen
 
 install-dev-tools: install-dev-tools-go1.22.0
 
@@ -26,6 +28,7 @@ build: build-glide-client generate-protobuf
 
 build-glide-client:
 	cargo build --release
+	cbindgen --config cbindgen.toml --crate glide-rs --output lib.h
 
 generate-protobuf:
 	mkdir -p protobuf

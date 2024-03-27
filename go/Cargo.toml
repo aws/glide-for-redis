@@ -10,7 +10,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 redis = { path = "../submodules/redis-rs/redis", features = ["aio", "tokio-comp", "tls", "tokio-native-tls-comp", "tls-rustls-insecure"] }
-glide-core = { path = "../glide-core" }
+glide-core = { path = "../glide-core", features = ["socket-layer"] }
 tokio = { version = "^1", features = ["rt", "macros", "rt-multi-thread", "time"] }
 protobuf = { version = "3.3.0", features = [] }
 

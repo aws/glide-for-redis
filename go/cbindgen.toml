@@ -1,0 +1,7 @@
+language = "C"
+
+header = "/* Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0 */"
+
+[parse]
+parse_deps = true
+include = ["glide-core"] 

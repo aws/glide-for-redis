@@ -34,6 +34,7 @@ public class TransactionTestUtilities {
         baseTransaction.customCommand(new String[] {"MGET", key1, key2});
 
         baseTransaction.exists(new String[] {key1});
+        baseTransaction.persist(key1);
 
         baseTransaction.del(new String[] {key1});
         baseTransaction.get(key1);
@@ -101,6 +102,7 @@ public class TransactionTestUtilities {
             null,
             new String[] {value1, value2},
             1L,
+            Boolean.FALSE,
             1L,
             null,
             1L,

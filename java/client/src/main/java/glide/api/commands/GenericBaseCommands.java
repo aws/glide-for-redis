@@ -269,4 +269,21 @@ public interface GenericBaseCommands {
      * }</pre>
      */
     CompletableFuture<Long> ttl(String key);
+
+    /**
+     * Remove the existing timeout on <code>key</code>, turning the <code>key</code> from volatile (a
+     * <code>key</code> with an expire set) to persistent (a <code>key</code> that will never expire
+     * as no timeout is associated).
+     *
+     * @see <a href="https://redis.io/commands/persist/">redis.io</a> for details.
+     * @param key The <code>key</code> to remove the existing timeout on.
+     * @return <code>false</code> if <code>key</code> does not exist or does not have an associated
+     *     timeout, <code>true</code> if the timeout has been removed.
+     * @example
+     *     <pre>{@code
+     * Boolean timeoutRemoved = client.persist("my_key").get();
+     * assert timeoutRemoved; // Indicates that the timeout associated with the key "my_key" was successfully removed.
+     * }</pre>
+     */
+    CompletableFuture<Boolean> persist(String key);
 }

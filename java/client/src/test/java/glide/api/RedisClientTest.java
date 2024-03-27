@@ -51,6 +51,7 @@ import static redis_request.RedisRequestOuterClass.RequestType.MGet;
 import static redis_request.RedisRequestOuterClass.RequestType.MSet;
 import static redis_request.RedisRequestOuterClass.RequestType.PExpire;
 import static redis_request.RedisRequestOuterClass.RequestType.PExpireAt;
+import static redis_request.RedisRequestOuterClass.RequestType.Persist;
 import static redis_request.RedisRequestOuterClass.RequestType.Ping;
 import static redis_request.RedisRequestOuterClass.RequestType.RPop;
 import static redis_request.RedisRequestOuterClass.RequestType.RPush;
@@ -549,6 +550,28 @@ public class RedisClientTest {
         // verify
         assertEquals(testResponse, response);
         assertEquals(ttl, response.get());
+    }
+
+    @SneakyThrows
+    @Test
+    public void persist_returns_success() {
+        // setup
+        String key = "testKey";
+        Boolean isTimeoutRemoved = true;
+
+        CompletableFuture<Boolean> testResponse = mock(CompletableFuture.class);
+        when(testResponse.get()).thenReturn(isTimeoutRemoved);
+
+        // match on protobuf request
+        when(commandManager.<Boolean>submitNewCommand(eq(Persist), eq(new String[] {key}), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<Boolean> response = service.persist(key);
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(isTimeoutRemoved, response.get());
     }
 
     @SneakyThrows

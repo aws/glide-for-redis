@@ -1,19 +1,17 @@
-﻿/**
- * Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0
- */
+﻿// Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0
 
 using System.Diagnostics;
 
 // Note: All IT should be in the same namespace
-namespace tests.Integration;
+namespace Tests.Integration;
 
 [SetUpFixture]
 public class IntegrationTestBase
 {
     internal class TestConfiguration
     {
-        public static List<uint> STANDALONE_PORTS { get; internal set; } = new();
-        public static List<uint> CLUSTER_PORTS { get; internal set; } = new();
+        public static List<uint> STANDALONE_PORTS { get; internal set; } = [];
+        public static List<uint> CLUSTER_PORTS { get; internal set; } = [];
         public static Version REDIS_VERSION { get; internal set; } = new();
     }
 
@@ -39,11 +37,9 @@ public class IntegrationTestBase
     }
 
     [OneTimeTearDown]
-    public void TearDown()
-    {
+    public void TearDown() =>
         // Stop all
         StopRedis(true);
-    }
 
     private readonly string _scriptDir;
 
@@ -52,10 +48,14 @@ public class IntegrationTestBase
     {
         string? projectDir = Directory.GetCurrentDirectory();
         while (!(Path.GetFileName(projectDir) == "csharp" || projectDir == null))
+        {
             projectDir = Path.GetDirectoryName(projectDir);
+        }
 
         if (projectDir == null)
+        {
             throw new FileNotFoundException("Can't detect the project dir. Are you running tests from `csharp` directory?");
+        }
 
         _scriptDir = Path.Combine(projectDir, "..", "utils");
     }
@@ -72,7 +72,7 @@ public class IntegrationTestBase
     internal void StopRedis(bool keepLogs, string? name = null)
     {
         string cmd = $"stop --prefix {name ?? "redis-cluster"} {(keepLogs ? "--keep-folder" : "")}";
-        RunClusterManager(cmd, true);
+        _ = RunClusterManager(cmd, true);
     }
 
     private string RunClusterManager(string cmd, bool ignoreExitCode)
@@ -94,23 +94,26 @@ public class IntegrationTestBase
 
         TestContext.Progress.WriteLine($"cluster_manager.py stdout\n====\n{output}\n====\ncluster_manager.py stderr\n====\n{error}\n====\n");
 
-        if (!ignoreExitCode && exit_code != 0)
-            throw new ApplicationException($"cluster_manager.py script failed: exit code {exit_code}.");
-
-        return output ?? "";
+        return !ignoreExitCode && exit_code != 0
+            ? throw new ApplicationException($"cluster_manager.py script failed: exit code {exit_code}.")
+            : output ?? "";
     }
 
     private static List<uint> ParsePortsFromOutput(string output)
     {
-        List<uint> ports = new();
+        List<uint> ports = [];
         foreach (string line in output.Split("\n"))
         {
             if (!line.StartsWith("CLUSTER_NODES="))
+            {
                 continue;
+            }
 
             string[] addresses = line.Split("=")[1].Split(",");
             foreach (string address in addresses)
+            {
                 ports.Add(uint.Parse(address.Split(":")[1]));
+            }
         }
         return ports;
     }

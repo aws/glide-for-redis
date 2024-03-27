@@ -1,6 +1,5 @@
-/**
- * Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0
- */
+// Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0
+
 
 using System.Runtime.InteropServices;
 using System.Text;
@@ -29,7 +28,7 @@ public class Logger
 {
     #region private fields
 
-    private static Level? loggerLevel = null;
+    private static Level? s_loggerLevel = null;
     #endregion private fields
 
     #region internal methods
@@ -38,7 +37,7 @@ public class Logger
     // If given a fileName argument, will write the logs to files postfixed with fileName. If fileName isn't provided, the logs will be written to the console.
     internal static void Init(Level? level, string? filename = null)
     {
-        if (Logger.loggerLevel is null)
+        if (s_loggerLevel is null)
         {
             SetLoggerConfig(level, filename);
         }
@@ -51,11 +50,15 @@ public class Logger
     // when the log is connect to certain task the identifier should be the task id, when the log is not part of specific task the identifier should give a context to the log - for example, "create client".
     internal static void Log(Level logLevel, string logIdentifier, string message)
     {
-        if (Logger.loggerLevel is null)
+        if (s_loggerLevel is null)
         {
             SetLoggerConfig(logLevel);
         }
-        if (!(logLevel <= Logger.loggerLevel)) return;
+        if (!(logLevel <= s_loggerLevel))
+        {
+            return;
+        }
+
         log(Convert.ToInt32(logLevel), Encoding.UTF8.GetBytes(logIdentifier), Encoding.UTF8.GetBytes(message));
     }
     #endregion internal methods
@@ -69,17 +72,17 @@ public class Logger
     // the filename argument is optional - if provided the target of the logs will be the file mentioned, else will be the console
     public static void SetLoggerConfig(Level? level, string? filename = null)
     {
-        var buffer = filename is null ? null : Encoding.UTF8.GetBytes(filename);
-        Logger.loggerLevel = InitInternalLogger(Convert.ToInt32(level), buffer);
+        byte[]? buffer = filename is null ? null : Encoding.UTF8.GetBytes(filename);
+        s_loggerLevel = InitInternalLogger(Convert.ToInt32(level), buffer);
     }
     #endregion public methods
 
     #region FFI function declaration
     [DllImport("libglide_rs", CallingConvention = CallingConvention.Cdecl, EntryPoint = "log")]
-    private static extern void log(Int32 logLevel, byte[] logIdentifier, byte[] message);
+    private static extern void log(int logLevel, byte[] logIdentifier, byte[] message);
 
     [DllImport("libglide_rs", CallingConvention = CallingConvention.Cdecl, EntryPoint = "init")]
-    private static extern Level InitInternalLogger(Int32 level, byte[]? filename);
+    private static extern Level InitInternalLogger(int level, byte[]? filename);
 
     #endregion
 }

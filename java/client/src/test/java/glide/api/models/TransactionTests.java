@@ -38,6 +38,7 @@ import static redis_request.RedisRequestOuterClass.RequestType.MGet;
 import static redis_request.RedisRequestOuterClass.RequestType.MSet;
 import static redis_request.RedisRequestOuterClass.RequestType.PExpire;
 import static redis_request.RedisRequestOuterClass.RequestType.PExpireAt;
+import static redis_request.RedisRequestOuterClass.RequestType.PTTL;
 import static redis_request.RedisRequestOuterClass.RequestType.Ping;
 import static redis_request.RedisRequestOuterClass.RequestType.RPop;
 import static redis_request.RedisRequestOuterClass.RequestType.RPush;
@@ -285,6 +286,9 @@ public class TransactionTests {
 
         transaction.ttl("key");
         results.add(Pair.of(TTL, ArgsArray.newBuilder().addArgs("key").build()));
+
+        transaction.pttl("key");
+        results.add(Pair.of(PTTL, ArgsArray.newBuilder().addArgs("key").build()));
 
         transaction.clientId();
         results.add(Pair.of(ClientId, ArgsArray.newBuilder().build()));

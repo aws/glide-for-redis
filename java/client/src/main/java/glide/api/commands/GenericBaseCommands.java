@@ -1,7 +1,9 @@
 /** Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0 */
 package glide.api.commands;
 
+import glide.api.models.Script;
 import glide.api.models.commands.ExpireOptions;
+import glide.api.models.commands.ScriptOptions;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -269,4 +271,51 @@ public interface GenericBaseCommands {
      * }</pre>
      */
     CompletableFuture<Long> ttl(String key);
+
+    /**
+     * Invokes a Lua script with its keys and arguments.<br>
+     * This method simplifies the process of invoking scripts on a Redis server by using an object
+     * that represents a Lua script. The script loading and execution will all be handled internally.
+     * If the script has not already been loaded, it will be loaded automatically using the Redis
+     * <code>SCRIPT LOAD</code> command. After that, it will be invoked using the Redis <code>EVALSHA
+     * </code> command.
+     *
+     * @see <a href="https://redis.io/commands/script-load/">SCRIPT LOAD</a> and <a
+     *     href="https://redis.io/commands/evalsha/">EVALSHA</a> for details.
+     * @param script The Lua script to execute.
+     * @return a value that depends on the script that was executed.
+     * @example
+     *     <pre>{@code
+     * try(Script luaScript = new Script("return 'Hello'")) {
+     *     String result = (String) client.invokeScript(luaScript).get();
+     *     assert result == "Hello";
+     * }
+     * }</pre>
+     */
+    CompletableFuture<Object> invokeScript(Script script);
+
+    /**
+     * Invokes a Lua script with its keys and arguments.<br>
+     * This method simplifies the process of invoking scripts on a Redis server by using an object
+     * that represents a Lua script. The script loading, argument preparation, and execution will all
+     * be handled internally. If the script has not already been loaded, it will be loaded
+     * automatically using the Redis <code>SCRIPT LOAD</code> command. After that, it will be invoked
+     * using the Redis <code>EVALSHA</code> command.
+     *
+     * @see <a href="https://redis.io/commands/script-load/">SCRIPT LOAD</a> and <a
+     *     href="https://redis.io/commands/evalsha/">EVALSHA</a> for details.
+     * @param script The Lua script to execute.
+     * @param options The script option that contains keys and arguments for the script.
+     * @return a value that depends on the script that was executed.
+     * @example
+     *     <pre>{@code
+     * try(Script luaScript = new Script("return { KEYS[1], ARGV[1] }")) {
+     *     ScriptOptions scriptOptions = ScriptOptions.builder().key("foo").arg("bar").build();
+     *     Object[] result = (Object[]) client.invokeScript(luaScript, scriptOptions).get();
+     *     assert result[0] == "foo";
+     *     assert result[1] == "bar";
+     * }
+     * }</pre>
+     */
+    CompletableFuture<Object> invokeScript(Script script, ScriptOptions options);
 }

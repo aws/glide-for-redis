@@ -1746,6 +1746,8 @@ class CoreCommands(Protocol):
         If the script has not already been loaded, it will be loaded automatically using the Redis `SCRIPT LOAD` command.
         After that, it will be invoked using the Redis `EVALSHA` command.
 
+        See https://redis.io/commands/script-load/ and https://redis.io/commands/evalsha/ for more details.
+
         Args:
             script (Script): The Lua script to execute.
             keys (List[str]): The keys that are used in the script.

@@ -19,7 +19,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import glide.api.BaseClient;
 import glide.api.RedisClient;
 import glide.api.RedisClusterClient;
+import glide.api.models.Script;
 import glide.api.models.commands.ExpireOptions;
+import glide.api.models.commands.ScriptOptions;
 import glide.api.models.commands.SetOptions;
 import glide.api.models.commands.ZaddOptions;
 import glide.api.models.configuration.NodeAddress;
@@ -859,6 +861,43 @@ public class SharedCommandTests {
         assertFalse(client.pexpireAt(key, Instant.now().toEpochMilli() + 10000L).get());
 
         assertEquals(-2L, client.ttl(key).get());
+    }
+
+    @SneakyThrows
+    @ParameterizedTest
+    @MethodSource("getClients")
+    public void invokeScript_test(BaseClient client) {
+        String key1 = UUID.randomUUID().toString();
+        String key2 = UUID.randomUUID().toString();
+
+        try (Script script = new Script("return 'Hello'")) {
+            Object response = client.invokeScript(script).get();
+            assertEquals("Hello", response);
+        }
+
+        try (Script script = new Script("return redis.call('SET', KEYS[1], ARGV[1])")) {
+            Object setResponse1 =
+                    client
+                            .invokeScript(script, ScriptOptions.builder().key(key1).arg("value1").build())
+                            .get();
+            assertEquals(OK, setResponse1);
+
+            Object setResponse2 =
+                    client
+                            .invokeScript(script, ScriptOptions.builder().key(key2).arg("value2").build())
+                            .get();
+            assertEquals(OK, setResponse2);
+        }
+
+        try (Script script = new Script("return redis.call('GET', KEYS[1])")) {
+            Object getResponse1 =
+                    client.invokeScript(script, ScriptOptions.builder().key(key1).build()).get();
+            assertEquals("value1", getResponse1);
+
+            Object getResponse2 =
+                    client.invokeScript(script, ScriptOptions.builder().key(key2).build()).get();
+            assertEquals("value2", getResponse2);
+        }
     }
 
     @SneakyThrows

@@ -987,6 +987,7 @@ export class BaseClient {
      * This method simplifies the process of invoking scripts on a Redis server by using an object that represents a Lua script.
      * The script loading, argument preparation, and execution will all be handled internally. If the script has not already been loaded,
      * it will be loaded automatically using the Redis `SCRIPT LOAD` command. After that, it will be invoked using the Redis `EVALSHA` command
+     * See https://redis.io/commands/script-load/ and https://redis.io/commands/evalsha/ for details.
      *
      * @param script - The Lua script to execute.
      * @param options - The script option that contains keys and arguments for the script.

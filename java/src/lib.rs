@@ -3,7 +3,7 @@
  */
 use glide_core::start_socket_listener;
 
-use jni::objects::{JClass, JObject, JObjectArray, JThrowable};
+use jni::objects::{JClass, JObject, JObjectArray, JString, JThrowable};
 use jni::sys::jlong;
 use jni::JNIEnv;
 use log::error;
@@ -152,4 +152,25 @@ fn throw_java_exception(mut env: JNIEnv, message: String) {
             );
         }
     };
+}
+
+#[no_mangle]
+pub extern "system" fn Java_glide_ffi_resolvers_ScriptResolver_storeScript<'local>(
+    mut env: JNIEnv<'local>,
+    _class: JClass<'local>,
+    code: JString,
+) -> JObject<'local> {
+    let code_str: String = env.get_string(&code).unwrap().into();
+    let hash = glide_core::scripts_container::add_script(&code_str);
+    JObject::from(env.new_string(hash).unwrap())
+}
+
+#[no_mangle]
+pub extern "system" fn Java_glide_ffi_resolvers_ScriptResolver_dropScript<'local>(
+    mut env: JNIEnv<'local>,
+    _class: JClass<'local>,
+    hash: JString,
+) {
+    let hash_str: String = env.get_string(&hash).unwrap().into();
+    glide_core::scripts_container::remove_script(&hash_str);
 }

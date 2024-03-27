@@ -42,6 +42,7 @@ import static redis_request.RedisRequestOuterClass.RequestType.SMembers;
 import static redis_request.RedisRequestOuterClass.RequestType.SRem;
 import static redis_request.RedisRequestOuterClass.RequestType.SetString;
 import static redis_request.RedisRequestOuterClass.RequestType.TTL;
+import static redis_request.RedisRequestOuterClass.RequestType.Type;
 import static redis_request.RedisRequestOuterClass.RequestType.Unlink;
 import static redis_request.RedisRequestOuterClass.RequestType.Zadd;
 import static redis_request.RedisRequestOuterClass.RequestType.Zcard;
@@ -585,5 +586,10 @@ public abstract class BaseClient
     @Override
     public CompletableFuture<Long> zcard(@NonNull String key) {
         return commandManager.submitNewCommand(Zcard, new String[] {key}, this::handleLongResponse);
+    }
+
+    @Override
+    public CompletableFuture<String> type(@NonNull String key) {
+        return commandManager.submitNewCommand(Type, new String[] {key}, this::handleStringResponse);
     }
 }

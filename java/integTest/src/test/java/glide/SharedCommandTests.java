@@ -12,6 +12,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -1010,5 +1011,41 @@ public class SharedCommandTests {
         ExecutionException executionException =
                 assertThrows(ExecutionException.class, () -> client.zcard("foo").get());
         assertTrue(executionException.getCause() instanceof RequestException);
+    }
+
+    @SneakyThrows
+    @ParameterizedTest
+    @MethodSource("getClients")
+    public void type(BaseClient client) {
+        String nonExistingKey = UUID.randomUUID().toString();
+        String stringKey = UUID.randomUUID().toString();
+        String listKey = UUID.randomUUID().toString();
+        String hashKey = UUID.randomUUID().toString();
+        String setKey = UUID.randomUUID().toString();
+        String zsetKey = UUID.randomUUID().toString();
+        String streamKey = UUID.randomUUID().toString();
+
+        assertEquals(OK, client.set(stringKey, "value").get());
+        assertEquals(1, client.lpush(listKey, new String[] {"value"}).get());
+        assertEquals(1, client.hset(hashKey, Map.of("1", "2")).get());
+        assertEquals(1, client.sadd(setKey, new String[] {"value"}).get());
+        assertEquals(1, client.zadd(zsetKey, Map.of("1", 2.)).get());
+
+        // TODO: update after adding XADD
+        // use custom command until XADD is implemented
+        String[] args = new String[] {"XADD", streamKey, "*", "field", "value"};
+        if (client instanceof RedisClient) {
+            assertNotNull(((RedisClient) client).customCommand(args).get());
+        } else if (client instanceof RedisClusterClient) {
+            assertNotNull(((RedisClusterClient) client).customCommand(args).get().getSingleValue());
+        }
+
+        assertTrue("none".equalsIgnoreCase(client.type(nonExistingKey).get()));
+        assertTrue("string".equalsIgnoreCase(client.type(stringKey).get()));
+        assertTrue("list".equalsIgnoreCase(client.type(listKey).get()));
+        assertTrue("hash".equalsIgnoreCase(client.type(hashKey).get()));
+        assertTrue("set".equalsIgnoreCase(client.type(setKey).get()));
+        assertTrue("zset".equalsIgnoreCase(client.type(zsetKey).get()));
+        assertTrue("stream".equalsIgnoreCase(client.type(streamKey).get()));
     }
 }

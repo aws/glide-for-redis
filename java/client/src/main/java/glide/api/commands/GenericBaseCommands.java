@@ -269,4 +269,22 @@ public interface GenericBaseCommands {
      * }</pre>
      */
     CompletableFuture<Long> ttl(String key);
+
+    /**
+     * Returns the string representation of the type of the value stored at <code>key</code>.
+     *
+     * @see <a href="https://redis.io/commands/type/>redis.io</a> for details.
+     * @param key The <code>key</code> to check its data type.
+     * @return If the <code>key</code> exists, the type of the stored value is returned. Otherwise, a
+     *     "none" string is returned.
+     * @example
+     *     <pre>{@code
+     * String type = client.type("StringKey").get();
+     * assert type.equals("string");
+     *
+     * type = client.type("ListKey").get();
+     * assert type.equals("list");
+     * }</pre>
+     */
+    CompletableFuture<String> type(String key);
 }

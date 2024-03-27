@@ -49,6 +49,7 @@ import static redis_request.RedisRequestOuterClass.RequestType.SMembers;
 import static redis_request.RedisRequestOuterClass.RequestType.SRem;
 import static redis_request.RedisRequestOuterClass.RequestType.SetString;
 import static redis_request.RedisRequestOuterClass.RequestType.TTL;
+import static redis_request.RedisRequestOuterClass.RequestType.Type;
 import static redis_request.RedisRequestOuterClass.RequestType.Unlink;
 import static redis_request.RedisRequestOuterClass.RequestType.Zadd;
 import static redis_request.RedisRequestOuterClass.RequestType.Zcard;
@@ -1238,6 +1239,20 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
     public T zcard(@NonNull String key) {
         ArgsArray commandArgs = buildArgs(new String[] {key});
         protobufTransaction.addCommands(buildCommand(Zcard, commandArgs));
+        return getThis();
+    }
+
+    /**
+     * Returns the string representation of the type of the value stored at <code>key</code>.
+     *
+     * @see <a href="https://redis.io/commands/type/>redis.io</a> for details.
+     * @param key The <code>key</code> to check its data type.
+     * @return Command Response - If the <code>key</code> exists, the type of the stored value is
+     *     returned. Otherwise, a "none" string is returned.
+     */
+    public T type(@NonNull String key) {
+        ArgsArray commandArgs = buildArgs(key);
+        protobufTransaction.addCommands(buildCommand(Type, commandArgs));
         return getThis();
     }
 

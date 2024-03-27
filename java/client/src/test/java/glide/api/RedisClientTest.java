@@ -25,6 +25,7 @@ import static redis_request.RedisRequestOuterClass.RequestType.CustomCommand;
 import static redis_request.RedisRequestOuterClass.RequestType.Decr;
 import static redis_request.RedisRequestOuterClass.RequestType.DecrBy;
 import static redis_request.RedisRequestOuterClass.RequestType.Del;
+import static redis_request.RedisRequestOuterClass.RequestType.Echo;
 import static redis_request.RedisRequestOuterClass.RequestType.Exists;
 import static redis_request.RedisRequestOuterClass.RequestType.Expire;
 import static redis_request.RedisRequestOuterClass.RequestType.ExpireAt;
@@ -123,6 +124,28 @@ public class RedisClientTest {
 
     @SneakyThrows
     @Test
+    public void echo_returns_success() {
+        // setup
+        String message = "GLIDE FOR REDIS";
+        String[] arguments = new String[] {message};
+        CompletableFuture<String> testResponse = new CompletableFuture<>();
+        testResponse.complete(message);
+
+        // match on protobuf request
+        when(commandManager.<String>submitNewCommand(eq(Echo), eq(arguments), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<String> response = service.echo(message);
+        String echo = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(message, echo);
+    }
+
+    @SneakyThrows
+    @Test
     public void ping_returns_success() {
         // setup
         CompletableFuture<String> testResponse = mock(CompletableFuture.class);
@@ -147,7 +170,7 @@ public class RedisClientTest {
         // setup
         String message = "RETURN OF THE PONG";
         String[] arguments = new String[] {message};
-        CompletableFuture<String> testResponse = new CompletableFuture();
+        CompletableFuture<String> testResponse = new CompletableFuture<>();
         testResponse.complete(message);
 
         // match on protobuf request

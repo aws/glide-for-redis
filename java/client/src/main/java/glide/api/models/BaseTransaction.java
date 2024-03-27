@@ -14,6 +14,7 @@ import static redis_request.RedisRequestOuterClass.RequestType.CustomCommand;
 import static redis_request.RedisRequestOuterClass.RequestType.Decr;
 import static redis_request.RedisRequestOuterClass.RequestType.DecrBy;
 import static redis_request.RedisRequestOuterClass.RequestType.Del;
+import static redis_request.RedisRequestOuterClass.RequestType.Echo;
 import static redis_request.RedisRequestOuterClass.RequestType.Exists;
 import static redis_request.RedisRequestOuterClass.RequestType.Expire;
 import static redis_request.RedisRequestOuterClass.RequestType.ExpireAt;
@@ -109,6 +110,19 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
 
         ArgsArray commandArgs = buildArgs(args);
         protobufTransaction.addCommands(buildCommand(CustomCommand, commandArgs));
+        return getThis();
+    }
+
+    /**
+     * Echoes the provided <code>message</code> back.
+     *
+     * @see <a href="https://redis.io/commands/echo>redis.io</a> for details.
+     * @param message The message to be echoed back.
+     * @return Command Response - The provided <code>message</code>.
+     */
+    public T echo(@NonNull String message) {
+        ArgsArray commandArgs = buildArgs(message);
+        protobufTransaction.addCommands(buildCommand(Echo, commandArgs));
         return getThis();
     }
 

@@ -242,4 +242,12 @@ public class CommandTests {
         response = regularClient.configSet(Map.of("maxclients", oldValue)).get();
         assertEquals(OK, response);
     }
+
+    @SneakyThrows
+    @Test
+    public void echo() {
+        String message = "GLIDE";
+        String response = regularClient.echo(message).get();
+        assertEquals(message, response);
+    }
 }

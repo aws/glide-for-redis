@@ -9,6 +9,7 @@ import static redis_request.RedisRequestOuterClass.RequestType.ConfigResetStat;
 import static redis_request.RedisRequestOuterClass.RequestType.ConfigRewrite;
 import static redis_request.RedisRequestOuterClass.RequestType.ConfigSet;
 import static redis_request.RedisRequestOuterClass.RequestType.CustomCommand;
+import static redis_request.RedisRequestOuterClass.RequestType.Echo;
 import static redis_request.RedisRequestOuterClass.RequestType.Info;
 import static redis_request.RedisRequestOuterClass.RequestType.Ping;
 import static redis_request.RedisRequestOuterClass.RequestType.Select;
@@ -116,5 +117,11 @@ public class RedisClient extends BaseClient
     public CompletableFuture<String> configSet(@NonNull Map<String, String> parameters) {
         return commandManager.submitNewCommand(
                 ConfigSet, convertMapToKeyValueStringArray(parameters), this::handleStringResponse);
+    }
+
+    @Override
+    public CompletableFuture<String> echo(@NonNull String message) {
+        return commandManager.submitNewCommand(
+                Echo, new String[] {message}, this::handleStringResponse);
     }
 }

@@ -63,4 +63,18 @@ public interface ConnectionManagementCommands {
      * }</pre>
      */
     CompletableFuture<String> clientGetName();
+
+    /**
+     * Echoes the provided <code>message</code> back.
+     *
+     * @see <a href="https://redis.io/commands/echo/>redis.io</a> for details.
+     * @param message The message to be echoed back.
+     * @return The provided <code>message</code>.
+     * @example
+     *     <pre>{@code
+     * String payload = client.echo("GLIDE").get();
+     * assert payload.equals("GLIDE");
+     * }</pre>
+     */
+    CompletableFuture<String> echo(String message);
 }

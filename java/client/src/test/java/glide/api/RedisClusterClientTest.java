@@ -18,6 +18,7 @@ import static redis_request.RedisRequestOuterClass.RequestType.ConfigGet;
 import static redis_request.RedisRequestOuterClass.RequestType.ConfigResetStat;
 import static redis_request.RedisRequestOuterClass.RequestType.ConfigRewrite;
 import static redis_request.RedisRequestOuterClass.RequestType.ConfigSet;
+import static redis_request.RedisRequestOuterClass.RequestType.Echo;
 import static redis_request.RedisRequestOuterClass.RequestType.Info;
 import static redis_request.RedisRequestOuterClass.RequestType.Ping;
 
@@ -233,6 +234,51 @@ public class RedisClusterClientTest {
         // verify
         assertEquals(testResponse, response);
         assertEquals(message, pong);
+    }
+
+    @SneakyThrows
+    @Test
+    public void echo_returns_success() {
+        // setup
+        String message = "GLIDE FOR REDIS";
+        String[] arguments = new String[] {message};
+        CompletableFuture<String> testResponse = new CompletableFuture<>();
+        testResponse.complete(message);
+
+        // match on protobuf request
+        when(commandManager.<String>submitNewCommand(eq(Echo), eq(arguments), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<String> response = service.echo(message);
+        String echo = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(message, echo);
+    }
+
+    @SneakyThrows
+    @Test
+    public void echo_with_route_returns_success() {
+        // setup
+        String message = "GLIDE FOR REDIS";
+        String[] arguments = new String[] {message};
+        CompletableFuture<ClusterValue<String>> testResponse = new CompletableFuture<>();
+        testResponse.complete(ClusterValue.ofSingleValue(message));
+
+        // match on protobuf request
+        when(commandManager.<ClusterValue<String>>submitNewCommand(
+                        eq(Echo), eq(arguments), eq(RANDOM), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<ClusterValue<String>> response = service.echo(message, RANDOM);
+        String echo = response.get().getSingleValue();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(message, echo);
     }
 
     @SneakyThrows

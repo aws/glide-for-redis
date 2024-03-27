@@ -503,4 +503,24 @@ public class CommandTests {
     public void cluster_fail_routing_by_address_if_no_port_is_provided() {
         assertThrows(RequestException.class, () -> clusterClient.info(new ByAddressRoute("foo")).get());
     }
+
+    @SneakyThrows
+    @Test
+    public void echo() {
+        String message = "GLIDE";
+        String response = clusterClient.echo(message).get();
+        assertEquals(message, response);
+    }
+
+    @SneakyThrows
+    @Test
+    public void echo_with_route() {
+        String message = "GLIDE";
+
+        String singlePayload = clusterClient.echo(message, RANDOM).get().getSingleValue();
+        assertEquals(message, singlePayload);
+
+        Map<String, String> multiPayload = clusterClient.echo(message, ALL_NODES).get().getMultiValue();
+        multiPayload.forEach((key, value) -> assertEquals(message, value));
+    }
 }

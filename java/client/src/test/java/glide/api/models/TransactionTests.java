@@ -12,6 +12,7 @@ import static redis_request.RedisRequestOuterClass.RequestType.ConfigSet;
 import static redis_request.RedisRequestOuterClass.RequestType.Decr;
 import static redis_request.RedisRequestOuterClass.RequestType.DecrBy;
 import static redis_request.RedisRequestOuterClass.RequestType.Del;
+import static redis_request.RedisRequestOuterClass.RequestType.Echo;
 import static redis_request.RedisRequestOuterClass.RequestType.Exists;
 import static redis_request.RedisRequestOuterClass.RequestType.Expire;
 import static redis_request.RedisRequestOuterClass.RequestType.ExpireAt;
@@ -97,6 +98,9 @@ public class TransactionTests {
 
         transaction.del(new String[] {"key1", "key2"});
         results.add(Pair.of(Del, ArgsArray.newBuilder().addArgs("key1").addArgs("key2").build()));
+
+        transaction.echo("GLIDE");
+        results.add(Pair.of(Echo, ArgsArray.newBuilder().addArgs("GLIDE").build()));
 
         transaction.ping();
         results.add(Pair.of(Ping, ArgsArray.newBuilder().build()));

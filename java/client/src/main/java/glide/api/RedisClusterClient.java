@@ -9,6 +9,7 @@ import static redis_request.RedisRequestOuterClass.RequestType.ConfigResetStat;
 import static redis_request.RedisRequestOuterClass.RequestType.ConfigRewrite;
 import static redis_request.RedisRequestOuterClass.RequestType.ConfigSet;
 import static redis_request.RedisRequestOuterClass.RequestType.CustomCommand;
+import static redis_request.RedisRequestOuterClass.RequestType.Echo;
 import static redis_request.RedisRequestOuterClass.RequestType.Info;
 import static redis_request.RedisRequestOuterClass.RequestType.Ping;
 
@@ -241,5 +242,24 @@ public class RedisClusterClient extends BaseClient
             @NonNull Map<String, String> parameters, @NonNull Route route) {
         return commandManager.submitNewCommand(
                 ConfigSet, convertMapToKeyValueStringArray(parameters), route, this::handleStringResponse);
+    }
+
+    @Override
+    public CompletableFuture<String> echo(@NonNull String message) {
+        return commandManager.submitNewCommand(
+                Echo, new String[] {message}, this::handleStringResponse);
+    }
+
+    @Override
+    public CompletableFuture<ClusterValue<String>> echo(
+            @NonNull String message, @NonNull Route route) {
+        return commandManager.submitNewCommand(
+                Echo,
+                new String[] {message},
+                route,
+                response ->
+                        route.isSingleNodeRoute()
+                                ? ClusterValue.ofSingleValue(handleStringResponse(response))
+                                : ClusterValue.ofMultiValue(handleMapResponse(response)));
     }
 }

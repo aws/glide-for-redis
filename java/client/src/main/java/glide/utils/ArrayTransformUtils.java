@@ -4,6 +4,7 @@ package glide.utils;
 import java.lang.reflect.Array;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /** Utility methods for data conversion. */
@@ -49,6 +50,22 @@ public class ArrayTransformUtils {
         return Arrays.stream(objectArr)
                 .map(clazz::cast)
                 .toArray(size -> (U[]) Array.newInstance(clazz, size));
+    }
+
+    /**
+     * Maps a Map of Arrays with value type T[] to value of U[].
+     *
+     * @param mapOfArrays Map of Array values to cast.
+     * @param clazz The class of the array values to cast to.
+     * @return A Map of arrays of type U[], containing the key/values from the input Map.
+     * @param <T> The base type from which the elements are being cast.
+     * @param <U> The subtype of T to which the elements are cast.
+     */
+    @SuppressWarnings("unchecked")
+    public static <T, U extends T> Map<String, U[]> castMapOfArrays(
+            Map<String, T[]> mapOfArrays, Class<U> clazz) {
+        return mapOfArrays.entrySet().stream()
+                .collect(Collectors.toMap(k -> k.getKey(), e -> castArray(e.getValue(), clazz)));
     }
 
     /**

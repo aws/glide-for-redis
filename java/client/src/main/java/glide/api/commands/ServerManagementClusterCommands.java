@@ -240,4 +240,46 @@ public interface ServerManagementClusterCommands {
      * }</pre>
      */
     CompletableFuture<String> configSet(Map<String, String> parameters, Route route);
+
+    /**
+     * Returns the server time.<br>
+     * The command will be routed to a random node.
+     *
+     * @see <a href="https://redis.io/commands/time/">redis.io</a> for details.
+     * @return The current server time as a <code>String</code> array with two elements: A Unix
+     *     timestamp and the amount of microseconds already elapsed in the current second. The
+     *     returned array is in a [Unix timestamp, Microseconds already elapsed] format.
+     * @example
+     *     <pre>{@code
+     * String[] serverTime = client.time().get();
+     * System.out.println("Server time is: " + serverTime[0] + "." + serverTime[1]);
+     * }</pre>
+     */
+    CompletableFuture<String[]> time();
+
+    /**
+     * Returns the server time.
+     *
+     * @see <a href="https://redis.io/commands/time/">redis.io</a> for details.
+     * @param route Specifies the routing configuration for the command. The client will route the
+     *     command to the nodes defined by <code>route</code>.
+     * @return The current server time as a <code>String</code> array with two elements: A Unix
+     *     timestamp and the amount of microseconds already elapsed in the current second. The
+     *     returned array is in a [Unix timestamp, Microseconds already elapsed] format.
+     * @example
+     *     <pre>{@code
+     * // Command sent to a single random node via RANDOM route, expecting a SingleValue result.
+     * String[] serverTime = client.time().get(RANDOM).getSingleValue();
+     * System.out.println("Server time is: " + serverTime[0] + "." + serverTime[1]);
+     *
+     * // Command sent to all nodes via ALL_NODES route, expecting a MultiValue result.
+     * Map<String, String[]> serverTimeForAllNodes = client.time(ALL_NODES).get().getMultiValue();
+     * for(var serverTimePerNode : serverTimeForAllNodes.getMultiValue().entrySet()) {
+     *     String node = serverTimePerNode.getKey();
+     *     String serverTimePerNodeStr = serverTimePerNode.getValue()[0] + "." + serverTimePerNode.getValue()[1];
+     *     System.out.println("Server time for node [" + node + "]: " + serverTimePerNodeStr);
+     * }
+     * }</pre>
+     */
+    CompletableFuture<ClusterValue<String[]>> time(Route route);
 }

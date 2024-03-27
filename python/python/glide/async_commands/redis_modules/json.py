@@ -139,6 +139,49 @@ async def get(
     return cast(str, await client.custom_command(args))
 
 
+async def strlen(
+    client: TRedisClient,
+    key: str,
+    path: Optional[str] = None,
+) -> TJsonResponse[int]:
+    """
+    Returns the length of the JSON string value stored at the specified `path` within the JSON document stored at `key`.
+
+    See https://redis.io/commands/json.strlen/ for more details.
+
+    Args:
+        client (TRedisClient): The Redis client to execute the command.
+        key (str): The key of the JSON document.
+        path (Optional[str]): The JSONPath to specify. Default is root `$`.
+
+    Returns:
+        TJsonResponse[int]: For JSONPath (`path` starts with `$`), returns a list of integer replies for every possible path, indicating the length of the JSON string value,
+        or None for JSON values matching the path that are not string.
+        For legacy path (`path` doesn't starts with `$`), returns the length of the JSON value at `path`.
+        Note that when sending legacy path syntax, if the JSON value at `path` is not a string, an error is raised.
+        For more information about the returned type, see `TJsonResponse`.
+
+    Examples:
+        >>> from glide import json as redisJson
+        >>> import json
+        >>> await redisJson.set(client, "doc", "$", json.dumps({"a":"foo", "nested": {"a": "hello"}, "nested2": {"a": 31}}))
+            'OK'
+        >>> await redisJson.strlen(client, "doc", "$..a")
+            [3, 5, None]  # Indicates the length of the string values at path '$..key' in the key stored at `doc`.
+        >>> await redisJson.strlen(client, "doc", "nested.a")
+            5  # Indicates the length of the JSON value at path 'nested.a' in the key stored at `doc`.
+        >>> await redisJson.strlen(client, "doc", "$")
+            []  # Returns an empty array since the value at root path does in the JSON document stored at `doc` is not a string.
+    """
+
+    return cast(
+        TJsonResponse[int],
+        await client.custom_command(
+            ["JSON.STRLEN", key, path] if path else ["JSON.STRLEN", key]
+        ),
+    )
+
+
 async def toggle(
     client: TRedisClient,
     key: str,
@@ -158,7 +201,7 @@ async def toggle(
         TJsonResponse[bool]: For JSONPath (`path` starts with `$`), returns a list of boolean replies for every possible path, with the toggled boolean value,
         or None for JSON values matching the path that are not boolean.
         For legacy path (`path` doesn't starts with `$`), returns the value of the toggled boolean in `path`.
-        Note that when sending legacy path syntax, If `path` doesn't exist or the value at `path` isn't a boolean, an error is raised.
+        Note that when sending legacy path syntax, if `path` doesn't exist or the value at `path` isn't a boolean, an error is raised.
         For more information about the returned type, see `TJsonResponse`.
 
     Examples:

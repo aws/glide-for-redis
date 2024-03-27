@@ -31,6 +31,7 @@ public class TransactionTestUtilities {
         baseTransaction.get(key1);
 
         baseTransaction.set(key2, value2, SetOptions.builder().returnOldValue(true).build());
+        baseTransaction.strlen(key2);
         baseTransaction.customCommand(new String[] {"MGET", key1, key2});
 
         baseTransaction.exists(new String[] {key1});
@@ -99,6 +100,7 @@ public class TransactionTestUtilities {
             OK,
             value1,
             null,
+            (long) value1.length(), // strlen(key2)
             new String[] {value1, value2},
             1L,
             1L,

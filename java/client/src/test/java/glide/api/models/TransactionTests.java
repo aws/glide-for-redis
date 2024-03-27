@@ -46,6 +46,7 @@ import static redis_request.RedisRequestOuterClass.RequestType.SCard;
 import static redis_request.RedisRequestOuterClass.RequestType.SMembers;
 import static redis_request.RedisRequestOuterClass.RequestType.SRem;
 import static redis_request.RedisRequestOuterClass.RequestType.SetString;
+import static redis_request.RedisRequestOuterClass.RequestType.Strlen;
 import static redis_request.RedisRequestOuterClass.RequestType.TTL;
 import static redis_request.RedisRequestOuterClass.RequestType.Unlink;
 import static redis_request.RedisRequestOuterClass.RequestType.Zadd;
@@ -133,6 +134,9 @@ public class TransactionTests {
 
         transaction.decrBy("key", 2);
         results.add(Pair.of(DecrBy, ArgsArray.newBuilder().addArgs("key").addArgs("2").build()));
+
+        transaction.strlen("key");
+        results.add(Pair.of(Strlen, ArgsArray.newBuilder().addArgs("key").build()));
 
         transaction.hset("key", Map.of("field", "value"));
         results.add(

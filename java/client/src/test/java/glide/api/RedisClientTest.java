@@ -60,6 +60,7 @@ import static redis_request.RedisRequestOuterClass.RequestType.SMembers;
 import static redis_request.RedisRequestOuterClass.RequestType.SRem;
 import static redis_request.RedisRequestOuterClass.RequestType.Select;
 import static redis_request.RedisRequestOuterClass.RequestType.SetString;
+import static redis_request.RedisRequestOuterClass.RequestType.Strlen;
 import static redis_request.RedisRequestOuterClass.RequestType.TTL;
 import static redis_request.RedisRequestOuterClass.RequestType.Unlink;
 import static redis_request.RedisRequestOuterClass.RequestType.Zadd;
@@ -747,7 +748,7 @@ public class RedisClientTest {
         when(testResponse.get()).thenReturn(value);
 
         // match on protobuf request
-        when(commandManager.<String>submitNewCommand(eq(Decr), eq(new String[] {key}), any()))
+        when(commandManager.<Long>submitNewCommand(eq(Decr), eq(new String[] {key}), any()))
                 .thenReturn(testResponse);
 
         // exercise
@@ -771,12 +772,35 @@ public class RedisClientTest {
         when(testResponse.get()).thenReturn(value);
 
         // match on protobuf request
-        when(commandManager.<String>submitNewCommand(
+        when(commandManager.<Long>submitNewCommand(
                         eq(DecrBy), eq(new String[] {key, Long.toString(amount)}), any()))
                 .thenReturn(testResponse);
 
         // exercise
         CompletableFuture<Long> response = service.decrBy(key, amount);
+        Long payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(value, payload);
+    }
+
+    @SneakyThrows
+    @Test
+    public void strlen_returns_success() {
+        // setup
+        String key = "testKey";
+        Long value = 10L;
+
+        CompletableFuture<Long> testResponse = mock(CompletableFuture.class);
+        when(testResponse.get()).thenReturn(value);
+
+        // match on protobuf request
+        when(commandManager.<Long>submitNewCommand(eq(Strlen), eq(new String[] {key}), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<Long> response = service.strlen(key);
         Long payload = response.get();
 
         // verify

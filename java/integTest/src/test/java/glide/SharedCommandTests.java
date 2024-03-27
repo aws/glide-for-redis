@@ -8,7 +8,6 @@ import static glide.api.BaseClient.OK;
 import static glide.api.models.commands.SetOptions.ConditionalSet.ONLY_IF_DOES_NOT_EXIST;
 import static glide.api.models.commands.SetOptions.ConditionalSet.ONLY_IF_EXISTS;
 import static glide.api.models.commands.SetOptions.Expiry.Milliseconds;
-import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -404,9 +403,28 @@ public class SharedCommandTests {
         assertEquals(-1, client.decr(key1).get());
         assertEquals("-1", client.get(key1).get());
 
-        assertNull(client.get(key2).get(10, SECONDS));
+        assertNull(client.get(key2).get());
         assertEquals(-3, client.decrBy(key2, 3).get());
         assertEquals("-3", client.get(key2).get());
+    }
+
+    @SneakyThrows
+    @ParameterizedTest
+    @MethodSource("getClients")
+    public void strlen(BaseClient client) {
+        String stringKey = UUID.randomUUID().toString();
+        String nonStringKey = UUID.randomUUID().toString();
+        String nonExistingKey = UUID.randomUUID().toString();
+
+        assertEquals(OK, client.set(stringKey, "GLIDE").get());
+        assertEquals(5L, client.strlen(stringKey).get());
+
+        assertEquals(0L, client.strlen(nonExistingKey).get());
+
+        assertEquals(1, client.lpush(nonStringKey, new String[] {"_"}).get());
+        Exception exception =
+                assertThrows(ExecutionException.class, () -> client.strlen(nonStringKey).get());
+        assertTrue(exception.getCause() instanceof RequestException);
     }
 
     @SneakyThrows

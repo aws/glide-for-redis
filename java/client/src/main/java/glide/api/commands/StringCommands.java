@@ -183,4 +183,24 @@ public interface StringCommands {
      * }</pre>
      */
     CompletableFuture<Long> decrBy(String key, long amount);
+
+    /**
+     * Returns the length of the string value stored at <code>key</code>.
+     *
+     * @see <a href="https://redis.io/commands/strlen/">redis.io</a> for details.
+     * @param key The key to check its length.
+     * @return The length of the string value stored at key.<br>
+     *     If <code>key</code> does not exist, it is treated as an empty string, and the command
+     *     returns <code>0</code>.
+     * @example
+     *     <pre>{@code
+     * client.set("key", "GLIDE").get();
+     * Long len = client.strlen("key").get();
+     * assert len == 5L;
+     *
+     * len = client.strlen("non_existing_key").get();
+     * assert len == 0L;
+     * }</pre>
+     */
+    CompletableFuture<Long> strlen(String key);
 }

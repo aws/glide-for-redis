@@ -48,6 +48,7 @@ import static redis_request.RedisRequestOuterClass.RequestType.SCard;
 import static redis_request.RedisRequestOuterClass.RequestType.SMembers;
 import static redis_request.RedisRequestOuterClass.RequestType.SRem;
 import static redis_request.RedisRequestOuterClass.RequestType.SetString;
+import static redis_request.RedisRequestOuterClass.RequestType.Strlen;
 import static redis_request.RedisRequestOuterClass.RequestType.TTL;
 import static redis_request.RedisRequestOuterClass.RequestType.Unlink;
 import static redis_request.RedisRequestOuterClass.RequestType.Zadd;
@@ -339,6 +340,21 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
         ArgsArray commandArgs = buildArgs(key, Long.toString(amount));
 
         protobufTransaction.addCommands(buildCommand(DecrBy, commandArgs));
+        return getThis();
+    }
+
+    /**
+     * Returns the length of the string value stored at <code>key</code>.
+     *
+     * @see <a href="https://redis.io/commands/strlen/">redis.io</a> for details.
+     * @param key The key to check its length.
+     * @return Command Response - The length of the string value stored at key.<br>
+     *     If <code>key</code> does not exist, it is treated as an empty string, and the command
+     *     returns <code>0</code>.
+     */
+    public T strlen(@NonNull String key) {
+        ArgsArray commandArgs = buildArgs(key);
+        protobufTransaction.addCommands(buildCommand(Strlen, commandArgs));
         return getThis();
     }
 

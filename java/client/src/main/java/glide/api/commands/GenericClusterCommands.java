@@ -16,7 +16,7 @@ public interface GenericClusterCommands {
 
     /**
      * Executes a single command, without checking inputs. Every part of the command, including
-     * subcommands, should be added as a separate value in {@code args}.
+     * subcommands, should be added as a separate value in <code>args</code>.
      *
      * <p>The command will be routed to all primaries.
      *
@@ -37,7 +37,7 @@ public interface GenericClusterCommands {
 
     /**
      * Executes a single command, without checking inputs. Every part of the command, including
-     * subcommands, should be added as a separate value in {@code args}.
+     * subcommands, should be added as a separate value in <code>args</code>.
      *
      * <p>Client will route the command to the nodes defined by <code>route</code>.
      *
@@ -61,7 +61,7 @@ public interface GenericClusterCommands {
     CompletableFuture<ClusterValue<Object>> customCommand(String[] args, Route route);
 
     /**
-     * Execute a transaction by processing the queued commands.
+     * Executes a transaction by processing the queued commands.
      *
      * <p>The transaction will be routed to the slot owner of the first key found in the transaction.
      * If no key is found, the command will be sent to a random node.
@@ -88,7 +88,7 @@ public interface GenericClusterCommands {
     CompletableFuture<Object[]> exec(ClusterTransaction transaction);
 
     /**
-     * Execute a transaction by processing the queued commands.
+     * Executes a transaction by processing the queued commands.
      *
      * @see <a href="https://redis.io/topics/Transactions/">redis.io</a> for details on Redis
      *     Transactions.

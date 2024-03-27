@@ -43,12 +43,12 @@ public final class SetOptions {
     @RequiredArgsConstructor
     @Getter
     public enum ConditionalSet {
+        /** Only set the key if it already exists. Equivalent to <code>XX</code> in the Redis API. */
+        ONLY_IF_EXISTS("XX"),
         /**
-         * Only set the key if it does not already exist. Equivalent to <code>XX</code> in the Redis
+         * Only set the key if it does not already exist. Equivalent to <code>NX</code> in the Redis
          * API.
          */
-        ONLY_IF_EXISTS("XX"),
-        /** Only set the key if it already exists. Equivalent to <code>NX</code> in the Redis API. */
         ONLY_IF_DOES_NOT_EXIST("NX");
 
         private final String redisApi;

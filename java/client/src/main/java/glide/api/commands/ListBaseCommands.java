@@ -38,8 +38,8 @@ public interface ListBaseCommands {
      *
      * @see <a href="https://redis.io/commands/lpop/">redis.io</a> for details.
      * @param key The key of the list.
-     * @return The value of the first element. <br>
-     *     If <code>key</code> does not exist, null will be returned. <br>
+     * @return The value of the first element.<br>
+     *     If <code>key</code> does not exist, null will be returned.
      * @example
      *     <pre>{@code
      * String value1 = client.lpop("my_list").get();
@@ -59,7 +59,7 @@ public interface ListBaseCommands {
      * @param key The key of the list.
      * @param count The count of the elements to pop from the list.
      * @return An array of the popped elements will be returned depending on the list's length.<br>
-     *     If <code>key</code> does not exist, null will be returned.<br>
+     *     If <code>key</code> does not exist, null will be returned.
      * @example
      *     <pre>{@code
      * String[] values1 = client.lpopCount("my_list", 2).get();
@@ -73,10 +73,11 @@ public interface ListBaseCommands {
 
     /**
      * Returns the specified elements of the list stored at <code>key</code>.<br>
-     * The offsets <code>start</code> and <code>end</code> are zero-based indexes, with 0 being the
-     * first element of the list, 1 being the next element and so on. These offsets can also be
-     * negative numbers indicating offsets starting at the end of the list, with -1 being the last
-     * element of the list, -2 being the penultimate, and so on.
+     * The offsets <code>start</code> and <code>end</code> are zero-based indexes, with <code>0</code>
+     * being the first element of the list, <code>1</code> being the next element and so on. These
+     * offsets can also be negative numbers indicating offsets starting at the end of the list, with
+     * <code>-1</code> being the last element of the list, <code>-2</code> being the penultimate, and
+     * so on.
      *
      * @see <a href="https://redis.io/commands/lrange/">redis.io</a> for details.
      * @param key The key of the list.
@@ -87,17 +88,17 @@ public interface ListBaseCommands {
      *     <code>end</code>, an empty array will be returned.<br>
      *     If <code>end</code> exceeds the actual end of the list, the range will stop at the actual
      *     end of the list.<br>
-     *     If <code>key</code> does not exist an empty array will be returned.<br>
+     *     If <code>key</code> does not exist an empty array will be returned.
      * @example
      *     <pre>{@code
-     * String[] payload = lient.lrange("my_list", 0, 2).get()
-     * assert payload.equals(new String[] {"value1", "value2", "value3"})
+     * String[] payload = lient.lrange("my_list", 0, 2).get();
+     * assert payload.equals(new String[] {"value1", "value2", "value3"});
      *
-     * String[] payload = client.lrange("my_list", -2, -1).get()
-     * assert payload.equals(new String[] {"value2", "value3"})
+     * String[] payload = client.lrange("my_list", -2, -1).get();
+     * assert payload.equals(new String[] {"value2", "value3"});
      *
-     * String[] payload = client.lrange("non_exiting_key", 0, 2).get()
-     * assert payload.equals(new String[] {})
+     * String[] payload = client.lrange("non_exiting_key", 0, 2).get();
+     * assert payload.equals(new String[] {});
      * }</pre>
      */
     CompletableFuture<String[]> lrange(String key, long start, long end);
@@ -134,7 +135,8 @@ public interface ListBaseCommands {
      * @see <a href="https://redis.io/commands/llen/">redis.io</a> for details.
      * @param key The key of the list.
      * @return The length of the list at <code>key</code>.<br>
-     *     If <code>key</code> does not exist, it is interpreted as an empty list and 0 is returned.
+     *     If <code>key</code> does not exist, it is interpreted as an empty list and <code>0</code>
+     *     is returned.
      * @example
      *     <pre>{@code
      * Long lenList = client.llen("my_list").get();
@@ -151,14 +153,14 @@ public interface ListBaseCommands {
      * If <code>count</code> is negative: Removes elements equal to <code>element</code> moving from
      * tail to head.<br>
      * If <code>count</code> is 0 or <code>count</code> is greater than the occurrences of elements
-     * equal to <code>element</code>, it removes all elements equal to <code>element</code>.<br>
+     * equal to <code>element</code>, it removes all elements equal to <code>element</code>.
      *
      * @see <a href="https://redis.io/commands/lrem/">redis.io</a> for details.
      * @param key The key of the list.
      * @param count The count of the occurrences of elements equal to <code>element</code> to remove.
      * @param element The element to remove from the list.
      * @return The number of the removed elements.<br>
-     *     If <code>key</code> does not exist, 0 is returned.<br>
+     *     If <code>key</code> does not exist, <code>0</code> is returned.
      * @example
      *     <pre>{@code
      * Long num = client.rem("my_list", 2, "value").get();
@@ -179,11 +181,11 @@ public interface ListBaseCommands {
      * @return The length of the list after the push operations.
      * @example
      *     <pre>{@code
-     * Long pushCount1 = client.rpush("my_list", new String[] {"value1", "value2"}).get()
-     * assert pushCount1 == 2L
+     * Long pushCount1 = client.rpush("my_list", new String[] {"value1", "value2"}).get();
+     * assert pushCount1 == 2L;
      *
-     * Long pushCount2 = client.rpush("nonexistent_list", new String[] {"new_value"}).get()
-     * assert pushCount2 == 1L
+     * Long pushCount2 = client.rpush("nonexistent_list", new String[] {"new_value"}).get();
+     * assert pushCount2 == 1L;
      * }</pre>
      */
     CompletableFuture<Long> rpush(String key, String[] elements);
@@ -195,7 +197,7 @@ public interface ListBaseCommands {
      * @see <a href="https://redis.io/commands/rpop/">redis.io</a> for details.
      * @param key The key of the list.
      * @return The value of the last element.<br>
-     *     If <code>key</code> does not exist, null will be returned.<br>
+     *     If <code>key</code> does not exist, <code>null</code> will be returned.
      * @example
      *     <pre>{@code
      * String value1 = client.rpop("my_list").get();
@@ -213,8 +215,8 @@ public interface ListBaseCommands {
      *
      * @see <a href="https://redis.io/commands/rpop/">redis.io</a> for details.
      * @param count The count of the elements to pop from the list.
-     * @returns An array of popped elements will be returned depending on the list's length.<br>
-     *     If <code>key</code> does not exist, null will be returned.<br>
+     * @return An array of popped elements will be returned depending on the list's length.<br>
+     *     If <code>key</code> does not exist, <code>null</code> will be returned.
      * @example
      *     <pre>{@code
      * String[] values1 = client.rpopCount("my_list", 2).get();

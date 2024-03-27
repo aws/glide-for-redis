@@ -14,7 +14,8 @@ import java.util.concurrent.CompletableFuture;
 public interface ServerManagementCommands {
 
     /**
-     * Get information and statistics about the Redis server using the {@link Section#DEFAULT} option.
+     * Gets information and statistics about the Redis server using the {@link Section#DEFAULT}
+     * option.
      *
      * @see <a href="https://redis.io/commands/info/">redis.io</a> for details.
      * @return Response from Redis containing a <code>String</code> with the information for the
@@ -44,7 +45,7 @@ public interface ServerManagementCommands {
     CompletableFuture<String> info(InfoOptions options);
 
     /**
-     * Change the currently selected Redis database.
+     * Changes the currently selected Redis database.
      *
      * @see <a href="https://redis.io/commands/select/">redis.io</a> for details.
      * @param index The index of the database to select.

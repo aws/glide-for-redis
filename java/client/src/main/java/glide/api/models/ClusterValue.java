@@ -8,7 +8,7 @@ import java.util.Map;
  * Represents a returned value object from a Redis server with cluster-mode enabled. The response
  * type may depend on the submitted {@link Route}.
  *
- * @remark ClusterValue stores values in a union-like object. It contains a single-value or
+ * @remarks ClusterValue stores values in a union-like object. It contains a single-value or
  *     multi-value response from Redis. If the command's routing is to a single node use {@link
  *     #getSingleValue()} to return a response of type <code>T</code>. Otherwise, use {@link
  *     #getMultiValue()} to return a <code>Map</code> of <code>address: nodeResponse</code> where

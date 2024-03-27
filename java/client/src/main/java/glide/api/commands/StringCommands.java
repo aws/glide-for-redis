@@ -16,8 +16,8 @@ import java.util.concurrent.CompletableFuture;
 public interface StringCommands {
 
     /**
-     * Get the value associated with the given <code>key</code>, or <code>null</code> if no such value
-     * exists.
+     * Gets the value associated with the given <code>key</code>, or <code>null</code> if no such
+     * value exists.
      *
      * @see <a href="https://redis.io/commands/get/">redis.io</a> for details.
      * @param key The <code>key</code> to retrieve from the database.
@@ -25,17 +25,17 @@ public interface StringCommands {
      *     <code>key</code> as a <code>String</code>. Otherwise, return <code>null</code>.
      * @example
      *     <pre>{@code
-     * String payload = client.get("key").get();
-     * assert payload.equals("value");
+     * String value = client.get("key").get();
+     * assert value.equals("value");
      *
-     * String payload = client.get("non_existing_key").get();
-     * assert payload.equals(null);
+     * String value = client.get("non_existing_key").get();
+     * assert value.equals(null);
      * }</pre>
      */
     CompletableFuture<String> get(String key);
 
     /**
-     * Set the given <code>key</code> with the given value.
+     * Sets the given <code>key</code> with the given value.
      *
      * @see <a href="https://redis.io/commands/set/">redis.io</a> for details.
      * @param key The <code>key</code> to store.
@@ -43,14 +43,14 @@ public interface StringCommands {
      * @return Response from Redis containing <code>"OK"</code>.
      * @example
      *     <pre>{@code
-     * String payload = client.set("key", "value").get();
-     * assert payload.equals("OK");
+     * String value = client.set("key", "value").get();
+     * assert value.equals("OK");
      * }</pre>
      */
     CompletableFuture<String> set(String key, String value);
 
     /**
-     * Set the given key with the given value. Return value is dependent on the passed options.
+     * Sets the given key with the given value. Return value is dependent on the passed options.
      *
      * @see <a href="https://redis.io/commands/set/">redis.io</a> for details.
      * @param key The key to store.
@@ -63,19 +63,15 @@ public interface StringCommands {
      *     is set, return the old value as a <code>String</code>.
      * @example
      *     <pre>{@code
-     * String payload =
-     *         client.set("key", "value", SetOptions.builder()
-     *                 .conditionalSet(ONLY_IF_EXISTS)
-     *                 .expiry(SetOptions.Expiry.Seconds(5L))
-     *                 .build())
-     *                 .get();
-     * assert payload.equals("OK");
+     * SetOptions options = SetOptions.builder().conditionalSet(ONLY_IF_EXISTS).expiry(Seconds(5L)).build();
+     * String value = client.set("key", "value", options).get();
+     * assert value.equals("OK");
      * }</pre>
      */
     CompletableFuture<String> set(String key, String value, SetOptions options);
 
     /**
-     * Retrieve the values of multiple <code>keys</code>.
+     * Retrieves the values of multiple <code>keys</code>.
      *
      * @see <a href="https://redis.io/commands/mget/">redis.io</a> for details.
      * @param keys A list of keys to retrieve values for.
@@ -84,28 +80,28 @@ public interface StringCommands {
      *     </code>.
      * @example
      *     <pre>{@code
-     * String payload = client.mget(new String[] {"key1", "key2"}).get();
-     * assert payload.equals(new String[] {"value1", "value2"});
+     * String values = client.mget(new String[] {"key1", "key2"}).get();
+     * assert values.equals(new String[] {"value1", "value2"});
      * }</pre>
      */
     CompletableFuture<String[]> mget(String[] keys);
 
     /**
-     * Set multiple keys to multiple values in a single operation.
+     * Sets multiple keys to multiple values in a single operation.
      *
      * @see <a href="https://redis.io/commands/mset/">redis.io</a> for details.
      * @param keyValueMap A key-value map consisting of keys and their respective values to set.
      * @return Always <code>OK</code>.
      * @example
      *     <pre>{@code
-     * String payload = client.mset(Map.of("key1", "value1", "key2", "value2"}).get();
-     * assert payload.equals("OK"));
+     * String result = client.mset(Map.of("key1", "value1", "key2", "value2"}).get();
+     * assert result.equals("OK"));
      * }</pre>
      */
     CompletableFuture<String> mset(Map<String, String> keyValueMap);
 
     /**
-     * Increment the number stored at <code>key</code> by one. If <code>key</code> does not exist, it
+     * Increments the number stored at <code>key</code> by one. If <code>key</code> does not exist, it
      * is set to 0 before performing the operation.
      *
      * @see <a href="https://redis.io/commands/incr/">redis.io</a> for details.
@@ -120,7 +116,7 @@ public interface StringCommands {
     CompletableFuture<Long> incr(String key);
 
     /**
-     * Increment the number stored at <code>key</code> by <code>amount</code>. If <code>key</code>
+     * Increments the number stored at <code>key</code> by <code>amount</code>. If <code>key</code>
      * does not exist, it is set to 0 before performing the operation.
      *
      * @see <a href="https://redis.io/commands/incrby/">redis.io</a> for details.
@@ -136,7 +132,7 @@ public interface StringCommands {
     CompletableFuture<Long> incrBy(String key, long amount);
 
     /**
-     * Increment the string representing a floating point number stored at <code>key</code> by <code>
+     * Increments the string representing a floating point number stored at <code>key</code> by <code>
      * amount</code>. By using a negative increment value, the result is that the value stored at
      * <code>key</code> is decremented. If <code>key</code> does not exist, it is set to 0 before
      * performing the operation.
@@ -147,14 +143,14 @@ public interface StringCommands {
      * @return The value of <code>key</code> after the increment.
      * @example
      *     <pre>{@code
-     * Long num = client.incrByFloat("key", 0.5).get();
+     * Double num = client.incrByFloat("key", 0.5).get();
      * assert num == 7.5;
      * }</pre>
      */
     CompletableFuture<Double> incrByFloat(String key, double amount);
 
     /**
-     * Decrement the number stored at <code>key</code> by one. If <code>key</code> does not exist, it
+     * Decrements the number stored at <code>key</code> by one. If <code>key</code> does not exist, it
      * is set to 0 before performing the operation.
      *
      * @see <a href="https://redis.io/commands/decr/">redis.io</a> for details.
@@ -169,7 +165,7 @@ public interface StringCommands {
     CompletableFuture<Long> decr(String key);
 
     /**
-     * Decrement the number stored at <code>key</code> by <code>amount</code>. If <code>key</code>
+     * Decrements the number stored at <code>key</code> by <code>amount</code>. If <code>key</code>
      * does not exist, it is set to 0 before performing the operation.
      *
      * @see <a href="https://redis.io/commands/decrby/">redis.io</a> for details.

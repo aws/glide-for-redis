@@ -92,18 +92,17 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * Executes a single command, without checking inputs. Every part of the command, including
      * subcommands, should be added as a separate value in args.
      *
+     * @param args Arguments for the custom command.
+     * @return A response from Redis with an <code>Object</code>.
      * @remarks This function should only be used for single-response commands. Commands that don't
      *     return response (such as <em>SUBSCRIBE</em>), or that return potentially more than a single
      *     response (such as <em>XREAD</em>), or that change the client's behavior (such as entering
      *     <em>pub</em>/<em>sub</em> mode on <em>RESP2</em> connections) shouldn't be called using
      *     this function.
      * @example Returns a list of all pub/sub clients:
-     *     <pre>
+     *     <pre>{@code
      * Object result = client.customCommand(new String[]{ "CLIENT", "LIST", "TYPE", "PUBSUB" }).get();
-     * </pre>
-     *
-     * @param args Arguments for the custom command.
-     * @return A response from Redis with an <code>Object</code>.
+     * }</pre>
      */
     public T customCommand(String[] args) {
 
@@ -113,10 +112,10 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
     }
 
     /**
-     * Ping the Redis server.
+     * Pings the Redis server.
      *
      * @see <a href="https://redis.io/commands/ping/">redis.io</a> for details.
-     * @return A response from Redis with a <code>String</code>.
+     * @return Command Response - A response from Redis with a <code>String</code>.
      */
     public T ping() {
         protobufTransaction.addCommands(buildCommand(Ping));
@@ -124,11 +123,11 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
     }
 
     /**
-     * Ping the Redis server.
+     * Pings the Redis server.
      *
      * @see <a href="https://redis.io/commands/ping/">redis.io</a> for details.
      * @param msg The ping argument that will be returned.
-     * @return A response from Redis with a <code>String</code>.
+     * @return Command Response - A response from Redis with a <code>String</code>.
      */
     public T ping(@NonNull String msg) {
         ArgsArray commandArgs = buildArgs(msg);
@@ -138,10 +137,11 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
     }
 
     /**
-     * Get information and statistics about the Redis server using the {@link Section#DEFAULT} option.
+     * Gets information and statistics about the Redis server using the {@link Section#DEFAULT}
+     * option.
      *
      * @see <a href="https://redis.io/commands/info/">redis.io</a> for details.
-     * @return A response from Redis with a <code>String</code>.
+     * @return Command Response - A <code>String</code> with server info.
      */
     public T info() {
         protobufTransaction.addCommands(buildCommand(Info));
@@ -149,13 +149,12 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
     }
 
     /**
-     * Get information and statistics about the Redis server.
+     * Gets information and statistics about the Redis server.
      *
      * @see <a href="https://redis.io/commands/info/">redis.io</a> for details.
      * @param options A list of {@link Section} values specifying which sections of information to
      *     retrieve. When no parameter is provided, the {@link Section#DEFAULT} option is assumed.
-     * @return Response from Redis with a <code>String</code> containing the requested {@link
-     *     Section}s.
+     * @return Command Response - A <code>String</code> containing the requested {@link Section}s.
      */
     public T info(@NonNull InfoOptions options) {
         ArgsArray commandArgs = buildArgs(options.toArgs());
@@ -180,11 +179,11 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
     }
 
     /**
-     * Get the value associated with the given key, or null if no such value exists.
+     * Gets the value associated with the given key, or null if no such value exists.
      *
      * @see <a href="https://redis.io/commands/get/">redis.io</a> for details.
      * @param key The key to retrieve from the database.
-     * @return Response from Redis. <code>key</code> exists, returns the <code>value</code> of <code>
+     * @return Command Response - If <code>key</code> exists, returns the <code>value</code> of <code>
      *     key</code> as a String. Otherwise, return <code>null</code>.
      */
     public T get(@NonNull String key) {
@@ -195,12 +194,12 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
     }
 
     /**
-     * Set the given key with the given value.
+     * Sets the given key with the given value.
      *
      * @see <a href="https://redis.io/commands/set/">redis.io</a> for details.
      * @param key The key to store.
      * @param value The value to store with the given <code>key</code>.
-     * @return Response from Redis.
+     * @return Command Response - A response from Redis.
      */
     public T set(@NonNull String key, @NonNull String value) {
         ArgsArray commandArgs = buildArgs(key, value);
@@ -210,14 +209,14 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
     }
 
     /**
-     * Set the given key with the given value. Return value is dependent on the passed options.
+     * Sets the given key with the given value. Return value is dependent on the passed options.
      *
      * @see <a href="https://redis.io/commands/set/">redis.io</a> for details.
      * @param key The key to store.
      * @param value The value to store with the given key.
      * @param options The Set options.
-     * @return Response from Redis with a <code>String</code> or <code>null</code> response. The old
-     *     value as a <code>String</code> if {@link SetOptionsBuilder#returnOldValue(boolean)} is set.
+     * @return Command Response - A <code>String</code> or <code>null</code> response. The old value
+     *     as a <code>String</code> if {@link SetOptionsBuilder#returnOldValue(boolean)} is set.
      *     Otherwise, if the value isn't set because of {@link ConditionalSet#ONLY_IF_EXISTS} or
      *     {@link ConditionalSet#ONLY_IF_DOES_NOT_EXIST} conditions, return <code>null</code>.
      *     Otherwise, return <code>OK</code>.
@@ -231,7 +230,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
     }
 
     /**
-     * Retrieve the values of multiple <code>keys</code>.
+     * Retrieves the values of multiple <code>keys</code>.
      *
      * @see <a href="https://redis.io/commands/mget/">redis.io</a> for details.
      * @param keys A list of keys to retrieve values for.
@@ -248,7 +247,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
     }
 
     /**
-     * Set multiple keys to multiple values in a single operation.
+     * Sets multiple keys to multiple values in a single operation.
      *
      * @see <a href="https://redis.io/commands/mset/">redis.io</a> for details.
      * @param keyValueMap A key-value map consisting of keys and their respective values to set.
@@ -263,7 +262,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
     }
 
     /**
-     * Increment the number stored at <code>key</code> by one. If <code>key</code> does not exist, it
+     * Increments the number stored at <code>key</code> by one. If <code>key</code> does not exist, it
      * is set to 0 before performing the operation.
      *
      * @see <a href="https://redis.io/commands/incr/">redis.io</a> for details.
@@ -278,7 +277,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
     }
 
     /**
-     * Increment the number stored at <code>key</code> by <code>amount</code>. If <code>key</code>
+     * Increments the number stored at <code>key</code> by <code>amount</code>. If <code>key</code>
      * does not exist, it is set to 0 before performing the operation.
      *
      * @see <a href="https://redis.io/commands/incrby/">redis.io</a> for details.
@@ -294,7 +293,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
     }
 
     /**
-     * Increment the string representing a floating point number stored at <code>key</code> by <code>
+     * Increments the string representing a floating point number stored at <code>key</code> by <code>
      * amount</code>. By using a negative increment value, the result is that the value stored at
      * <code>key</code> is decremented. If <code>key</code> does not exist, it is set to 0 before
      * performing the operation.
@@ -312,7 +311,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
     }
 
     /**
-     * Decrement the number stored at <code>key</code> by one. If <code>key</code> does not exist, it
+     * Decrements the number stored at <code>key</code> by one. If <code>key</code> does not exist, it
      * is set to 0 before performing the operation.
      *
      * @see <a href="https://redis.io/commands/decr/">redis.io</a> for details.
@@ -327,7 +326,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
     }
 
     /**
-     * Decrement the number stored at <code>key</code> by <code>amount</code>. If <code>key</code>
+     * Decrements the number stored at <code>key</code> by <code>amount</code>. If <code>key</code>
      * does not exist, it is set to 0 before performing the operation.
      *
      * @see <a href="https://redis.io/commands/decrby/">redis.io</a> for details.
@@ -343,14 +342,13 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
     }
 
     /**
-     * Retrieve the value associated with <code>field</code> in the hash stored at <code>key</code>.
+     * Retrieves the value associated with <code>field</code> in the hash stored at <code>key</code>.
      *
      * @see <a href="https://redis.io/commands/hget/">redis.io</a> for details.
      * @param key The key of the hash.
      * @param field The field in the hash stored at <code>key</code> to retrieve from the database.
      * @return Command Response - The value associated with <code>field</code>, or <code>null</code>
-     *     when <code>field
-     *     </code> is not present in the hash or <code>key</code> does not exist.
+     *     when <code>field</code> is not present in the hash or <code>key</code> does not exist.
      */
     public T hget(@NonNull String key, @NonNull String field) {
         ArgsArray commandArgs = buildArgs(key, field);
@@ -469,7 +467,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
     }
 
     /**
-     * Increment the string representing a floating point number stored at <code>field</code> in the
+     * Increments the string representing a floating point number stored at <code>field</code> in the
      * hash stored at <code>key</code> by increment. By using a negative increment value, the value
      * stored at <code>field</code> in the hash stored at <code>key</code> is decremented. If <code>
      * field</code> or <code>key</code> does not exist, it is set to 0 before performing the
@@ -481,7 +479,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     value.
      * @param amount The amount by which to increment or decrement the field's value. Use a negative
      *     value to decrement.
-     * @returns Command Response - The value of <code>field</code> in the hash stored at <code>key
+     * @return Command Response - The value of <code>field</code> in the hash stored at <code>key
      *     </code> after the increment or decrement.
      */
     public T hincrByFloat(@NonNull String key, @NonNull String field, double amount) {
@@ -515,8 +513,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *
      * @see <a href="https://redis.io/commands/lpop/">redis.io</a> for details.
      * @param key The key of the list.
-     * @return Command Response - The value of the first element. <br>
-     *     If <code>key</code> does not exist, null will be returned. <br>
+     * @return Command Response - The value of the first element.<br>
+     *     If <code>key</code> does not exist, null will be returned.
      */
     public T lpop(@NonNull String key) {
         ArgsArray commandArgs = buildArgs(key);
@@ -534,7 +532,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @param count The count of the elements to pop from the list.
      * @return Command Response - An array of the popped elements will be returned depending on the
      *     list's length.<br>
-     *     If <code>key</code> does not exist, null will be returned.<br>
+     *     If <code>key</code> does not exist, null will be returned.
      */
     public T lpopCount(@NonNull String key, long count) {
         ArgsArray commandArgs = buildArgs(key, Long.toString(count));
@@ -545,10 +543,11 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
 
     /**
      * Returns the specified elements of the list stored at <code>key</code>.<br>
-     * The offsets <code>start</code> and <code>end</code> are zero-based indexes, with 0 being the
-     * first element of the list, 1 being the next element and so on. These offsets can also be
-     * negative numbers indicating offsets starting at the end of the list, with -1 being the last
-     * element of the list, -2 being the penultimate, and so on.
+     * The offsets <code>start</code> and <code>end</code> are zero-based indexes, with <code>0</code>
+     * being the first element of the list, <code>1</code> being the next element and so on. These
+     * offsets can also be negative numbers indicating offsets starting at the end of the list, with
+     * <code>-1</code> being the last element of the list, <code>-2</code> being the penultimate, and
+     * so on.
      *
      * @see <a href="https://redis.io/commands/lrange/">redis.io</a> for details.
      * @param key The key of the list.
@@ -559,7 +558,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     <code>end</code>, an empty array will be returned.<br>
      *     If <code>end</code> exceeds the actual end of the list, the range will stop at the actual
      *     end of the list.<br>
-     *     If <code>key</code> does not exist an empty array will be returned.<br>
+     *     If <code>key</code> does not exist an empty array will be returned.
      */
     public T lrange(@NonNull String key, long start, long end) {
         ArgsArray commandArgs = buildArgs(key, Long.toString(start), Long.toString(end));
@@ -569,18 +568,17 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
     }
 
     /**
-     * Trims an existing list so that it will contain only the specified range of elements specified.
-     * <br>
-     * The offsets <code>start</code> and <code>end</code> are zero-based indexes, with 0 being the
-     * first element of the list, 1 being the next element and so on.<br>
+     * Trims an existing list so that it will contain only the specified range of elements specified.<br>
+     * The offsets <code>start</code> and <code>end</code> are zero-based indexes, with <code>0</code> being the
+     * first element of the list, </code>1<code> being the next element and so on.<br>
      * These offsets can also be negative numbers indicating offsets starting at the end of the list,
-     * with -1 being the last element of the list, -2 being the penultimate, and so on.
+     * with <code>-1</code> being the last element of the list, <code>-2</code> being the penultimate, and so on.
      *
      * @see <a href="https://redis.io/commands/ltrim/">redis.io</a> for details.
      * @param key The key of the list.
      * @param start The starting point of the range.
      * @param end The end of the range.
-     * @return Command Response - Always <code>OK</code>. <br>
+     * @return Command Response - Always <code>OK</code>.<br>
      *     If <code>start</code> exceeds the end of the list, or if <code>start</code> is greater than
      *     <code>end</code>, the result will be an empty list (which causes key to be removed).<br>
      *     If <code>end</code> exceeds the actual end of the list, it will be treated like the last
@@ -600,7 +598,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @see <a href="https://redis.io/commands/llen/">redis.io</a> for details.
      * @param key The key of the list.
      * @return Command Response - The length of the list at <code>key</code>.<br>
-     *     If <code>key</code> does not exist, it is interpreted as an empty list and 0 is returned.
+     *     If <code>key</code> does not exist, it is interpreted as an empty list and <code>0</code>
+     *     is returned.
      */
     public T llen(@NonNull String key) {
         ArgsArray commandArgs = buildArgs(key);
@@ -617,14 +616,14 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * If <code>count</code> is negative: Removes elements equal to <code>element</code> moving from
      * tail to head.<br>
      * If <code>count</code> is 0 or <code>count</code> is greater than the occurrences of elements
-     * equal to <code>element</code>, it removes all elements equal to <code>element</code>.<br>
+     * equal to <code>element</code>, it removes all elements equal to <code>element</code>.
      *
      * @see <a href="https://redis.io/commands/lrem/">redis.io</a> for details.
      * @param key The key of the list.
      * @param count The count of the occurrences of elements equal to <code>element</code> to remove.
      * @param element The element to remove from the list.
      * @return Command Response - The number of the removed elements.<br>
-     *     If <code>key</code> does not exist, 0 is returned.<br>
+     *     If <code>key</code> does not exist, <code>0</code> is returned.
      */
     public T lrem(@NonNull String key, long count, @NonNull String element) {
         ArgsArray commandArgs = buildArgs(key, Long.toString(count), element);
@@ -658,7 +657,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @see <a href="https://redis.io/commands/rpop/">redis.io</a> for details.
      * @param key The key of the list.
      * @return Command Response - The value of the last element.<br>
-     *     If <code>key</code> does not exist, null will be returned.<br>
+     *     If <code>key</code> does not exist, <code>null</code> will be returned.
      */
     public T rpop(@NonNull String key) {
         ArgsArray commandArgs = buildArgs(key);
@@ -675,7 +674,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @param count The count of the elements to pop from the list.
      * @return Command Response - An array of popped elements will be returned depending on the list's
      *     length.<br>
-     *     If <code>key</code> does not exist, null will be returned.<br>
+     *     If <code>key</code> does not exist, <code>null</code> will be returned.
      */
     public T rpopCount(@NonNull String key, long count) {
         ArgsArray commandArgs = buildArgs(key, Long.toString(count));
@@ -685,8 +684,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
     }
 
     /**
-     * Add specified members to the set stored at <code>key</code>. Specified members that are already
-     * a member of this set are ignored.
+     * Adds specified members to the set stored at <code>key</code>. Specified members that are
+     * already a member of this set are ignored.
      *
      * @see <a href="https://redis.io/commands/sadd/">redis.io</a> for details.
      * @param key The <code>key</code> where members will be added to its set.
@@ -704,7 +703,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
     }
 
     /**
-     * Remove specified members from the set stored at <code>key</code>. Specified members that are
+     * Removes specified members from the set stored at <code>key</code>. Specified members that are
      * not a member of this set are ignored.
      *
      * @see <a href="https://redis.io/commands/srem/">redis.io</a> for details.
@@ -713,7 +712,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @return Command Response - The number of members that were removed from the set, excluding
      *     non-existing members.
      * @remarks If <code>key</code> does not exist, it is treated as an empty set and this command
-     *     returns 0.
+     *     returns <code>0</code>.
      */
     public T srem(@NonNull String key, @NonNull String[] members) {
         ArgsArray commandArgs = buildArgs(ArrayUtils.addFirst(members, key));
@@ -723,7 +722,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
     }
 
     /**
-     * Retrieve all the members of the set value stored at <code>key</code>.
+     * Retrieves all the members of the set value stored at <code>key</code>.
      *
      * @see <a href="https://redis.io/commands/smembers/">redis.io</a> for details.
      * @param key The key from which to retrieve the set members.
@@ -738,7 +737,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
     }
 
     /**
-     * Retrieve the set cardinality (number of elements) of the set stored at <code>key</code>.
+     * Retrieves the set cardinality (number of elements) of the set stored at <code>key</code>.
      *
      * @see <a href="https://redis.io/commands/scard/">redis.io</a> for details.
      * @param key The key from which to retrieve the number of set members.
@@ -800,7 +799,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
     }
 
     /**
-     * Unlink (delete) multiple <code>keys</code> from the database. A key is ignored if it does not
+     * Unlinks (deletes) multiple <code>keys</code> from the database. A key is ignored if it does not
      * exist. This command, similar to DEL, removes specified keys and ignores non-existent ones.
      * However, this command does not block the server, while <a
      * href="https://redis.io/commands/del/">DEL</a> does.
@@ -1004,7 +1003,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @see <a href="https://redis.io/commands/pexpireat/">redis.io</a> for details.
      * @param key The <code>key</code> to set timeout on it.
      * @param unixMilliseconds The timeout in an absolute Unix timestamp.
-     * @param expireOptions The expire option.
+     * @param expireOptions The expiration option.
      * @return Command response - <code>true</code> if the timeout was set. <code>false</code> if the
      *     timeout was not set. e.g. <code>key</code> doesn't exist, or operation skipped due to the
      *     provided arguments.
@@ -1036,7 +1035,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
     }
 
     /**
-     * Get the current connection id.
+     * Gets the current connection id.
      *
      * @see <a href="https://redis.io/commands/client-id/">redis.io</a> for details.
      * @return Command response - The id of the client.
@@ -1047,7 +1046,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
     }
 
     /**
-     * Get the name of the current connection.
+     * Gets the name of the current connection.
      *
      * @see <a href="https://redis.io/commands/client-getname/">redis.io</a> for details.
      * @return Command response - The name of the client connection as a string if a name is set, or

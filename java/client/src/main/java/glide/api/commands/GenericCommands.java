@@ -13,30 +13,27 @@ public interface GenericCommands {
 
     /**
      * Executes a single command, without checking inputs. Every part of the command, including
-     * subcommands, should be added as a separate value in args.
+     * subcommands, should be added as a separate value in <code>args</code>.
      *
+     * @param args Arguments for the custom command.
+     * @return Response from Redis containing an <code>Object</code>.
      * @remarks This function should only be used for single-response commands. Commands that don't
      *     return response (such as <em>SUBSCRIBE</em>), or that return potentially more than a single
      *     response (such as <em>XREAD</em>), or that change the client's behavior (such as entering
      *     <em>pub</em>/<em>sub</em> mode on <em>RESP2</em> connections) shouldn't be called using
      *     this function.
-     * @example Returns a list of all pub/sub clients:
-     *     <pre>
-     * Object result = client.customCommand(new String[]{ "CLIENT", "LIST", "TYPE", "PUBSUB" }).get();
-     * </pre>
-     *
-     * @param args Arguments for the custom command.
-     * @return Response from Redis containing an <code>Object</code>.
      * @example
      *     <pre>{@code
-     * Object response = (String) client.customCommand(new String[] {"ping", "GLIDE"}).get()
+     * Object response = (String) client.customCommand(new String[] {"ping", "GLIDE"}).get();
      * assert ((String) response).equals("GLIDE");
+     * // Get a list of all pub/sub clients:
+     * Object result = client.customCommand(new String[]{ "CLIENT", "LIST", "TYPE", "PUBSUB" }).get();
      * }</pre>
      */
     CompletableFuture<Object> customCommand(String[] args);
 
     /**
-     * Execute a transaction by processing the queued commands.
+     * Executes a transaction by processing the queued commands.
      *
      * @see <a href="https://redis.io/topics/Transactions/">redis.io</a> for details on Redis
      *     Transactions.

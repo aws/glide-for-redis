@@ -13,7 +13,8 @@ import java.util.concurrent.CompletableFuture;
 public interface ConnectionManagementClusterCommands {
 
     /**
-     * Ping the Redis server. The command will be routed to all primaries.
+     * Pings the Redis server.<br>
+     * The command will be routed to all primary nodes.
      *
      * @see <a href="https://redis.io/commands/ping/">redis.io</a> for details.
      * @return <code>String</code> with <code>"PONG"</code>.
@@ -26,7 +27,8 @@ public interface ConnectionManagementClusterCommands {
     CompletableFuture<String> ping();
 
     /**
-     * Ping the Redis server. The command will be routed to all primaries.
+     * Pings the Redis server.<br>
+     * The command will be routed to all primary nodes.
      *
      * @see <a href="https://redis.io/commands/ping/">redis.io</a> for details.
      * @param message The server will respond with a copy of the message.
@@ -40,7 +42,7 @@ public interface ConnectionManagementClusterCommands {
     CompletableFuture<String> ping(String message);
 
     /**
-     * Ping the Redis server.
+     * Pings the Redis server.
      *
      * @see <a href="https://redis.io/commands/ping/">redis.io</a> for details.
      * @param route Specifies the routing configuration for the command. The client will route the
@@ -55,7 +57,7 @@ public interface ConnectionManagementClusterCommands {
     CompletableFuture<String> ping(Route route);
 
     /**
-     * Ping the Redis server.
+     * Pings the Redis server.
      *
      * @see <a href="https://redis.io/commands/ping/">redis.io</a> for details.
      * @param message The ping argument that will be returned.

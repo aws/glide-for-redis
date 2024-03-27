@@ -45,6 +45,7 @@ import static redis_request.RedisRequestOuterClass.RequestType.TTL;
 import static redis_request.RedisRequestOuterClass.RequestType.Unlink;
 import static redis_request.RedisRequestOuterClass.RequestType.Zadd;
 import static redis_request.RedisRequestOuterClass.RequestType.Zcard;
+import static redis_request.RedisRequestOuterClass.RequestType.Zrank;
 import static redis_request.RedisRequestOuterClass.RequestType.Zrem;
 
 import glide.api.commands.GenericBaseCommands;
@@ -207,6 +208,10 @@ public abstract class BaseClient
 
     protected Long handleLongResponse(Response response) throws RedisException {
         return handleRedisResponse(Long.class, false, response);
+    }
+
+    protected Long handleLongOrNullResponse(Response response) throws RedisException {
+        return handleRedisResponse(Long.class, true, response);
     }
 
     protected Double handleDoubleResponse(Response response) throws RedisException {
@@ -585,5 +590,17 @@ public abstract class BaseClient
     @Override
     public CompletableFuture<Long> zcard(@NonNull String key) {
         return commandManager.submitNewCommand(Zcard, new String[] {key}, this::handleLongResponse);
+    }
+
+    @Override
+    public CompletableFuture<Long> zrank(@NonNull String key, @NonNull String member) {
+        return commandManager.submitNewCommand(
+                Zrank, new String[] {key, member}, this::handleLongOrNullResponse);
+    }
+
+    @Override
+    public CompletableFuture<Object[]> zrankWithScore(@NonNull String key, @NonNull String member) {
+        return commandManager.submitNewCommand(
+                Zrank, new String[] {key, member, "WITHSCORE"}, this::handleArrayOrNullResponse);
     }
 }

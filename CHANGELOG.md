@@ -27,6 +27,7 @@
 * Core: Enabled Cluster Mode periodic checks by default ([#1089](https://github.com/aws/glide-for-redis/pull/1089))
 * Node: Added Rename command. ([#1124](https://github.com/aws/glide-for-redis/pull/1124))
 * Python: Added JSON.TOGGLE command ([#1184](https://github.com/aws/glide-for-redis/pull/1184))
+* Python: Added JSON.STRLEN command ([#1187](https://github.com/aws/glide-for-redis/pull/1187))
 
 #### Features
 

@@ -166,3 +166,20 @@ class TestJson:
 
         with pytest.raises(RequestError):
             assert await json.toggle(redis_client, "non_exiting_key", "$")
+
+    @pytest.mark.parametrize("cluster_mode", [True, False])
+    @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
+    async def test_json_strlen(self, redis_client: TRedisClient):
+        key = get_random_string(10)
+        json_value = {"a": "foo", "nested": {"a": "hello"}, "nested2": {"a": 31}}
+        assert await json.set(redis_client, key, "$", OuterJson.dumps(json_value)) == OK
+
+        assert await json.strlen(redis_client, key, "$..a") == [3, 5, None]
+        assert await json.strlen(redis_client, key, "a") == 3
+
+        assert await json.strlen(redis_client, key, "$.nested") == [None]
+        with pytest.raises(RequestError):
+            assert await json.strlen(redis_client, key, "nested")
+
+        with pytest.raises(RequestError):
+            assert await json.strlen(redis_client, "non_exiting_key", "$")

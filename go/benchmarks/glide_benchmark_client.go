@@ -1,9 +1,9 @@
-// Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0
+// Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0
 
 package main
 
 import (
-	"github.com/aws/glide-for-redis/go/glide/api"
+	"github.com/valkey-io/valkey-glide/go/glide/api"
 )
 
 type glideBenchmarkClient struct {
@@ -12,10 +12,10 @@ type glideBenchmarkClient struct {
 
 func (glideBenchmarkClient *glideBenchmarkClient) connect(connectionSettings *connectionSettings) error {
 	if connectionSettings.clusterModeEnabled {
-		config := api.NewRedisClusterClientConfiguration().
+		config := api.NewGlideClusterClientConfiguration().
 			WithAddress(&api.NodeAddress{Host: connectionSettings.host, Port: connectionSettings.port}).
 			WithUseTLS(connectionSettings.useTLS)
-		glideClient, err := api.NewRedisClusterClient(config)
+		glideClient, err := api.NewGlideClusterClient(config)
 		if err != nil {
 			return err
 		}
@@ -23,10 +23,10 @@ func (glideBenchmarkClient *glideBenchmarkClient) connect(connectionSettings *co
 		glideBenchmarkClient.client = glideClient
 		return nil
 	} else {
-		config := api.NewRedisClientConfiguration().
+		config := api.NewGlideClientConfiguration().
 			WithAddress(&api.NodeAddress{Host: connectionSettings.host, Port: connectionSettings.port}).
 			WithUseTLS(connectionSettings.useTLS)
-		glideClient, err := api.NewRedisClient(config)
+		glideClient, err := api.NewGlideClient(config)
 		if err != nil {
 			return err
 		}

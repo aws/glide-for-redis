@@ -1,4 +1,4 @@
-// Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0
+// Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0
 
 package integTest
 
@@ -12,9 +12,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aws/glide-for-redis/go/glide/api"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
+	"github.com/valkey-io/valkey-glide/go/glide/api"
 )
 
 type GlideTestSuite struct {
@@ -22,8 +22,8 @@ type GlideTestSuite struct {
 	standalonePorts []int
 	clusterPorts    []int
 	redisVersion    string
-	clients         []*api.RedisClient
-	clusterClients  []*api.RedisClusterClient
+	clients         []*api.GlideClient
+	clusterClients  []*api.GlideClusterClient
 }
 
 func (suite *GlideTestSuite) SetupSuite() {
@@ -31,19 +31,19 @@ func (suite *GlideTestSuite) SetupSuite() {
 	// If an error occurs, we ignore it in case the servers actually were stopped before running this.
 	runClusterManager(suite, []string{"stop", "--prefix", "redis-cluster"}, true)
 
-	// Delete dirs if stop failed due to https://github.com/aws/glide-for-redis/issues/849
+	// Delete dirs if stop failed due to https://github.com/valkey-io/valkey-glide/issues/849
 	err := os.RemoveAll("../../utils/clusters")
 	if err != nil && !os.IsNotExist(err) {
 		log.Fatal(err)
 	}
 
-	// Start standalone Redis instance
+	// Start standalone instance
 	clusterManagerOutput := runClusterManager(suite, []string{"start", "-r", "0"}, false)
 
 	suite.standalonePorts = extractPorts(suite, clusterManagerOutput)
 	suite.T().Logf("Standalone ports = %s", fmt.Sprint(suite.standalonePorts))
 
-	// Start Redis cluster
+	// Start cluster
 	clusterManagerOutput = runClusterManager(suite, []string{"start", "--cluster-mode"}, false)
 
 	suite.clusterPorts = extractPorts(suite, clusterManagerOutput)
@@ -55,7 +55,7 @@ func (suite *GlideTestSuite) SetupSuite() {
 		suite.T().Fatal(err.Error())
 	}
 
-	suite.redisVersion = extractRedisVersion(string(byteOutput))
+	suite.redisVersion = extractServerVersion(string(byteOutput))
 	suite.T().Logf("Redis version = %s", suite.redisVersion)
 }
 
@@ -108,11 +108,13 @@ func runClusterManager(suite *GlideTestSuite, args []string, ignoreExitCode bool
 	return string(output)
 }
 
-func extractRedisVersion(output string) string {
-	// Expected output format:
+func extractServerVersion(output string) string {
+	// Redis response:
 	// Redis server v=7.2.3 sha=00000000:0 malloc=jemalloc-5.3.0 bits=64 build=7504b1fedf883f2
-	versionSection := strings.Split(output, " ")[2]
-	return strings.Split(versionSection, "=")[1]
+	// Valkey response:
+	// Server v=7.2.5 sha=26388270:0 malloc=jemalloc-5.3.0 bits=64 build=ea40bb1576e402d6
+	versionSection := strings.Split(output, "v=")[1]
+	return strings.Split(versionSection, " ")[0]
 }
 
 func TestGlideTestSuite(t *testing.T) {
@@ -142,15 +144,15 @@ func (suite *GlideTestSuite) getDefaultClients() []api.BaseClient {
 	return []api.BaseClient{suite.defaultClient(), suite.defaultClusterClient()}
 }
 
-func (suite *GlideTestSuite) defaultClient() *api.RedisClient {
-	config := api.NewRedisClientConfiguration().
+func (suite *GlideTestSuite) defaultClient() *api.GlideClient {
+	config := api.NewGlideClientConfiguration().
 		WithAddress(&api.NodeAddress{Port: suite.standalonePorts[0]}).
 		WithRequestTimeout(5000)
 	return suite.client(config)
 }
 
-func (suite *GlideTestSuite) client(config *api.RedisClientConfiguration) *api.RedisClient {
-	client, err := api.NewRedisClient(config)
+func (suite *GlideTestSuite) client(config *api.GlideClientConfiguration) *api.GlideClient {
+	client, err := api.NewGlideClient(config)
 
 	assert.Nil(suite.T(), err)
 	assert.NotNil(suite.T(), client)
@@ -159,15 +161,15 @@ func (suite *GlideTestSuite) client(config *api.RedisClientConfiguration) *api.R
 	return client
 }
 
-func (suite *GlideTestSuite) defaultClusterClient() *api.RedisClusterClient {
-	config := api.NewRedisClusterClientConfiguration().
+func (suite *GlideTestSuite) defaultClusterClient() *api.GlideClusterClient {
+	config := api.NewGlideClusterClientConfiguration().
 		WithAddress(&api.NodeAddress{Port: suite.clusterPorts[0]}).
 		WithRequestTimeout(5000)
 	return suite.clusterClient(config)
 }
 
-func (suite *GlideTestSuite) clusterClient(config *api.RedisClusterClientConfiguration) *api.RedisClusterClient {
-	client, err := api.NewRedisClusterClient(config)
+func (suite *GlideTestSuite) clusterClient(config *api.GlideClusterClientConfiguration) *api.GlideClusterClient {
+	client, err := api.NewGlideClusterClient(config)
 
 	assert.Nil(suite.T(), err)
 	assert.NotNil(suite.T(), client)

@@ -1,38 +1,32 @@
-// Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0
+// Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0
 
 package api
 
+// #cgo LDFLAGS: -L../target/release -lglide_rs
+// #include "../lib.h"
+import "C"
+
 import (
-	"fmt"
-	"go/types"
-	"reflect"
+	"unsafe"
 )
 
-type redisResponse interface {
-	interface{} | string | types.Nil
+func convertCharArrayToString(arr *C.char, length C.long) string {
+	if arr == nil {
+		return ""
+	}
+	byteSlice := C.GoBytes(unsafe.Pointer(arr), C.int(int64(length)))
+	// Create Go string from byte slice (preserving null characters)
+	return string(byteSlice)
 }
 
-func handleRedisResponse[T redisResponse](t reflect.Type, isNilable bool, response interface{}) (T, error) {
-	if isNilable && response == nil {
-		return reflect.ValueOf(nil).Interface().(T), nil
-	}
+func handleStringResponse(response *C.struct_CommandResponse) string {
+	defer C.free_command_response(response)
+	return convertCharArrayToString(response.string_value, response.string_value_len)
+}
 
-	if reflect.TypeOf(response) == t {
-		return reflect.ValueOf(response).Interface().(T), nil
-	}
-
-	var responseTypeName string
+func handleStringOrNullResponse(response *C.struct_CommandResponse) string {
 	if response == nil {
-		responseTypeName = "nil"
-	} else {
-		responseTypeName = reflect.TypeOf(response).Name()
+		return ""
 	}
-
-	return reflect.Zero(t).Interface().(T), &RequestError{
-		fmt.Sprintf("Unexpected return type from Redis: got %s, expected %s", responseTypeName, t),
-	}
-}
-
-func handleStringResponse(response interface{}) (string, error) {
-	return handleRedisResponse[string](reflect.TypeOf(""), false, response)
+	return handleStringResponse(response)
 }

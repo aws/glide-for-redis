@@ -24,8 +24,6 @@ on:
             - .github/workflows/lint-rust/action.yml
             - .github/workflows/install-valkey/action.yml
             - .github/json_matrices/build-matrix.json
-    workflow_dispatch:
-
 concurrency:
     group: go-${{ github.head_ref || github.ref }}
     cancel-in-progress: true

@@ -1,16 +1,16 @@
-// Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0
+// Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0
 
 package integTest
 
 import (
-	"github.com/aws/glide-for-redis/go/glide/api"
 	"github.com/stretchr/testify/assert"
+	"github.com/valkey-io/valkey-glide/go/glide/api"
 )
 
 func (suite *GlideTestSuite) TestStandaloneConnect() {
-	config := api.NewRedisClientConfiguration().
+	config := api.NewGlideClientConfiguration().
 		WithAddress(&api.NodeAddress{Port: suite.standalonePorts[0]})
-	client, err := api.NewRedisClient(config)
+	client, err := api.NewGlideClient(config)
 
 	assert.Nil(suite.T(), err)
 	assert.NotNil(suite.T(), client)
@@ -19,12 +19,12 @@ func (suite *GlideTestSuite) TestStandaloneConnect() {
 }
 
 func (suite *GlideTestSuite) TestClusterConnect() {
-	config := api.NewRedisClusterClientConfiguration()
+	config := api.NewGlideClusterClientConfiguration()
 	for _, port := range suite.clusterPorts {
 		config.WithAddress(&api.NodeAddress{Port: port})
 	}
 
-	client, err := api.NewRedisClusterClient(config)
+	client, err := api.NewGlideClusterClient(config)
 
 	assert.Nil(suite.T(), err)
 	assert.NotNil(suite.T(), client)
@@ -33,10 +33,10 @@ func (suite *GlideTestSuite) TestClusterConnect() {
 }
 
 func (suite *GlideTestSuite) TestClusterConnect_singlePort() {
-	config := api.NewRedisClusterClientConfiguration().
+	config := api.NewGlideClusterClientConfiguration().
 		WithAddress(&api.NodeAddress{Port: suite.clusterPorts[0]})
 
-	client, err := api.NewRedisClusterClient(config)
+	client, err := api.NewGlideClusterClient(config)
 
 	assert.Nil(suite.T(), err)
 	assert.NotNil(suite.T(), client)
@@ -45,9 +45,9 @@ func (suite *GlideTestSuite) TestClusterConnect_singlePort() {
 }
 
 func (suite *GlideTestSuite) TestConnectWithInvalidAddress() {
-	config := api.NewRedisClientConfiguration().
+	config := api.NewGlideClientConfiguration().
 		WithAddress(&api.NodeAddress{Host: "invalid-host"})
-	client, err := api.NewRedisClient(config)
+	client, err := api.NewGlideClient(config)
 
 	assert.Nil(suite.T(), client)
 	assert.NotNil(suite.T(), err)

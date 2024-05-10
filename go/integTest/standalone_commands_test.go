@@ -1,4 +1,4 @@
-// Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0
+// Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0
 
 package integTest
 
@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/aws/glide-for-redis/go/glide/api"
+	"github.com/valkey-io/valkey-glide/go/glide/api"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -31,7 +31,7 @@ func (suite *GlideTestSuite) TestCustomCommandPing() {
 
 func (suite *GlideTestSuite) TestCustomCommandClientInfo() {
 	clientName := "TEST_CLIENT_NAME"
-	config := api.NewRedisClientConfiguration().
+	config := api.NewGlideClientConfiguration().
 		WithAddress(&api.NodeAddress{Port: suite.standalonePorts[0]}).
 		WithClientName(clientName)
 	client := suite.client(config)

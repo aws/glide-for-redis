@@ -1,12 +1,12 @@
-// Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0
+// Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0
 
 package integTest
 
 import (
 	"time"
 
-	"github.com/aws/glide-for-redis/go/glide/api"
 	"github.com/stretchr/testify/assert"
+	"github.com/valkey-io/valkey-glide/go/glide/api"
 )
 
 const (
@@ -22,6 +22,17 @@ func (suite *GlideTestSuite) TestSetAndGet_noOptions() {
 
 		assert.Nil(suite.T(), err)
 		assert.Equal(suite.T(), initialValue, result)
+	})
+}
+
+func (suite *GlideTestSuite) TestSetAndGet_byteString() {
+	suite.runWithDefaultClients(func(client api.BaseClient) {
+		invalidUTF8Value := "\xff\xfe\xfd"
+		suite.verifyOK(client.Set(keyName, invalidUTF8Value))
+		result, err := client.Get(keyName)
+
+		assert.Nil(suite.T(), err)
+		assert.Equal(suite.T(), invalidUTF8Value, result)
 	})
 }
 

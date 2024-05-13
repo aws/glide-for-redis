@@ -3,8 +3,9 @@
  */
 use glide_core::start_socket_listener;
 
+use jni::errors::Error as JniError;
 use jni::objects::{JClass, JObject, JObjectArray, JString, JThrowable};
-use jni::sys::jlong;
+use jni::sys::{jint, jlong};
 use jni::JNIEnv;
 use log::error;
 use redis::Value;
@@ -14,6 +15,8 @@ use std::sync::mpsc;
 mod ffi_test;
 #[cfg(ffi_test)]
 pub use ffi_test::*;
+
+struct Level(i32);
 
 // TODO: Consider caching method IDs here in a static variable (might need RwLock to mutate)
 fn redis_value_to_java<'local>(env: &mut JNIEnv<'local>, val: Value) -> JObject<'local> {
@@ -175,4 +178,77 @@ pub extern "system" fn Java_glide_ffi_resolvers_ScriptResolver_dropScript<'local
 ) {
     let hash_str: String = env.get_string(&hash).unwrap().into();
     glide_core::scripts_container::remove_script(&hash_str);
+}
+
+impl From<logger_core::Level> for Level {
+    fn from(level: logger_core::Level) -> Self {
+        match level {
+            logger_core::Level::Error => Level(0),
+            logger_core::Level::Warn => Level(1),
+            logger_core::Level::Info => Level(2),
+            logger_core::Level::Debug => Level(3),
+            logger_core::Level::Trace => Level(4),
+        }
+    }
+}
+
+impl TryFrom<Level> for logger_core::Level {
+    type Error = String;
+    fn try_from(level: Level) -> Result<Self, <logger_core::Level as TryFrom<Level>>::Error> {
+        match level.0 {
+            0 => Ok(logger_core::Level::Error),
+            1 => Ok(logger_core::Level::Warn),
+            2 => Ok(logger_core::Level::Info),
+            3 => Ok(logger_core::Level::Debug),
+            4 => Ok(logger_core::Level::Trace),
+            _ => Err(format!("Invalid log level: {:?}", level.0)),
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "system" fn Java_glide_utils_Logger_logInternal<'local>(
+    mut env: JNIEnv<'local>,
+    _class: JClass<'local>,
+    level: jint,
+    log_identifier: JString<'local>,
+    message: JString<'local>,
+) {
+    let level = Level(level);
+
+    let log_identifier: String = env
+        .get_string(&log_identifier)
+        .unwrap_or_else(|_| panic!("{}", make_jstring_error("log_identifier")))
+        .into();
+
+    let message: String = env
+        .get_string(&message)
+        .unwrap_or_else(|_| panic!("{}", make_jstring_error("message")))
+        .into();
+
+    logger_core::log(level.try_into().unwrap(), log_identifier, message);
+}
+
+#[no_mangle]
+pub extern "system" fn Java_glide_utils_Logger_initInternal<'local>(
+    mut env: JNIEnv<'local>,
+    _class: JClass<'local>,
+    level: jint,
+    file_name: JString<'local>,
+) -> jint {
+    let level = if level > 0 { Some(level) } else { None };
+    let file_name: Option<String> = match env.get_string(&file_name) {
+        Ok(file_name) => Some(file_name.into()),
+        Err(JniError::NullPtr(_)) => None,
+        _ => panic!("{}", make_jstring_error("file_name")),
+    };
+    let logger_level = logger_core::init(
+        level.map(|level| Level(level).try_into().unwrap()),
+        file_name.as_deref(),
+    );
+    Level::from(logger_level).0
+}
+
+fn make_jstring_error(jstring: &str) -> String {
+    format!("Failed to get String from JString {}", jstring)
 }

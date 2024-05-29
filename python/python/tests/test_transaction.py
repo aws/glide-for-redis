@@ -329,7 +329,7 @@ async def transaction_test(
     args.append("0-1")
     transaction.xadd(key11, [("foo", "bar")], StreamAddOptions(id="0-2"))
     args.append("0-2")
-    transaction.xtrim(key11, TrimByMinId(threshold="0-2", exact=True))
+    transaction.xtrim(key11, TrimByMinId.create_withexact(threshold="0-2", exact=True))
     args.append(1)
 
     min_version = "7.0.0"

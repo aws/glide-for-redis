@@ -160,9 +160,9 @@ class StreamTrimOptions(ABC):
     @abstractmethod
     def __init__(
         self,
-        exact: bool,
         threshold: Union[str, int],
         method: str,
+        exact: Optional[bool] = None,
         limit: Optional[int] = None,
     ):
         """
@@ -176,7 +176,7 @@ class StreamTrimOptions(ABC):
             limit (Optional[int]): Max number of entries to be trimmed. Defaults to None.
                 Note: If `exact` is set to `True`, `limit` cannot be specified.
         """
-        if exact and limit:
+        if exact is not None and exact and limit is not None:
             raise ValueError(
                 "If `exact` is set to `True`, `limit` cannot be specified."
             )
@@ -194,9 +194,13 @@ class StreamTrimOptions(ABC):
         """
         option_args = [
             self.method,
-            "=" if self.exact else "~",
-            str(self.threshold),
         ]
+        if self.exact is not None:
+            if self.exact:
+                option_args.extend("=")
+            else:
+                option_args.extend("~")
+        option_args.extend([str(self.threshold)])
         if self.limit is not None:
             option_args.extend(["LIMIT", str(self.limit)])
         return option_args
@@ -207,7 +211,27 @@ class TrimByMinId(StreamTrimOptions):
     Stream trim option to trim by minimum ID.
     """
 
-    def __init__(self, exact: bool, threshold: str, limit: Optional[int] = None):
+    def __init__(
+        self,
+        threshold: str,
+        method: str,
+        exact: Optional[bool] = None,
+        limit: Optional[int] = None,
+    ):
+        super().__init__(threshold, method, exact, limit)
+
+    @classmethod
+    def create(cls, threshold: str):
+        """
+        Initialize trim option by minimum ID.
+
+        Args:
+            threshold (str): Threshold for trimming by minimum ID.
+        """
+        return cls(threshold, "MINID", None, None)
+
+    @classmethod
+    def create_withexact(cls, exact: bool, threshold: str):
         """
         Initialize trim option by minimum ID.
 
@@ -215,10 +239,20 @@ class TrimByMinId(StreamTrimOptions):
             exact (bool): If `true`, the stream will be trimmed exactly.
                 Otherwise the stream will be trimmed in a near-exact manner, which is more efficient.
             threshold (str): Threshold for trimming by minimum ID.
-            limit (Optional[int]): Max number of entries to be trimmed. Defaults to None.
-                Note: If `exact` is set to `True`, `limit` cannot be specified.
         """
-        super().__init__(exact, threshold, "MINID", limit)
+        print(threshold)
+        return cls(threshold, "MINID", exact, None)
+
+    @classmethod
+    def create_withlimit(cls, threshold: str, limit: int):
+        """
+        Initialize trim option by minimum ID.
+
+        Args:
+            threshold (str): Threshold for trimming by minimum ID.
+            limit (int): Max number of entries to be trimmed.
+        """
+        return cls(threshold, "MINID", False, limit)
 
 
 class TrimByMaxLen(StreamTrimOptions):
@@ -226,7 +260,27 @@ class TrimByMaxLen(StreamTrimOptions):
     Stream trim option to trim by maximum length.
     """
 
-    def __init__(self, exact: bool, threshold: int, limit: Optional[int] = None):
+    def __init__(
+        self,
+        threshold: int,
+        method: str,
+        exact: Optional[bool] = None,
+        limit: Optional[int] = None,
+    ):
+        super().__init__(threshold, method, exact, limit)
+
+    @classmethod
+    def create(cls, threshold: int):
+        """
+        Initialize trim option by maximum length.
+
+        Args:
+            threshold (int): Threshold for trimming by maximum length.
+        """
+        return cls(threshold, "MAXLEN", None, None)
+
+    @classmethod
+    def create_withexact(cls, exact: bool, threshold: int):
         """
         Initialize trim option by maximum length.
 
@@ -234,10 +288,19 @@ class TrimByMaxLen(StreamTrimOptions):
             exact (bool): If `true`, the stream will be trimmed exactly.
                 Otherwise the stream will be trimmed in a near-exact manner, which is more efficient.
             threshold (int): Threshold for trimming by maximum length.
-            limit (Optional[int]): Max number of entries to be trimmed. Defaults to None.
-                Note: If `exact` is set to `True`, `limit` cannot be specified.
         """
-        super().__init__(exact, threshold, "MAXLEN", limit)
+        return cls(threshold, "MAXLEN", exact, None)
+
+    @classmethod
+    def create_withlimit(cls, threshold: int, limit: int):
+        """
+        Initialize trim option by maximum length.
+
+        Args:
+            threshold (int): Threshold for trimming by maximum length.
+            limit (int): Max number of entries to be trimmed.
+        """
+        return cls(threshold, "MAXLEN", False, limit)
 
 
 class StreamAddOptions:
@@ -2151,7 +2214,7 @@ class CoreCommands(Protocol):
 
         Example:
             >>> await client.xadd("mystream", [("field", "value"), ("field2", "value2")], StreamAddOptions(id="0-1"))
-            >>> await client.xtrim("mystream", TrimByMinId(exact=True, threshold="0-2")))
+            >>> await client.xtrim("mystream", TrimByMinId.create_withexact(True, "0-2")))
                 1 # One entry was deleted from the stream.
         """
         args = [key]

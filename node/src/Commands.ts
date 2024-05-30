@@ -376,6 +376,13 @@ export function createHSet(
 /**
  * @internal
  */
+export function createHKeys(key: string): redis_request.Command {
+    return createCommand(RequestType.HKeys, [key]);
+}
+
+/**
+ * @internal
+ */
 export function createHSetNX(
     key: string,
     field: string,

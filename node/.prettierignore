@@ -1,5 +1,6 @@
 # ignore that dir, because there are a lot of files which we don't manage, e.g. json files in cargo crates
 rust-client/*
+*.md
 # unignore specific files
 !rust-client/package.json
 !rust-client/tsconfig.json

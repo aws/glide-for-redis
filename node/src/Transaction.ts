@@ -383,7 +383,8 @@ export class BaseTransaction<T extends BaseTransaction<T>> {
      * See https://redis.io/commands/hkeys/ for more details.
      *
      * @param key - The key of the hash.
-     * @returns A list of field names for the hash, or an empty list when the key does not exist.
+     *
+     * Command Response - A list of field names for the hash, or an empty list when the key does not exist.
      */
     public hkeys(key: string): T {
         return this.addAndReturn(createHKeys(key));

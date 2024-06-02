@@ -716,7 +716,7 @@ export class BaseClient {
      * @example
      * ```typescript
      * // Example usage of the hkeys method
-     * const result = await client.hkeys("my_hash")
+     * const result = await client.hkeys("my_hash");
      * console.log(result); // Output: ["field1", "field2", "field3"]  - Returns all the field names stored in the hash "my_hash".
      * ```
      */

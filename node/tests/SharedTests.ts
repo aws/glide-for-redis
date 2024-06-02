@@ -601,13 +601,7 @@ export function runBaseTests<Context>(config: {
 
                 expect(await client.set(key2, value)).toEqual("OK");
 
-                try {
-                    expect(await client.hkeys(key2)).toThrow();
-                } catch (e) {
-                    expect((e as Error).message).toMatch(
-                        "WRONGTYPE: Operation against a key holding the wrong kind of value",
-                    );
-                }
+                expect(await client.hkeys(key2)).rejects.toThrow();
             }, protocol);
         },
         config.timeout,

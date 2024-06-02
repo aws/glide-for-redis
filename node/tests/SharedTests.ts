@@ -2208,7 +2208,7 @@ export function runBaseTests<Context>(config: {
     );
 
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
-        `streams add and trim test_%p`,
+        `streams add test_%p`,
         async () => {
             await runTest(async (client: BaseClient) => {
                 const key = uuidv4();
@@ -2290,6 +2290,76 @@ export function runBaseTests<Context>(config: {
                 ).toEqual(1);
                 expect(await client.customCommand(["XLEN", key])).toEqual(1);
             }, ProtocolVersion.RESP2);
+        },
+        config.timeout,
+    );
+
+    it.only.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
+        `streams trim options test_%p`,
+        async (protocol) => {
+            await runTest(async (client: BaseClient) => {
+                const key = uuidv4();
+                const field = uuidv4();
+                const value = uuidv4();
+
+                for (let counter = 1; counter <= 300; counter++) {
+                    const id = "12345-" + counter;
+                    expect(
+                        await client.xadd(
+                            key,
+                            [[field + counter, value + counter]],
+                            { id: id },
+                        ),
+                    ).toEqual(id);
+                }
+
+                // TODO: Update when XLEN is implemented
+                expect(await client.customCommand(["XLEN", key])).toEqual(300);
+
+                // trim ids from 12345-1..12345-9 using MinId
+                expect(
+                    await client.xtrim(key, {
+                        method: "minid",
+                        threshold: "12345-10",
+                    }),
+                ).toEqual(9);
+                // TODO: Update when XLEN is implemented
+                expect(await client.customCommand(["XLEN", key])).toEqual(291);
+
+                // trim 91 items (already trimmed 9 items, and Redis trims only another 91 items)
+                expect(
+                    await client.xtrim(key, {
+                        method: "minid",
+                        threshold: "12345-300",
+                        exact: false,
+                        limit: 100,
+                    }),
+                ).toEqual(81);
+                // TODO: Update when XLEN is implemented
+                expect(await client.customCommand(["XLEN", key])).toEqual(210);
+
+                // trim another 100 items using maxlen of 0
+                expect(
+                    await client.xtrim(key, {
+                        method: "maxlen",
+                        threshold: 0,
+                        limit: 100,
+                    }),
+                ).toEqual(88);
+                // TODO: Update when XLEN is implemented
+                expect(await client.customCommand(["XLEN", key])).toEqual(122);
+
+                // trims the remainder of items
+                expect(
+                    await client.xtrim(key, {
+                        method: "maxlen",
+                        exact: true,
+                        threshold: 0,
+                    }),
+                ).toEqual(122);
+                // TODO: Update when XLEN is implemented
+                expect(await client.customCommand(["XLEN", key])).toEqual(0);
+            }, protocol);
         },
         config.timeout,
     );

@@ -2171,6 +2171,14 @@ export class BaseClient {
      * @param key - the key of the stream
      * @param options - options detailing how to trim the stream.
      * @returns The number of entries deleted from the stream. If `key` doesn't exist, 0 is returned.
+     *
+     * @example
+     * ```typescript
+     * // Example usage of xtrim to trim id "0-2" from the stream
+     * await client.xadd("my_stream", [("f1", "v2"), ("f2, "v2")], {id: "0-2"});
+     * const result = await client.xtrim("my_stream", {method: "minid", threshold: "0-2", exact: true});
+     * console.log(result); // Output: 1 - One entry was deleted from the stream
+     * ```
      */
     public xtrim(key: string, options: StreamTrimOptions): Promise<number> {
         return this.createWritePromise(createXTrim(key, options));

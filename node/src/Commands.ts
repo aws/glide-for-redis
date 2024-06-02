@@ -1108,33 +1108,44 @@ export function createZRank(
     return createCommand(RequestType.ZRank, args);
 }
 
-export type StreamTrimOptions = (
-    | {
-          /**
-           * Trim the stream according to entry ID.
-           * Equivalent to `MINID` in the Redis API.
-           */
-          method: "minid";
-          threshold: string;
-      }
-    | {
-          /**
-           * Trim the stream according to length.
-           * Equivalent to `MAXLEN` in the Redis API.
-           */
-          method: "maxlen";
-          threshold: number;
-      }
-) & {
+export type StreamTrimExactOptions = {
     /**
-     * If `true`, the stream will be trimmed exactly. Equivalent to `=` in the Redis API. Otherwise the stream will be trimmed in a near-exact manner, which is more efficient, equivalent to `~` in the Redis API.
+     * If `true`, the stream will be trimmed exactly. Equivalent to `=` in the Redis API.
+     * Otherwise, the stream will be trimmed in a near-exact manner, which is more efficient. Equivalent to
+     * `~` in the Redis API.
      */
-    exact: boolean;
+    exact?: boolean;
+};
+
+export type StreamTrimLimitOptions = {
     /**
      * If set, sets the maximal amount of entries that will be deleted.
      */
-    limit?: number;
+    exact: false;
+    limit: number;
 };
+
+export type StreamTrimMinIdOptions = {
+    /**
+     * Trim the stream according to entry ID.
+     * Equivalent to `MINID` in the Redis API.
+     */
+    method: "minid";
+    threshold: string;
+} & (StreamTrimExactOptions | StreamTrimLimitOptions);
+
+export type StreamTrimMaxLenOptions = {
+    /**
+     * Trim the stream according to length.
+     * Equivalent to `MAXLEN` in the Redis API.
+     */
+    method: "maxlen";
+    threshold: number;
+} & (StreamTrimExactOptions | StreamTrimLimitOptions);
+
+export type StreamTrimOptions =
+    | StreamTrimMinIdOptions
+    | StreamTrimMaxLenOptions;
 
 export type StreamAddOptions = {
     /**
@@ -1159,9 +1170,13 @@ function addTrimOptions(options: StreamTrimOptions, args: string[]) {
         args.push("MINID");
     }
 
-    if (options.exact) {
-        args.push("=");
-    } else {
+    if ("exact" in options) {
+        if (options.exact) {
+            args.push("=");
+        } else {
+            args.push("~");
+        }
+    } else if ("limit" in options) {
         args.push("~");
     }
 
@@ -1171,9 +1186,9 @@ function addTrimOptions(options: StreamTrimOptions, args: string[]) {
         args.push(options.threshold);
     }
 
-    if (options.limit) {
+    if ("limit" in options) {
         args.push("LIMIT");
-        args.push(options.limit.toString());
+        args.push((options as StreamTrimLimitOptions).limit.toString());
     }
 }
 

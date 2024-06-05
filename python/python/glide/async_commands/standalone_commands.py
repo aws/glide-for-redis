@@ -278,6 +278,7 @@ class StandaloneCommands(CoreCommands):
         """
         Sorts the elements in the list, set, or sorted set at `key` and returns the result.
         The `sort` command can be used to sort elements based on different criteria and apply transformations on sorted elements.
+        This command is routed to primary only.
         To store the result into a new key, see `sort_store`.
 
         See https://valkey.io/commands/sort for more details.
@@ -327,6 +328,70 @@ class StandaloneCommands(CoreCommands):
         """
         args = _build_sort_args(key, by_pattern, limit, get_patterns, order, alpha)
         result = await self._execute_command(RequestType.Sort, args)
+        return cast(List[Optional[str]], result)
+
+    async def sort_ro(
+        self,
+        key: str,
+        by_pattern: Optional[str] = None,
+        limit: Optional[Limit] = None,
+        get_patterns: Optional[List[str]] = None,
+        order: Optional[OrderBy] = None,
+        alpha: Optional[bool] = None,
+    ) -> List[Optional[str]]:
+        """
+        Sorts the elements in the list, set, or sorted set at `key` and returns the result.
+        The `sort` command can be used to sort elements based on different criteria and apply transformations on sorted elements.
+        This command is routed depending on the the client's `ReadFrom` strategy.
+        To store the result into a new key, see `sort_store`.
+
+        See https://valkey.io/commands/sort_ro for more details.
+
+        Args:
+            key (str): The key of the list, set, or sorted set to be sorted.
+            by_pattern (Optional[str]): A pattern to sort by external keys instead of by the elements stored at the key themselves.
+                The pattern should contain an asterisk (*) as a placeholder for the element values, where the value
+                from the key replaces the asterisk to create the key name. For example, if `key` contains IDs of objects,
+                `by_pattern` can be used to sort these IDs based on an attribute of the objects, like their weights or
+                timestamps.
+                E.g., if `by_pattern` is `weight_*`, the command will sort the elements by the values of the
+                keys `weight_<element>`.
+                If not provided, elements are sorted by their value.
+            limit (Optional[Limit]): Limiting the range of the query by setting offset and result count. See `Limit` class for more information.
+            get_pattern (Optional[str]): A pattern used to retrieve external keys' values, instead of the elements at `key`.
+                The pattern should contain an asterisk (*) as a placeholder for the element values, where the value
+                from `key` replaces the asterisk to create the key name. This allows the sorted elements to be
+                transformed based on the related keys values. For example, if `key` contains IDs of users, `get_pattern`
+                can be used to retrieve specific attributes of these users, such as their names or email addresses.
+                E.g., if `get_pattern` is `name_*`, the command will return the values of the keys `name_<element>`
+                for each sorted element. Multiple `get_pattern` arguments can be provided to retrieve multiple attributes.
+                The special value `#` can be used to include the actual element from `key` being sorted.
+                If not provided, only the sorted elements themselves are returned.
+            order (Optional[OrderBy]): Specifies the order to sort the elements.
+                Can be `OrderBy.ASC` (ascending) or `OrderBy.DESC` (descending).
+            alpha (Optional[bool]): When `True`, sorts elements lexicographically. When `False` (default), sorts elements numerically.
+                Use this when the list, set, or sorted set contains string values that cannot be converted into double precision floating point
+
+        Returns:
+            List[Optional[str]]: Returns a list of sorted elements.
+
+        Examples:
+            >>> await client.lpush("mylist", 3, 1, 2)
+            >>> await client.sort_ro("mylist")
+            ['1', '2', '3']
+            >>> await client.sort_ro("mylist", order=OrderBy.DESC)
+            ['3', '2', '1']
+            >>> await client.lpush("mylist2", 2, 1, 2, 3, 3, 1)
+            >>> await client.sort_ro("mylist2", limit=Limit(2, 3))
+            ['2', '2', '3']
+            >>> await client.hset("user:1", "name", "Alice", "age", 30)
+            >>> await client.hset("user:2", "name", "Bob", "age", 25)
+            >>> await client.lpush("user_ids", 2, 1)
+            >>> await client.sort_ro("user_ids", by_pattern="user:*->age", get_patterns=["user:*->name"])
+            ['Bob', 'Alice']
+        """
+        args = _build_sort_args(key, by_pattern, limit, get_patterns, order, alpha)
+        result = await self._execute_command(RequestType.SortReadOnly, args)
         return cast(List[Optional[str]], result)
 
     async def sort_store(

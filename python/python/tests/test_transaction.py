@@ -385,6 +385,13 @@ async def transaction_test(
         alpha=True,
     )
     args.append(["2", "3", "4", "a"])
+    transaction.sort_ro(
+        key17,
+        limit=Limit(1, 4),
+        order=OrderBy.ASC,
+        alpha=True,
+    )
+    args.append(["2", "3", "4", "a"])
     transaction.sort_store(
         key17,
         key18,
@@ -545,6 +552,13 @@ class TestTransaction:
             order=OrderBy.ASC,
             alpha=True,
         )
+        transaction.sort_ro(
+            key1,
+            by_pattern="user:*->age",
+            get_patterns=["user:*->name"],
+            order=OrderBy.ASC,
+            alpha=True,
+        )
         transaction.sort_store(
             key1,
             "newSortedKey",
@@ -561,8 +575,17 @@ class TestTransaction:
         assert isinstance(result[0], str)
         assert "# Memory" in result[0]
         assert result[1:4] == [OK, OK, value]
-        assert result[4:11] == [2, 2, 2, ["Bob", "Alice"], 2, OK, None]
-        assert result[11:] == expected
+        assert result[4:12] == [
+            2,
+            2,
+            2,
+            ["Bob", "Alice"],
+            ["Bob", "Alice"],
+            2,
+            OK,
+            None,
+        ]
+        assert result[12:] == expected
 
     def test_transaction_clear(self):
         transaction = Transaction()

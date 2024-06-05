@@ -182,6 +182,7 @@ pub enum RequestType {
     Move = 174,
     SInterCard = 175,
     XRevRange = 176,
+    SortReadOnly = 177,
     Copy = 178,
     MSetNX = 179,
 }
@@ -371,6 +372,7 @@ impl From<::protobuf::EnumOrUnknown<ProtobufRequestType>> for RequestType {
             ProtobufRequestType::Sort => RequestType::Sort,
             ProtobufRequestType::XRevRange => RequestType::XRevRange,
             ProtobufRequestType::MSetNX => RequestType::MSetNX,
+            ProtobufRequestType::SortReadOnly => RequestType::SortReadOnly,
         }
     }
 }
@@ -554,6 +556,7 @@ impl RequestType {
             RequestType::Sort => Some(cmd("SORT")),
             RequestType::XRevRange => Some(cmd("XREVRANGE")),
             RequestType::MSetNX => Some(cmd("MSETNX")),
+            RequestType::SortReadOnly => Some(cmd("SORT_RO")),
         }
     }
 }

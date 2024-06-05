@@ -378,6 +378,7 @@ class ClusterCommands(CoreCommands):
     ) -> List[str]:
         """
         Sorts the elements in the list, set, or sorted set at `key` and returns the result.
+        This command is routed to primary only.
         To store the result into a new key, see `sort_store`.
 
         By default, sorting is numeric, and elements are compared by their value interpreted as double precision floating point numbers.
@@ -413,6 +414,53 @@ class ClusterCommands(CoreCommands):
         """
         args = _build_sort_args(key, None, limit, None, order, alpha)
         result = await self._execute_command(RequestType.Sort, args)
+        return cast(List[str], result)
+
+    async def sort_ro(
+        self,
+        key: str,
+        limit: Optional[Limit] = None,
+        order: Optional[OrderBy] = None,
+        alpha: Optional[bool] = None,
+    ) -> List[str]:
+        """
+        Sorts the elements in the list, set, or sorted set at `key` and returns the result.
+        This command is routed depending on the the client's `ReadFrom` strategy.
+        To store the result into a new key, see `sort_store`.
+
+        By default, sorting is numeric, and elements are compared by their value interpreted as double precision floating point numbers.
+
+        See https://valkey.io/commands/sort_ro for more details.
+
+        Args:
+            key (str): The key of the list, set, or sorted set to be sorted.
+            limit (Optional[Limit]): Limiting the range of the query by setting offset and result count. See `Limit` class for more information.
+            order (Optional[OrderBy]): Specifies the order to sort the elements.
+                Can be `OrderBy.ASC` (ascending) or `OrderBy.DESC` (descending).
+            alpha (Optional[bool]): When `True`, sorts elements lexicographically. When `False` (default), sorts elements numerically.
+                Use this when the list, set, or sorted set contains string values that cannot be converted into double precision floating point numbers.
+
+        Returns:
+            List[str]: A list of sorted elements.
+
+        Examples:
+            >>> await client.lpush("mylist", '3', '1', '2')
+            >>> await client.sort_ro("mylist")
+            ['1', '2', '3']
+
+            >>> await client.sort_ro("mylist", order=OrderBy.DESC)
+            ['3', '2', '1']
+
+            >>> await client.lpush("mylist", '2', '1', '2', '3', '3', '1')
+            >>> await client.sort_ro("mylist", limit=Limit(2, 3))
+            ['1', '2', '2']
+
+            >>> await client.lpush("mylist", "a", "b", "c", "d")
+            >>> await client.sort_ro("mylist", limit=Limit(2, 2), order=OrderBy.DESC, alpha=True)
+            ['b', 'a']
+        """
+        args = _build_sort_args(key, None, limit, None, order, alpha)
+        result = await self._execute_command(RequestType.SortReadOnly, args)
         return cast(List[str], result)
 
     async def sort_store(

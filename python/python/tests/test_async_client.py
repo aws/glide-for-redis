@@ -3697,6 +3697,15 @@ class TestCommands:
         )
         assert result == ["Alice", "Bob"]
 
+        result_ro = await redis_client.sort_ro(
+            key,
+            limit=Limit(0, 2),
+            get_patterns=["user:*->name"],
+            order=OrderBy.ASC,
+            alpha=True,
+        )
+        assert result_ro == ["Alice", "Bob"]
+
         # Test sort_store with all arguments
         sort_store_result = await redis_client.sort_store(
             key,
@@ -3719,6 +3728,14 @@ class TestCommands:
         )
         assert result == ["Dave", "Bob", "Alice", "Charlie", "Eve"]
 
+        result_ro = await redis_client.sort_ro(
+            "user_ids",
+            by_pattern="user:*->age",
+            get_patterns=["user:*->name"],
+            alpha=True,
+        )
+        assert result_ro == ["Dave", "Bob", "Alice", "Charlie", "Eve"]
+
         # Test sort with `by` argument with missing keys to sort by
         assert await redis_client.lpush("user_ids", ["a"]) == 6
         result = await redis_client.sort(
@@ -3729,6 +3746,14 @@ class TestCommands:
         )
         assert result == [None, "Dave", "Bob", "Alice", "Charlie", "Eve"]
 
+        result_ro = await redis_client.sort_ro(
+            "user_ids",
+            by_pattern="user:*->age",
+            get_patterns=["user:*->name"],
+            alpha=True,
+        )
+        assert result_ro == [None, "Dave", "Bob", "Alice", "Charlie", "Eve"]
+
         # Test sort with `by` argument with missing keys to sort by
         result = await redis_client.sort(
             "user_ids",
@@ -3738,6 +3763,14 @@ class TestCommands:
         )
         assert result == [None, "30", "25", "35", "20", "40"]
 
+        result_ro = await redis_client.sort_ro(
+            "user_ids",
+            by_pattern="user:*->name",
+            get_patterns=["user:*->age"],
+            alpha=True,
+        )
+        assert result_ro == [None, "30", "25", "35", "20", "40"]
+
         # Test Limit with count 0
         result = await redis_client.sort(
             "user_ids",
@@ -3745,6 +3778,13 @@ class TestCommands:
             alpha=True,
         )
         assert result == []
+
+        result_ro = await redis_client.sort_ro(
+            "user_ids",
+            limit=Limit(0, 0),
+            alpha=True,
+        )
+        assert result_ro == []
 
     @pytest.mark.parametrize("cluster_mode", [True, False])
     @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
@@ -3757,6 +3797,9 @@ class TestCommands:
         # Test sort with non-existing key
         result = await redis_client.sort("non_existing_key")
         assert result == []
+
+        result_ro = await redis_client.sort_ro("non_existing_key")
+        assert result_ro == []
 
         # Test sort_store with non-existing key
         sort_store_result = await redis_client.sort_store(
@@ -3771,13 +3814,22 @@ class TestCommands:
         result = await redis_client.sort(key)
         assert result == ["1", "2", "3", "4", "5"]
 
+        result_ro = await redis_client.sort_ro(key)
+        assert result_ro == ["1", "2", "3", "4", "5"]
+
         # limit argument
         result = await redis_client.sort(key, limit=Limit(1, 3))
         assert result == ["2", "3", "4"]
 
+        result_ro = await redis_client.sort_ro(key, limit=Limit(1, 3))
+        assert result_ro == ["2", "3", "4"]
+
         # order argument
         result = await redis_client.sort(key, order=OrderBy.DESC)
         assert result == ["5", "4", "3", "2", "1"]
+
+        result_ro = await redis_client.sort_ro(key, order=OrderBy.DESC)
+        assert result_ro == ["5", "4", "3", "2", "1"]
 
         assert await redis_client.lpush(key, ["a"]) == 6
 
@@ -3785,15 +3837,27 @@ class TestCommands:
             await redis_client.sort(key)
         assert "can't be converted into double" in str(e).lower()
 
+        with pytest.raises(RequestError) as e:
+            await redis_client.sort_ro(key)
+        assert "can't be converted into double" in str(e).lower()
+
         # alpha argument
         result = await redis_client.sort(key, alpha=True)
         assert result == ["1", "2", "3", "4", "5", "a"]
+
+        result_ro = await redis_client.sort_ro(key, alpha=True)
+        assert result_ro == ["1", "2", "3", "4", "5", "a"]
 
         # Combining multiple arguments
         result = await redis_client.sort(
             key, limit=Limit(1, 3), order=OrderBy.DESC, alpha=True
         )
         assert result == ["5", "4", "3"]
+
+        result_ro = await redis_client.sort_ro(
+            key, limit=Limit(1, 3), order=OrderBy.DESC, alpha=True
+        )
+        assert result_ro == ["5", "4", "3"]
 
         # Test sort_store with combined arguments
         sort_store_result = await redis_client.sort_store(

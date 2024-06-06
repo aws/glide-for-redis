@@ -3788,7 +3788,7 @@ class TestCommands:
             alpha=True,
         )
         assert result == []
-        
+
         if not skip_sort_ro_test:
             result_ro = await redis_client.sort_ro(
                 "user_ids",

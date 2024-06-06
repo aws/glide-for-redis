@@ -262,6 +262,8 @@ export async function transactionTest(
     args.push(false);
     baseTransaction.hvals(key4);
     args.push([value]);
+    baseTransaction.hkeys(key4);
+    args.push([field]);
     baseTransaction.hget(key4, field);
     args.push(value);
     baseTransaction.hgetall(key4);

@@ -457,6 +457,8 @@ class ClusterCommands(CoreCommands):
             >>> await client.lpush("mylist", "a", "b", "c", "d")
             >>> await client.sort_ro("mylist", limit=Limit(2, 2), order=OrderBy.DESC, alpha=True)
             ['b', 'a']
+
+        Since: Redis version 7.0.0.
         """
         args = _build_sort_args(key, None, limit, None, order, alpha)
         result = await self._execute_command(RequestType.SortReadOnly, args)

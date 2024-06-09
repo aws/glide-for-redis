@@ -387,6 +387,8 @@ class StandaloneCommands(CoreCommands):
             >>> await client.lpush("user_ids", 2, 1)
             >>> await client.sort_ro("user_ids", by_pattern="user:*->age", get_patterns=["user:*->name"])
             ['Bob', 'Alice']
+
+        Since: Redis version 7.0.0.
         """
         args = _build_sort_args(key, by_pattern, limit, get_patterns, order, alpha)
         result = await self._execute_command(RequestType.SortReadOnly, args)

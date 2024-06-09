@@ -2957,6 +2957,8 @@ class Transaction(BaseTransaction):
 
         Command response:
             List[Optional[str]]: Returns a list of sorted elements.
+
+        Since: Redis version 7.0.0.
         """
         args = _build_sort_args(key, by_pattern, limit, get_patterns, order, alpha)
         return self.append_command(RequestType.SortReadOnly, args)
@@ -3072,6 +3074,8 @@ class ClusterTransaction(BaseTransaction):
 
         Command response:
             List[str]: A list of sorted elements.
+
+        Since: Redis version 7.0.0.
         """
         args = _build_sort_args(key, None, limit, None, order, alpha)
         return self.append_command(RequestType.SortReadOnly, args)

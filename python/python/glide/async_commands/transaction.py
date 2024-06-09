@@ -2879,7 +2879,7 @@ class Transaction(BaseTransaction):
         """
         Sorts the elements in the list, set, or sorted set at `key` and returns the result.
         The `sort` command can be used to sort elements based on different criteria and apply transformations on sorted elements.
-        This command is routed to primary only.
+        This command is routed to primary nodes only.
         To store the result into a new key, see `sort_store`.
 
         See https://valkey.io/commands/sort for more details.
@@ -2927,8 +2927,6 @@ class Transaction(BaseTransaction):
         """
         Sorts the elements in the list, set, or sorted set at `key` and returns the result.
         The `sort` command can be used to sort elements based on different criteria and apply transformations on sorted elements.
-        This command is routed depending on the client's `ReadFrom` strategy.
-        To store the result into a new key, see `sort_store`.
 
         See https://valkey.io/commands/sort_ro for more details.
 
@@ -3061,8 +3059,6 @@ class ClusterTransaction(BaseTransaction):
     ) -> TTransaction:
         """
         Sorts the elements in the list, set, or sorted set at `key` and returns the result.
-        This command is routed depending on the client's `ReadFrom` strategy.
-        To store the result into a new key, see `sort_store`.
 
         See https://valkey.io/commands/sort_ro for more details.
 

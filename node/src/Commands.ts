@@ -854,16 +854,46 @@ export function createZInterstore(
     keys: string[] | KeyWeight[],
     aggregationType?: AggregationType,
 ): redis_request.Command {
-    const args = createZCmdStoreArgs(destination, keys, aggregationType);
+    const args = createZCmdArgs(keys, aggregationType, false, destination);
     return createCommand(RequestType.ZInterStore, args);
 }
 
-function createZCmdStoreArgs(
-    destination: string,
+/**
+ * @internal
+ */
+export function createZInter(
     keys: string[] | KeyWeight[],
     aggregationType?: AggregationType,
+    withScores?: boolean,
+): redis_request.Command {
+    const args = createZCmdArgs(keys, aggregationType, withScores);
+    return createCommand(RequestType.ZInter, args);
+}
+
+/**
+ * @internal
+ */
+export function createZUnion(
+    keys: string[] | KeyWeight[],
+    aggregationType?: AggregationType,
+    withScores?: boolean,
+): redis_request.Command {
+    const args = createZCmdArgs(keys, aggregationType, withScores);
+    return createCommand(RequestType.ZUnion, args);
+}
+
+function createZCmdArgs(
+    keys: string[] | KeyWeight[],
+    aggregationType?: AggregationType,
+    withscores?: boolean,
+    destination?: string,
 ): string[] {
-    const args: string[] = [destination, keys.length.toString()];
+    const args = [];
+    if (destination) {
+        args.push(destination);
+    }
+
+    args.push(keys.length.toString());
 
     if (typeof keys[0] === "string") {
         args.push(...(keys as string[]));
@@ -876,6 +906,10 @@ function createZCmdStoreArgs(
 
     if (aggregationType) {
         args.push("AGGREGATE", aggregationType);
+    }
+
+    if (withscores) {
+        args.push("WITHSCORES");
     }
 
     return args;

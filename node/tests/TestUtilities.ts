@@ -232,6 +232,7 @@ export async function transactionTest(
     const key11 = "{key}" + uuidv4(); // hyper log log
     const key12 = "{key}" + uuidv4();
     const key13 = "{key}" + uuidv4();
+    const key14 = "{key}" + uuidv4();
     const field = uuidv4();
     const value = uuidv4();
     const args: ReturnType[] = [];
@@ -363,10 +364,18 @@ export async function transactionTest(
     args.push({ member2: 3, member3: 3.5, member4: 4, member5: 5 });
     baseTransaction.zadd(key12, { one: 1, two: 2 });
     args.push(2);
-    baseTransaction.zadd(key13, { one: 1, two: 2, tree: 3.5 });
+    baseTransaction.zadd(key13, { one: 1, two: 2, three: 3.5 });
     args.push(3);
     baseTransaction.zinterstore(key12, [key12, key13]);
     args.push(2);
+    baseTransaction.zadd(key14, { one: 1, two: 2 });
+    args.push(2);
+    baseTransaction.zinter([key13, key14]);
+    args.push(["one", "two"]);
+    baseTransaction.zinterWithScores([key13, key14]);
+    args.push({one: 2, two: 4});
+    baseTransaction.zunionWithScores([key13, key14]);
+    args.push({one: 2, two: 4, three: 3.5});
     baseTransaction.zcount(key8, { value: 2 }, "positiveInfinity");
     args.push(4);
     baseTransaction.zpopmin(key8);

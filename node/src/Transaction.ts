@@ -1114,13 +1114,11 @@ export class BaseTransaction<T extends BaseTransaction<T>> {
      * 
      * See https://valkey.io/commands/zinter/ for more details.
      * 
-     * @param keys - The keys of the sorted sets with possible formats:
-     *  string[] - for keys only.
-     *  KeyWeight[] - for weighted keys with score multipliers.
+     * @param keys - The keys of the sorted sets.
      * Command Response - The resulting array of intersecting elements.
      */
     public zinter(
-        keys: string[] | KeyWeight[],
+        keys: string[],
     ): T {
         return this.addAndReturn(
             createZInter(keys),
@@ -1161,13 +1159,11 @@ export class BaseTransaction<T extends BaseTransaction<T>> {
      * 
      * See https://valkey.io/commands/zunion/ for more details.
      * 
-     * @param keys - The keys of the sorted sets with possible formats:
-     *  string[] - for keys only.
-     *  KeyWeight[] - for weighted keys with score multipliers.
+     * @param keys - The keys of the sorted sets.
      * Command Response - The resulting array of union elements.
      */
-    public zunioun(
-        keys: string[] | KeyWeight[],
+    public zunion(
+        keys: string[],
     ): T {
         return this.addAndReturn(
             createZUnion(keys),

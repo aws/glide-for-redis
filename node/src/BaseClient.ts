@@ -1952,16 +1952,14 @@ export class BaseClient {
 
     /**
      * Computes the intersection of sorted sets given by the specified `keys` and returns a list of intersecting elements.
-     * To get the scores as well, see `zinter_withscores`.
-     * To store the result in a key as a sorted set, see `zinterstore`.
+     * To get the scores as well, see `zinterWithScores`.
+     * To store the result in a key as a sorted set, see `zinterStore`.
      *
      * When in cluster mode, all keys in `keys` must map to the same hash slot.
      * 
      * See https://valkey.io/commands/zinter/ for more details.
      * 
-     * @param keys - The keys of the sorted sets with possible formats:
-     *  string[] - for keys only.
-     *  KeyWeight[] - for weighted keys with score multipliers.
+     * @param keys - The keys of the sorted sets.
      * @returns The resulting array of intersecting elements.
      * 
      * @example
@@ -1972,7 +1970,7 @@ export class BaseClient {
      * ```
      */
     public zinter(
-        keys: string[] | KeyWeight[],
+        keys: string[],
     ): Promise<string[]> {
         return this.createWritePromise(
             createZInter(keys),
@@ -1982,7 +1980,7 @@ export class BaseClient {
     /**
      * Computes the intersection of sorted sets given by the specified `keys` and returns a list of intersecting elements with scores.
      * To get the elements only, see `zinter`.
-     * To store the result in a key as a sorted set, see `zinterstore`.
+     * To store the result in a key as a sorted set, see `zinterStore`.
      *
      * When in cluster mode, all keys in `keys` must map to the same hash slot.
      * 
@@ -2013,17 +2011,15 @@ export class BaseClient {
 
     /**
      * Computes the union of sorted sets given by the specified `keys` and returns a list of union elements.
-     * To get the scores as well, see `zunion_withscores`.
+     * To get the scores as well, see `zunionWithScores`.
      * 
-     * To store the result in a key as a sorted set, see `zunionstore`.
+     * To store the result in a key as a sorted set, see `zunionStore`.
      * 
      * When in cluster mode, all keys in `keys` must map to the same hash slot.
      * 
      * See https://valkey.io/commands/zunion/ for more details.
      * 
-     * @param keys - The keys of the sorted sets with possible formats:
-     *  string[] - for keys only.
-     *  KeyWeight[] - for weighted keys with score multipliers.
+     * @param keys - The keys of the sorted sets.
      * @returns The resulting array of union elements.
      * 
      * @example
@@ -2033,8 +2029,8 @@ export class BaseClient {
      * await client.zunion(["key1", "key2"]) // Output: ['member1', 'member2']
      * ```
      */
-    public zunioun(
-        keys: string[] | KeyWeight[],
+    public zunion(
+        keys: string[],
     ): Promise<string[]> {
         return this.createWritePromise(
             createZUnion(keys),

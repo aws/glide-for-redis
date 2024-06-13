@@ -1989,9 +1989,10 @@ export class BaseClient {
      * 
      * @example
      * ```typescript
-     * await client.zadd("key1", {"member1": 10.5, "member2": 8.2})
-     * await client.zadd("key2", {"member1": 9.5})
-     * await client.zinter(["key1", "key2"]) // Output: ['member1']
+     * await client.zadd("key1", {"member1": 10.5, "member2": 8.2});
+     * await client.zadd("key2", {"member1": 9.5});
+     * const result = await client.zinter(["key1", "key2"]);
+     * console.log(result); // Output: ['member1']
      * ```
      */
     public zinter(
@@ -2019,10 +2020,12 @@ export class BaseClient {
      * 
      * @example
      * ```typescript
-     * await client.zadd("key1", {"member1": 10.5, "member2": 8.2})
-     * await client.zadd("key2", {"member1": 9.5})
-     * await client.zinterWithScores(["key1", "key2"]) // Output: {'member1': 20} - "member1" with score of 20 is the result
-     * await client.zinterWithScores(["key1", "key2"], AggregationType.MAX) // Output: {'member1': 10.5} - "member1" with score of 10.5 is the result.
+     * await client.zadd("key1", {"member1": 10.5, "member2": 8.2});
+     * await client.zadd("key2", {"member1": 9.5});
+     * const result1 = await client.zinterWithScores(["key1", "key2"]);
+     * console.log(result1); // Output: {'member1': 20} - "member1" with score of 20 is the result
+     * const result2 = await client.zinterWithScores(["key1", "key2"], AggregationType.MAX)
+     * console.log(result2); // Output: {'member1': 10.5} - "member1" with score of 10.5 is the result.
      * ```
      */
     public zinterWithScores(
@@ -2049,9 +2052,10 @@ export class BaseClient {
      * 
      * @example
      * ```typescript
-     * await client.zadd("key1", {"member1": 10.5, "member2": 8.2})
-     * await client.zadd("key2", {"member1": 9.5})
-     * await client.zunion(["key1", "key2"]) // Output: ['member1', 'member2']
+     * await client.zadd("key1", {"member1": 10.5, "member2": 8.2});
+     * await client.zadd("key2", {"member1": 9.5});
+     * const result = await client.zunion(["key1", "key2"]);
+     * console.log(result); // Output: ['member1', 'member2']
      * ```
      */
     public zunion(
@@ -2078,10 +2082,12 @@ export class BaseClient {
      * 
      * @example
      * ```typescript
-     * await client.zadd("key1", {"member1": 10.5, "member2": 8.2})
-     * await client.zadd("key2", {"member1": 9.5})
-     * await client.zunionWithScores(["key1", "key2"]) // {'member1': 20, 'member2': 8.2}
-     * await client.zunionWithScores(["key1", "key2"], "MAX") // {'member1': 10.5, 'member2': 8.2}
+     * await client.zadd("key1", {"member1": 10.5, "member2": 8.2});
+     * await client.zadd("key2", {"member1": 9.5});
+     * const result1 = await client.zunionWithScores(["key1", "key2"]);
+     * console.log(result1); // {'member1': 20, 'member2': 8.2}
+     * const result2 = await client.zunionWithScores(["key1", "key2"], "MAX");
+     * console.log(result2); // {'member1': 10.5, 'member2': 8.2}
      * ```
      */
     public zunionWithScores(

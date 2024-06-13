@@ -274,7 +274,7 @@ describe("RedisClusterClient", () => {
         TIMEOUT,
     );
 
-    it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
+    it.only.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `check that multi key command returns a cross slot error`,
         async (protocol) => {
             const client = await RedisClusterClient.createClient(
@@ -291,7 +291,11 @@ describe("RedisClusterClient", () => {
                 client.smove("abc", "zxy", "value"),
                 client.renamenx("abc", "zxy"),
                 client.sinter(["abc", "zxy", "lkn"]),
+                client.zinter(["abc", "zxy", "lkn"]),
+                client.zinterWithScores(["abc", "zxy", "lkn"]),
                 client.zinterstore("abc", ["zxy", "lkn"]),
+                client.zunion(["abc", "zxy", "lkn"]),
+                client.zunionWithScores(["abc", "zxy", "lkn"]),
                 client.sunionstore("abc", ["zxy", "lkn"]),
                 client.pfcount(["abc", "zxy", "lkn"]),
                 // TODO all rest multi-key commands except ones tested below

@@ -882,6 +882,10 @@ export function createZUnion(
     return createCommand(RequestType.ZUnion, args);
 }
 
+/**
+ * @internal
+ * Helper function for Zcommands (ZInter, ZinterStore, ZUnion..) that arranges arguments in the server's required order.
+ */
 function createZCmdArgs(
     keys: string[] | KeyWeight[],
     aggregationType?: AggregationType,
@@ -889,6 +893,7 @@ function createZCmdArgs(
     destination?: string,
 ): string[] {
     const args = [];
+
     if (destination) {
         args.push(destination);
     }

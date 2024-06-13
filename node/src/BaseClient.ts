@@ -77,17 +77,20 @@ import {
     createSMove,
     createSPop,
     createSRem,
+    createSUnionStore,
     createSet,
     createStrlen,
     createTTL,
     createType,
     createUnlink,
     createXAdd,
+    createXLen,
     createXRead,
     createXTrim,
     createZAdd,
     createZCard,
     createZCount,
+    createZInterCard,
     createZInterstore,
     createZPopMax,
     createZPopMin,
@@ -98,9 +101,7 @@ import {
     createZRemRangeByRank,
     createZRemRangeByScore,
     createZScore,
-    createSUnionStore,
-    createXLen,
-    createZInterCard,
+    createZUnionStore,
 } from "./Commands";
 import {
     ClosingError,
@@ -1970,6 +1971,43 @@ export class BaseClient {
     ): Promise<number> {
         return this.createWritePromise(
             createZInterstore(destination, keys, aggregationType),
+        );
+    }
+
+    /**
+     * Computes the union of sorted sets given by the specified `keys` and stores the result in `destination`.
+     * If `destination` already exists, it is overwritten. Otherwise, a new sorted set will be created.
+     * To get the result directly, see `zunion_withscores`.
+     * 
+     * When in cluster mode, `destination` and all keys in `keys` must map to the same hash slot.
+     * 
+     * See https://valkey.io/commands/zunionstore/ for more details.
+
+     * @param destination - The key of the destination sorted set.
+     * @param keys - The keys of the sorted sets with possible formats:
+     *  string[] - for keys only.
+     *  KeyWeight[] - for weighted keys with score multipliers.
+     * @param aggregationType - Specifies the aggregation strategy to apply when combining the scores of elements. See `AggregationType`.
+     * @returns The number of elements in the resulting sorted set stored at `destination`.
+     *
+     * @example
+     * ```typescript
+     * // Example usage of zunionStore command with an existing key
+     * await client.zadd("key1", {"member1": 10.5, "member2": 8.2})
+     * await client.zadd("key2", {"member1": 9.5})
+     * await client.zunionStore("my_sorted_set", ["key1", "key2"]) // Output: 2 - Indicates that the sorted set "my_sorted_set" contains two elements.
+     * await client.zrangeWithScores("my_sorted_set", RangeByIndex(0, -1)) // Output: {'member1': 20, 'member2': 8.2}  - "member1"  is now stored in "my_sorted_set" with score of 20 and "member2" with score of 8.2.
+     * await client.zunionStore("my_sorted_set", ["key1", "key2"] , AggregationType.MAX ) // Output: 2 - Indicates that the sorted set "my_sorted_set" contains two elements, and each score is the maximum score between the sets.
+     * await client.zrangeWithScores("my_sorted_set", RangeByIndex(0, -1)) // Output: {'member1': 10.5, 'member2': 8.2}  - "member1"  is now stored in "my_sorted_set" with score of 10.5 and "member2" with score of 8.2.
+     * ```
+     */
+    public zunionStore(
+        destination: string,
+        keys: string[] | KeyWeight[],
+        aggregationType?: AggregationType,
+    ): Promise<number> {
+        return this.createWritePromise(
+            createZUnionStore(destination, keys, aggregationType),
         );
     }
 

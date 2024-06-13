@@ -80,6 +80,7 @@ import {
     createSMove,
     createSPop,
     createSRem,
+    createSUnionStore,
     createSelect,
     createSet,
     createStrlen,
@@ -88,11 +89,13 @@ import {
     createType,
     createUnlink,
     createXAdd,
+    createXLen,
     createXRead,
     createXTrim,
     createZAdd,
     createZCard,
     createZCount,
+    createZInterCard,
     createZInterstore,
     createZPopMax,
     createZPopMin,
@@ -103,9 +106,7 @@ import {
     createZRemRangeByRank,
     createZRemRangeByScore,
     createZScore,
-    createSUnionStore,
-    createXLen,
-    createZInterCard,
+    createZUnionStore,
 } from "./Commands";
 import { redis_request } from "./ProtobufMessage";
 
@@ -1100,6 +1101,30 @@ export class BaseTransaction<T extends BaseTransaction<T>> {
     ): T {
         return this.addAndReturn(
             createZInterstore(destination, keys, aggregationType),
+        );
+    }
+
+    /**
+     * Computes the union of sorted sets given by the specified `keys` and stores the result in `destination`.
+     * If `destination` already exists, it is overwritten. Otherwise, a new sorted set will be created.
+     * To get the result directly, see `zunion_withscores`.
+     * 
+     * See https://valkey.io/commands/zunionstore/ for more details.
+
+     * @param destination - The key of the destination sorted set.
+     * @param keys - The keys of the sorted sets with possible formats:
+     *  string[] - for keys only.
+     *  KeyWeight[] - for weighted keys with score multipliers.
+     * @param aggregationType - Specifies the aggregation strategy to apply when combining the scores of elements. See `AggregationType`.
+     * Command Response - The number of elements in the resulting sorted set stored at `destination`.
+     */
+    public zunionStore(
+        destination: string,
+        keys: string[] | KeyWeight[],
+        aggregationType?: AggregationType,
+    ): T {
+        return this.addAndReturn(
+            createZUnionStore(destination, keys, aggregationType),
         );
     }
 

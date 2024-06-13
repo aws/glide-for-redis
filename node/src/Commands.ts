@@ -858,6 +858,18 @@ export function createZInterstore(
     return createCommand(RequestType.ZInterStore, args);
 }
 
+/**
+ * @internal
+ */
+export function createZUnionStore(
+    destination: string,
+    keys: string[] | KeyWeight[],
+    aggregationType?: AggregationType,
+): redis_request.Command {
+    const args = createZCmdStoreArgs(destination, keys, aggregationType);
+    return createCommand(RequestType.ZUnionStore, args);
+}
+
 function createZCmdStoreArgs(
     destination: string,
     keys: string[] | KeyWeight[],

@@ -1,4 +1,5 @@
 #### Changes
+* Node: Added ZUNIONSTORE command ([#1550](https://github.com/aws/glide-for-redis/pull/1550))
 * Node: Added ZINTERSTORE command ([#1513](https://github.com/aws/glide-for-redis/pull/1513))
 * Python: Added OBJECT ENCODING command ([#1471](https://github.com/aws/glide-for-redis/pull/1471))
 * Python: Added OBJECT FREQ command ([#1472](https://github.com/aws/glide-for-redis/pull/1472))

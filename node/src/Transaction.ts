@@ -1112,6 +1112,8 @@ export class BaseTransaction<T extends BaseTransaction<T>> {
      *
      * When in cluster mode, all keys in `keys` must map to the same hash slot.
      * 
+     * since - Valkey version 6.2.0.
+     * 
      * See https://valkey.io/commands/zinter/ for more details.
      * 
      * @param keys - The keys of the sorted sets.
@@ -1156,6 +1158,8 @@ export class BaseTransaction<T extends BaseTransaction<T>> {
      * To store the result in a key as a sorted set, see `zunionstore`.
      * 
      * When in cluster mode, all keys in `keys` must map to the same hash slot.
+     * 
+     * since - Valkey version 6.2.0.
      * 
      * See https://valkey.io/commands/zunion/ for more details.
      * 

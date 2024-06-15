@@ -380,7 +380,7 @@ export class BaseTransaction<T extends BaseTransaction<T>> {
 
     /**
      * Returns all field names in the hash stored at `key`.
-     * See https://redis.io/commands/hkeys/ for more details.
+     * See https://valkey.io/commands/hkeys/ for more details.
      *
      * @param key - The key of the hash.
      *

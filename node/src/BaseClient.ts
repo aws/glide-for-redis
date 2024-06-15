@@ -708,7 +708,7 @@ export class BaseClient {
 
     /**
      * Returns all field names in the hash stored at `key`.
-     * See https://redis.io/commands/hkeys/ for more details.
+     * See https://valkey.io/commands/hkeys/ for more details.
      *
      * @param key - The key of the hash.
      * @returns A list of field names for the hash, or an empty list when the key does not exist.

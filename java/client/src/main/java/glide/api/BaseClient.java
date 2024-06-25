@@ -195,6 +195,7 @@ import glide.api.models.commands.RangeOptions.RangeQueryBinary;
 import glide.api.models.commands.RangeOptions.ScoreRange;
 import glide.api.models.commands.RangeOptions.ScoreRangeBinary;
 import glide.api.models.commands.RangeOptions.ScoredRangeQuery;
+import glide.api.models.commands.RangeOptions.ScoredRangeQueryBinary;
 import glide.api.models.commands.RestoreOptions;
 import glide.api.models.commands.ScoreFilter;
 import glide.api.models.commands.ScriptOptions;
@@ -1894,7 +1895,23 @@ public abstract class BaseClient
     }
 
     @Override
+    public CompletableFuture<GlideString[]> zrange(
+            @NonNull GlideString key, @NonNull RangeQueryBinary rangeQuery, boolean reverse) {
+        GlideString[] arguments = RangeOptions.createZRangeArgsBinary(key, rangeQuery, reverse, false);
+
+        return commandManager.submitNewCommand(
+                ZRange,
+                arguments,
+                response -> castArray(handleArrayOrNullResponse(response), GlideString.class));
+    }
+
+    @Override
     public CompletableFuture<String[]> zrange(@NonNull String key, @NonNull RangeQuery rangeQuery) {
+        return zrange(key, rangeQuery, false);
+    }
+
+    @Override
+    public CompletableFuture<GlideString[]> zrange(@NonNull GlideString key, @NonNull RangeQueryBinary rangeQuery) {
         return zrange(key, rangeQuery, false);
     }
 
@@ -1907,8 +1924,22 @@ public abstract class BaseClient
     }
 
     @Override
+    public CompletableFuture<Map<GlideString, Double>> zrangeWithScores(
+            @NonNull GlideString key, @NonNull ScoredRangeQueryBinary rangeQuery, boolean reverse) {
+        GlideString[] arguments = RangeOptions.createZRangeArgsBinary(key, rangeQuery, reverse, true);
+
+        return commandManager.submitNewCommand(ZRange, arguments, this::handleBinaryStringMapResponse);
+    }
+
+    @Override
     public CompletableFuture<Map<String, Double>> zrangeWithScores(
             @NonNull String key, @NonNull ScoredRangeQuery rangeQuery) {
+        return zrangeWithScores(key, rangeQuery, false);
+    }
+
+    @Override
+    public CompletableFuture<Map<GlideString, Double>> zrangeWithScores(
+            @NonNull GlideString key, @NonNull ScoredRangeQueryBinary rangeQuery) {
         return zrangeWithScores(key, rangeQuery, false);
     }
 

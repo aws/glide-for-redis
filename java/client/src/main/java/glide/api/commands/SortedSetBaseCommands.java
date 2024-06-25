@@ -16,6 +16,7 @@ import glide.api.models.commands.RangeOptions.ScoreBoundary;
 import glide.api.models.commands.RangeOptions.ScoreRange;
 import glide.api.models.commands.RangeOptions.ScoreRangeBinary;
 import glide.api.models.commands.RangeOptions.ScoredRangeQuery;
+import glide.api.models.commands.RangeOptions.ScoredRangeQueryBinary;
 import glide.api.models.commands.ScoreFilter;
 import glide.api.models.commands.WeightAggregateOptions.Aggregate;
 import glide.api.models.commands.WeightAggregateOptions.KeyArray;
@@ -485,6 +486,38 @@ public interface SortedSetBaseCommands {
      *       <li>For range queries by score, use {@link RangeByScore}.
      *     </ul>
      *
+     * @param reverse If true, reverses the sorted set, with index 0 as the element with the highest
+     *     score.
+     * @return An array of elements within the specified range. If <code>key</code> does not exist, it
+     *     is treated as an empty sorted set, and the command returns an empty array.
+     * @example
+     *     <pre>{@code
+     * RangeByScoreBinary query1 = new RangeByScoreBinary(new ScoreBoundaryBinary(10), new ScoreBoundaryBinary(20));
+     * String[] payload1 = client.zrange(gs("mySortedSet"), query1, true).get(); // Returns members with scores between 10 and 20.
+     * assert payload1.equals(new GlideString[] {gs('member3'), gs('member2'), gs('member1')}); // Returns all members in descending order.
+     *
+     * RangeByScoreBinary query2 = new RangeByScoreBinary(InfScoreBoundBinary.NEGATIVE_INFINITY, new ScoreBoundaryBinary(3));
+     * String[] payload2 = client.zrange(gs("mySortedSet"), query2, false).get();
+     * assert payload2.equals(new GlideString[] {gs('member2'), gs('member3')}); // Returns members with scores within the range of negative infinity to 3, in ascending order.
+     * }</pre>
+     */
+    CompletableFuture<GlideString[]> zrange(GlideString key, RangeQueryBinary rangeQuery, boolean reverse);
+
+    /**
+     * Returns the specified range of elements in the sorted set stored at <code>key</code>.<br>
+     * <code>ZRANGE</code> can perform different types of range queries: by index (rank), by the
+     * score, or by lexicographical order.<br>
+     * To get the elements with their scores, see {@link #zrangeWithScores}.
+     *
+     * @see <a href="https://redis.io/commands/zrange/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param rangeQuery The range query object representing the type of range query to perform.<br>
+     *     <ul>
+     *       <li>For range queries by index (rank), use {@link RangeByIndex}.
+     *       <li>For range queries by lexicographical order, use {@link RangeByLex}.
+     *       <li>For range queries by score, use {@link RangeByScore}.
+     *     </ul>
+     *
      * @return An of array elements within the specified range. If <code>key</code> does not exist, it
      *     is treated as an empty sorted set, and the command returns an empty array.
      * @example
@@ -499,6 +532,39 @@ public interface SortedSetBaseCommands {
      * }</pre>
      */
     CompletableFuture<String[]> zrange(String key, RangeQuery rangeQuery);
+
+    /**
+     * Returns the specified range of elements in the sorted set stored at <code>key</code>.<br>
+     * <code>ZRANGE</code> can perform different types of range queries: by index (rank), by the
+     * score, or by lexicographical order.<br>
+     * To get the elements with their scores, see {@link #zrangeWithScores}.
+     *
+     * @see <a href="https://redis.io/commands/zrange/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param rangeQuery The range query object representing the type of range query to perform.<br>
+     *     <ul>
+     *       <li>For range queries by index (rank), use {@link RangeByIndex}.
+     *       <li>For range queries by lexicographical order, use {@link RangeByLex}.
+     *       <li>For range queries by score, use {@link RangeByScore}.
+     *     </ul>
+     *
+     * @return An of array elements within the specified range. If <code>key</code> does not exist, it
+     *     is treated as an empty sorted set, and the command returns an empty array.
+     * @example
+     *     <pre>{@code
+     * RangeByIndexBinary query1 = new RangeByIndexBinary(0, -1);
+     * GlideString[] payload1 = client.zrange(gs("mySortedSet"),query1).get();
+     * assert payload1.equals(new String[] {gs('member1')
+     * , gs('member2')
+     * , gs('member3')
+     * }); // Returns all members in ascending order.
+     *
+     * RangeByScoreBinary query2 = new RangeByScoreBinary(InfScoreBoundBinary.NEGATIVE_INFINITY, new ScoreBoundaryBinary(3));
+     * GlideString[] payload2 = client.zrange(gs("mySortedSet"), query2).get();
+     * assert payload2.equals(new GlideString[] {gs('member2'), gs('member3')}); // Returns members with scores within the range of negative infinity to 3, in ascending order.
+     * }</pre>
+     */
+    CompletableFuture<GlideString[]> zrange(GlideString key, RangeQueryBinary rangeQuery);
 
     /**
      * Returns the specified range of elements with their scores in the sorted set stored at <code>key
@@ -543,6 +609,37 @@ public interface SortedSetBaseCommands {
      *       <li>For range queries by score, use {@link RangeByScore}.
      *     </ul>
      *
+     * @param reverse If true, reverses the sorted set, with index 0 as the element with the highest
+     *     score.
+     * @return A <code>Map</code> of elements and their scores within the specified range. If <code>
+     *     key</code> does not exist, it is treated as an empty sorted set, and the command returns an
+     *     empty <code>Map</code>.
+     * @example
+     *     <pre>{@code
+     * RangeByScoreBinary query1 = new RangeByScoreBinary(new ScoreBoundaryBinary(10), new ScoreBoundaryBinary(20));
+     * Map<GlideString, Double> payload1 = client.zrangeWithScores(gs("mySortedSet"), query1, true).get();
+     * assert payload1.equals(Map.of(gs('member2'), 15.2, gs('member1'), 10.5)); // Returns members with scores between 10 and 20 (inclusive) with their scores.
+     *
+     * RangeByScoreBinary query2 = new RangeByScoreBinary(InfScoreBoundBinary.NEGATIVE_INFINITY, new ScoreBoundaryBinary(3));
+     * Map<GlideString, Double> payload2 = client.zrangeWithScores(gs("mySortedSet"), query2, false).get();
+     * assert payload2.equals(Map.of(gs('member4'), -2.0, gs('member7'), 1.5)); // Returns members with with scores within the range of negative infinity to 3, with their scores.
+     * }</pre>
+     */
+    CompletableFuture<Map<GlideString, Double>> zrangeWithScores(
+            GlideString key, ScoredRangeQueryBinary rangeQuery, boolean reverse);
+
+    /**
+     * Returns the specified range of elements with their scores in the sorted set stored at <code>key
+     * </code>. Similar to {@link #zrange} but with a <code>WITHSCORE</code> flag.
+     *
+     * @see <a href="https://redis.io/commands/zrange/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param rangeQuery The range query object representing the type of range query to perform.<br>
+     *     <ul>
+     *       <li>For range queries by index (rank), use {@link RangeByIndex}.
+     *       <li>For range queries by score, use {@link RangeByScore}.
+     *     </ul>
+     *
      * @return A <code>Map</code> of elements and their scores within the specified range. If <code>
      *     key</code> does not exist, it is treated as an empty sorted set, and the command returns an
      *     empty <code>Map</code>.
@@ -558,6 +655,34 @@ public interface SortedSetBaseCommands {
      * }</pre>
      */
     CompletableFuture<Map<String, Double>> zrangeWithScores(String key, ScoredRangeQuery rangeQuery);
+
+    /**
+     * Returns the specified range of elements with their scores in the sorted set stored at <code>key
+     * </code>. Similar to {@link #zrange} but with a <code>WITHSCORE</code> flag.
+     *
+     * @see <a href="https://redis.io/commands/zrange/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param rangeQuery The range query object representing the type of range query to perform.<br>
+     *     <ul>
+     *       <li>For range queries by index (rank), use {@link RangeByIndex}.
+     *       <li>For range queries by score, use {@link RangeByScore}.
+     *     </ul>
+     *
+     * @return A <code>Map</code> of elements and their scores within the specified range. If <code>
+     *     key</code> does not exist, it is treated as an empty sorted set, and the command returns an
+     *     empty <code>Map</code>.
+     * @example
+     *     <pre>{@code
+     * RangeByScoreBinary query1 = new RangeByScoreBinary(new ScoreBoundaryBinary(10), new ScoreBoundaryBinary(20));
+     * Map<GlideString, Double> payload1 = client.zrangeWithScores(gs("mySortedSet"), query1).get();
+     * assert payload1.equals(Map.of(gs('member1'), 10.5, gs('member2'), 15.2)); // Returns members with scores between 10 and 20 (inclusive) with their scores.
+     *
+     * RangeByScore query2 = new RangeByScore(InfScoreBoundBinary.NEGATIVE_INFINITY, new ScoreBoundaryBinary(3));
+     * Map<GlideString, Double> payload2 = client.zrangeWithScores(gs("mySortedSet"), query2).get();
+     * assert payload2.equals(Map.of(gs('member4'), -2.0, gs('member7'), 1.5)); // Returns members with with scores within the range of negative infinity to 3, with their scores.
+     * }</pre>
+     */
+    CompletableFuture<Map<GlideString, Double>> zrangeWithScores(GlideString key, ScoredRangeQueryBinary rangeQuery);
 
     /**
      * Stores a specified range of elements from the sorted set at <code>source</code>, into a new

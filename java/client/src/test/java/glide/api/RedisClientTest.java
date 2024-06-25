@@ -3324,6 +3324,31 @@ public class RedisClientTest {
 
     @SneakyThrows
     @Test
+    public void zrange_binary_by_index_returns_success() {
+        // setup
+        GlideString key = gs("testKey");
+        RangeByIndexBinary rangeByIndex = new RangeByIndexBinary(0, 1);
+        GlideString[] arguments = new GlideString[] {key, rangeByIndex.getStart(), rangeByIndex.getEnd()};
+        GlideString[] value = new GlideString[] {gs("one"), gs("two")};
+
+        CompletableFuture<GlideString[]> testResponse = new CompletableFuture<>();
+        testResponse.complete(value);
+
+        // match on protobuf request
+        when(commandManager.<GlideString[]>submitNewCommand(eq(ZRange), eq(arguments), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<GlideString[]> response = service.zrange(key, rangeByIndex);
+        GlideString[] payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(value, payload);
+    }
+
+    @SneakyThrows
+    @Test
     public void zrange_by_score_with_reverse_returns_success() {
         // setup
         String key = "testKey";
@@ -3343,6 +3368,33 @@ public class RedisClientTest {
         // exercise
         CompletableFuture<String[]> response = service.zrange(key, rangeByScore, true);
         String[] payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(value, payload);
+    }
+
+    @SneakyThrows
+    @Test
+    public void zrange_binary_by_score_with_reverse_returns_success() {
+        // setup
+        GlideString key = gs("testKey");
+        RangeByScoreBinary rangeByScore =
+                new RangeByScoreBinary(new ScoreBoundaryBinary(3, false), InfScoreBoundBinary.NEGATIVE_INFINITY);
+        GlideString[] arguments =
+                new GlideString[] {key, rangeByScore.getStart(), rangeByScore.getEnd(), gs("BYSCORE"), gs("REV")};
+        GlideString[] value = new GlideString[] {gs("two"), gs("one")};
+
+        CompletableFuture<GlideString[]> testResponse = new CompletableFuture<>();
+        testResponse.complete(value);
+
+        // match on protobuf request
+        when(commandManager.<GlideString[]>submitNewCommand(eq(ZRange), eq(arguments), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<GlideString[]> response = service.zrange(key, rangeByScore, true);
+        GlideString[] payload = response.get();
 
         // verify
         assertEquals(testResponse, response);
@@ -3377,6 +3429,32 @@ public class RedisClientTest {
 
     @SneakyThrows
     @Test
+    public void zrange_binary_by_lex_returns_success() {
+        // setup
+        GlideString key = gs("testKey");
+        RangeByLexBinary rangeByLex =
+                new RangeByLexBinary(InfLexBoundBinary.NEGATIVE_INFINITY, new LexBoundaryBinary(gs("c"), false));
+        GlideString[] arguments = new GlideString[] {key, rangeByLex.getStart(), rangeByLex.getEnd(), gs("BYLEX")};
+        GlideString[] value = new GlideString[] {gs("a"), gs("b")};
+
+        CompletableFuture<GlideString[]> testResponse = new CompletableFuture<>();
+        testResponse.complete(value);
+
+        // match on protobuf request
+        when(commandManager.<GlideString[]>submitNewCommand(eq(ZRange), eq(arguments), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<GlideString[]> response = service.zrange(key, rangeByLex);
+        GlideString[] payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(value, payload);
+    }
+
+    @SneakyThrows
+    @Test
     public void zrangeWithScores_by_index_returns_success() {
         // setup
         String key = "testKey";
@@ -3395,6 +3473,32 @@ public class RedisClientTest {
         // exercise
         CompletableFuture<Map<String, Double>> response = service.zrangeWithScores(key, rangeByIndex);
         Map<String, Double> payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(value, payload);
+    }
+
+    @SneakyThrows
+    @Test
+    public void zrangeWithScores_binary_by_index_returns_success() {
+        // setup
+        GlideString key = gs("testKey");
+        RangeByIndexBinary rangeByIndex = new RangeByIndexBinary(0, 4);
+        GlideString[] arguments =
+                new GlideString[] {key, rangeByIndex.getStart(), rangeByIndex.getEnd(), gs(WITH_SCORES_REDIS_API)};
+        Map<GlideString, Double> value = Map.of(gs("one"), 1.0, gs("two"), 2.0, gs("three"), 3.0);
+
+        CompletableFuture<Map<GlideString, Double>> testResponse = new CompletableFuture<>();
+        testResponse.complete(value);
+
+        // match on protobuf request
+        when(commandManager.<Map<GlideString, Double>>submitNewCommand(eq(ZRange), eq(arguments), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<Map<GlideString, Double>> response = service.zrangeWithScores(key, rangeByIndex);
+        Map<GlideString, Double> payload = response.get();
 
         // verify
         assertEquals(testResponse, response);
@@ -3435,6 +3539,46 @@ public class RedisClientTest {
         CompletableFuture<Map<String, Double>> response =
                 service.zrangeWithScores(key, rangeByScore, false);
         Map<String, Double> payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(value, payload);
+    }
+
+    @SneakyThrows
+    @Test
+    public void zrangeWithScores_binary_by_score_returns_success() {
+        // setup
+        GlideString key = gs("testKey");
+        RangeByScoreBinary rangeByScore =
+                new RangeByScoreBinary(
+                        InfScoreBoundBinary.NEGATIVE_INFINITY,
+                        InfScoreBoundBinary.POSITIVE_INFINITY,
+                        new RangeOptions.Limit(1, 2));
+        GlideString[] arguments =
+                new GlideString[] {
+                    key,
+                    rangeByScore.getStart(),
+                    rangeByScore.getEnd(),
+                    gs("BYSCORE"),
+                    gs("LIMIT"),
+                    gs("1"),
+                    gs("2"),
+                    gs(WITH_SCORES_REDIS_API)
+                };
+        Map<GlideString, Double> value = Map.of(gs("two"), 2.0, gs("three"), 3.0);
+
+        CompletableFuture<Map<GlideString, Double>> testResponse = new CompletableFuture<>();
+        testResponse.complete(value);
+
+        // match on protobuf request
+        when(commandManager.<Map<GlideString, Double>>submitNewCommand(eq(ZRange), eq(arguments), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<Map<GlideString, Double>> response =
+                service.zrangeWithScores(key, rangeByScore, false);
+        Map<GlideString, Double> payload = response.get();
 
         // verify
         assertEquals(testResponse, response);

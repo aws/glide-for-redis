@@ -6,12 +6,14 @@ import glide.api.models.commands.RangeOptions.InfLexBound;
 import glide.api.models.commands.RangeOptions.InfScoreBound;
 import glide.api.models.commands.RangeOptions.LexBoundary;
 import glide.api.models.commands.RangeOptions.LexRange;
+import glide.api.models.commands.RangeOptions.LexRangeBinary;
 import glide.api.models.commands.RangeOptions.RangeByIndex;
 import glide.api.models.commands.RangeOptions.RangeByLex;
 import glide.api.models.commands.RangeOptions.RangeByScore;
 import glide.api.models.commands.RangeOptions.RangeQuery;
 import glide.api.models.commands.RangeOptions.ScoreBoundary;
 import glide.api.models.commands.RangeOptions.ScoreRange;
+import glide.api.models.commands.RangeOptions.ScoreRangeBinary;
 import glide.api.models.commands.RangeOptions.ScoredRangeQuery;
 import glide.api.models.commands.ScoreFilter;
 import glide.api.models.commands.WeightAggregateOptions.Aggregate;
@@ -711,6 +713,29 @@ public interface SortedSetBaseCommands {
     CompletableFuture<Long> zrevrank(String key, String member);
 
     /**
+     * Returns the rank of <code>member</code> in the sorted set stored at <code>key</code>, where
+     * scores are ordered from the highest to lowest, starting from <code>0</code>.<br>
+     * To get the rank of <code>member</code> with its score, see {@link #zrevrankWithScore}.
+     *
+     * @see <a href="https://redis.io/commands/zrevrank/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param member The member whose rank is to be retrieved.
+     * @return The rank of <code>member</code> in the sorted set, where ranks are ordered from high to
+     *     low based on scores.<br>
+     *     If <code>key</code> doesn't exist, or if <code>member</code> is not present in the set,
+     *     <code>null</code> will be returned.
+     * @example
+     *     <pre>{@code
+     * Long num1 = client.zrevrank(gs("mySortedSet"), gs("member2")).get();
+     * assert num1 == 1L; // Indicates that "member2" has the second-highest score in the sorted set "mySortedSet".
+     *
+     * Long num2 = client.zrevrank(gs("mySortedSet"), gs("nonExistingMember")).get();
+     * assert num2 == null; // Indicates that "nonExistingMember" is not present in the sorted set "mySortedSet".
+     * }</pre>
+     */
+    CompletableFuture<Long> zrevrank(GlideString key, GlideString member);
+
+    /**
      * Returns the rank of <code>member</code> in the sorted set stored at <code>key</code> with its
      * score, where scores are ordered from the highest to lowest, starting from <code>0</code>.
      *
@@ -732,6 +757,29 @@ public interface SortedSetBaseCommands {
      * }</pre>
      */
     CompletableFuture<Object[]> zrevrankWithScore(String key, String member);
+
+    /**
+     * Returns the rank of <code>member</code> in the sorted set stored at <code>key</code> with its
+     * score, where scores are ordered from the highest to lowest, starting from <code>0</code>.
+     *
+     * @see <a href="https://redis.io/commands/zrevrank/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param member The member whose rank is to be retrieved.
+     * @return An array containing the rank (as <code>Long</code>) and score (as <code>Double</code>)
+     *     of <code>member</code> in the sorted set, where ranks are ordered from high to low based on
+     *     scores.<br>
+     *     If <code>key</code> doesn't exist, or if <code>member</code> is not present in the set,
+     *     <code>null</code> will be returned.
+     * @example
+     *     <pre>{@code
+     * Object[] result1 = client.zrevrankWithScore(gs("mySortedSet"), gs("member2")).get();
+     * assert ((Long) result1[0]) == 1L && ((Double) result1[1]) == 6.0; // Indicates that "member2" with score 6.0 has the second-highest score in the sorted set "mySortedSet".
+     *
+     * Object[] result2 = client.zrevrankWithScore(gs("mySortedSet"), gs("nonExistingMember")).get();
+     * assert result2 == null; // Indicates that "nonExistingMember" is not present in the sorted set "mySortedSet".
+     * }</pre>
+     */
+    CompletableFuture<Object[]> zrevrankWithScore(GlideString key, GlideString member);
 
     /**
      * Returns the scores associated with the specified <code>members</code> in the sorted set stored
@@ -957,6 +1005,33 @@ public interface SortedSetBaseCommands {
     CompletableFuture<Long> zremrangebylex(String key, LexRange minLex, LexRange maxLex);
 
     /**
+     * Removes all elements in the sorted set stored at <code>key</code> with a lexicographical order
+     * between <code>minLex</code> and <code>maxLex</code>.
+     *
+     * @see <a href="https://redis.io/commands/zremrangebylex/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param minLex The minimum bound of the lexicographical range. Can be an implementation of
+     *     {@link InfLexBound} representing positive/negative infinity, or {@link LexBoundary}
+     *     representing a specific lex and inclusivity.
+     * @param maxLex The maximum bound of the lexicographical range. Can be an implementation of
+     *     {@link InfLexBound} representing positive/negative infinity, or {@link LexBoundary}
+     *     representing a specific lex and inclusivity.
+     * @return The number of members removed from the sorted set.<br>
+     *     If <code>key</code> does not exist, it is treated as an empty sorted set, and the command
+     *     returns <code>0</code>.<br>
+     *     If <code>minLex</code> is greater than <code>maxLex</code>, <code>0</code> is returned.
+     * @example
+     *     <pre>{@code
+     * Long payload1 = client.zremrangebylex(gs("mySortedSet"), new LexBoundaryBinary(gs("a"), false), new LexBoundaryBinary(gs("e"))).get();
+     * assert payload1 == 4L; // Indicates that 4 members, with lexicographical values ranging from "a" (exclusive) to "e" (inclusive), have been removed from "mySortedSet".
+     *
+     * Long payload2 = client.zremrangebylex(gs("mySortedSet"), InfLexBoundBinary.NEGATIVE_INFINITY , new LexBoundaryBinary(gs("e"))).get();
+     * assert payload2 == 0L; // Indicates that no elements were removed.
+     * }</pre>
+     */
+    CompletableFuture<Long> zremrangebylex(GlideString key, LexRangeBinary minLex, LexRangeBinary maxLex);
+
+    /**
      * Removes all elements in the sorted set stored at <code>key</code> with a score between <code>
      * minScore</code> and <code>maxScore</code>.
      *
@@ -982,6 +1057,33 @@ public interface SortedSetBaseCommands {
      * }</pre>
      */
     CompletableFuture<Long> zremrangebyscore(String key, ScoreRange minScore, ScoreRange maxScore);
+
+    /**
+     * Removes all elements in the sorted set stored at <code>key</code> with a score between <code>
+     * minScore</code> and <code>maxScore</code>.
+     *
+     * @see <a href="https://redis.io/commands/zremrangebyscore/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param minScore The minimum score to remove from. Can be an implementation of {@link
+     *     InfScoreBound} representing positive/negative infinity, or {@link ScoreBoundary}
+     *     representing a specific score and inclusivity.
+     * @param maxScore The maximum score to remove to. Can be an implementation of {@link
+     *     InfScoreBound} representing positive/negative infinity, or {@link ScoreBoundary}
+     *     representing a specific score and inclusivity.
+     * @return The number of members removed.<br>
+     *     If <code>key</code> does not exist, it is treated as an empty sorted set, and the command
+     *     returns <code>0</code>.<br>
+     *     If <code>minScore</code> is greater than <code>maxScore</code>, <code>0</code> is returned.
+     * @example
+     *     <pre>{@code
+     * Long payload1 = client.zremrangebyscore(gs("mySortedSet"), new ScoreBoundary(1, false), new ScoreBoundary(5)).get();
+     * assert payload1 == 4L; // Indicates that 4 members, with scores ranging from 1 (exclusive) to 5 (inclusive), have been removed from "mySortedSet".
+     *
+     * Long payload2 = client.zremrangebyscore(gs("mySortedSet"), InfScoreBound.NEGATIVE_INFINITY , new ScoreBoundary(-42)).get();
+     * assert payload2 == 0L; // Indicates that no elements were removed.
+     * }</pre>
+     */
+    CompletableFuture<Long> zremrangebyscore(GlideString key, ScoreRangeBinary minScore, ScoreRangeBinary maxScore);
 
     /**
      * Returns the number of members in the sorted set stored at <code>key</code> with scores between

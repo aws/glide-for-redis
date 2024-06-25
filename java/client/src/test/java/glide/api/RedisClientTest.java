@@ -253,12 +253,16 @@ import glide.api.models.commands.LPosOptions;
 import glide.api.models.commands.ListDirection;
 import glide.api.models.commands.RangeOptions;
 import glide.api.models.commands.RangeOptions.InfLexBound;
+import glide.api.models.commands.RangeOptions.InfLexBoundBinary;
 import glide.api.models.commands.RangeOptions.InfScoreBound;
+import glide.api.models.commands.RangeOptions.InfScoreBoundBinary;
 import glide.api.models.commands.RangeOptions.LexBoundary;
+import glide.api.models.commands.RangeOptions.LexBoundaryBinary;
 import glide.api.models.commands.RangeOptions.RangeByIndex;
 import glide.api.models.commands.RangeOptions.RangeByLex;
 import glide.api.models.commands.RangeOptions.RangeByScore;
 import glide.api.models.commands.RangeOptions.ScoreBoundary;
+import glide.api.models.commands.RangeOptions.ScoreBoundaryBinary;
 import glide.api.models.commands.RestoreOptions;
 import glide.api.models.commands.ScoreFilter;
 import glide.api.models.commands.ScriptOptions;
@@ -3536,11 +3540,62 @@ public class RedisClientTest {
 
     @SneakyThrows
     @Test
+    public void zrevrank_binary_returns_success() {
+        // setup
+        GlideString key = gs("testKey");
+        GlideString member = gs("testMember");
+        GlideString[] arguments = new GlideString[] {key, member};
+        Long value = 3L;
+
+        CompletableFuture<Long> testResponse = new CompletableFuture<>();
+        testResponse.complete(value);
+
+        // match on protobuf request
+        when(commandManager.<Long>submitNewCommand(eq(ZRevRank), eq(arguments), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<Long> response = service.zrevrank(key, member);
+        Long payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(value, payload);
+    }
+
+
+    @SneakyThrows
+    @Test
     public void zrevrankWithScore_returns_success() {
         // setup
         String key = "testKey";
         String member = "testMember";
         String[] arguments = new String[] {key, member, WITH_SCORE_REDIS_API};
+        Object[] value = new Object[] {1, 6.0};
+
+        CompletableFuture<Object[]> testResponse = new CompletableFuture<>();
+        testResponse.complete(value);
+
+        // match on protobuf request
+        when(commandManager.<Object[]>submitNewCommand(eq(ZRevRank), eq(arguments), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<Object[]> response = service.zrevrankWithScore(key, member);
+        Object[] payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(value, payload);
+    }
+
+    @SneakyThrows
+    @Test
+    public void zrevrankWithScore_binary_returns_success() {
+        // setup
+        GlideString key = gs("testKey");
+        GlideString member = gs("testMember");
+        GlideString[] arguments = new GlideString[] {key, member, gs(WITH_SCORE_REDIS_API)};
         Object[] value = new Object[] {1, 6.0};
 
         CompletableFuture<Object[]> testResponse = new CompletableFuture<>();
@@ -3820,6 +3875,31 @@ public class RedisClientTest {
 
     @SneakyThrows
     @Test
+    public void zremrangebylex_binary_returns_success() {
+        // setup
+        GlideString key = gs("testKey");
+        GlideString[] arguments = new GlideString[] {key, gs("-"), gs("[z")};
+        Long value = 3L;
+
+        CompletableFuture<Long> testResponse = new CompletableFuture<>();
+        testResponse.complete(value);
+
+        // match on protobuf request
+        when(commandManager.<Long>submitNewCommand(eq(ZRemRangeByLex), eq(arguments), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<Long> response =
+                service.zremrangebylex(key, InfLexBoundBinary.NEGATIVE_INFINITY, new LexBoundaryBinary(gs("z"), true));
+        Long payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(value, payload);
+    }
+
+    @SneakyThrows
+    @Test
     public void zremrangebyscore_returns_success() {
         // setup
         String key = "testKey";
@@ -3842,6 +3922,32 @@ public class RedisClientTest {
         assertEquals(testResponse, response);
         assertEquals(value, payload);
     }
+
+    @SneakyThrows
+    @Test
+    public void zremrangebyscore_binary_returns_success() {
+        // setup
+        GlideString key = gs("testKey");
+        GlideString[] arguments = new GlideString[] {key, gs("-inf"), gs("10.0")};
+        Long value = 3L;
+
+        CompletableFuture<Long> testResponse = new CompletableFuture<>();
+        testResponse.complete(value);
+
+        // match on protobuf request
+        when(commandManager.<Long>submitNewCommand(eq(ZRemRangeByScore), eq(arguments), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<Long> response =
+                service.zremrangebyscore(key, InfScoreBoundBinary.NEGATIVE_INFINITY, new ScoreBoundaryBinary(10, true));
+        Long payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(value, payload);
+    }
+
 
     @SneakyThrows
     @Test

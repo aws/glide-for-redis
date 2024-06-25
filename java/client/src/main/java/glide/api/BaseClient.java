@@ -189,8 +189,10 @@ import glide.api.models.commands.LPosOptions;
 import glide.api.models.commands.ListDirection;
 import glide.api.models.commands.RangeOptions;
 import glide.api.models.commands.RangeOptions.LexRange;
+import glide.api.models.commands.RangeOptions.LexRangeBinary;
 import glide.api.models.commands.RangeOptions.RangeQuery;
 import glide.api.models.commands.RangeOptions.ScoreRange;
+import glide.api.models.commands.RangeOptions.ScoreRangeBinary;
 import glide.api.models.commands.RangeOptions.ScoredRangeQuery;
 import glide.api.models.commands.RestoreOptions;
 import glide.api.models.commands.ScoreFilter;
@@ -1328,11 +1330,26 @@ public abstract class BaseClient
     }
 
     @Override
+    public CompletableFuture<Long> zrevrank(@NonNull GlideString key, @NonNull GlideString member) {
+        return commandManager.submitNewCommand(
+                ZRevRank, new GlideString[] {key, member}, this::handleLongOrNullResponse);
+    }
+
+    @Override
     public CompletableFuture<Object[]> zrevrankWithScore(
             @NonNull String key, @NonNull String member) {
         return commandManager.submitNewCommand(
                 ZRevRank,
                 new String[] {key, member, WITH_SCORE_REDIS_API},
+                this::handleArrayOrNullResponse);
+    }
+
+    @Override
+    public CompletableFuture<Object[]> zrevrankWithScore(
+            @NonNull GlideString key, @NonNull GlideString member) {
+        return commandManager.submitNewCommand(
+                ZRevRank,
+                new GlideString[] {key, member, gs(WITH_SCORE_REDIS_API)},
                 this::handleArrayOrNullResponse);
     }
 
@@ -1420,11 +1437,29 @@ public abstract class BaseClient
     }
 
     @Override
+    public CompletableFuture<Long> zremrangebylex(
+            @NonNull GlideString key, @NonNull LexRangeBinary minLex, @NonNull LexRangeBinary maxLex) {
+        return commandManager.submitNewCommand(
+                ZRemRangeByLex,
+                new GlideString[] {key, minLex.toArgs(), maxLex.toArgs()},
+                this::handleLongResponse);
+    }
+
+    @Override
     public CompletableFuture<Long> zremrangebyscore(
             @NonNull String key, @NonNull ScoreRange minScore, @NonNull ScoreRange maxScore) {
         return commandManager.submitNewCommand(
                 ZRemRangeByScore,
                 new String[] {key, minScore.toArgs(), maxScore.toArgs()},
+                this::handleLongResponse);
+    }
+
+    @Override
+    public CompletableFuture<Long> zremrangebyscore(
+            @NonNull GlideString key, @NonNull ScoreRangeBinary minScore, @NonNull ScoreRangeBinary maxScore) {
+        return commandManager.submitNewCommand(
+                ZRemRangeByScore,
+                new GlideString[] {key, minScore.toArgs(), maxScore.toArgs()},
                 this::handleLongResponse);
     }
 

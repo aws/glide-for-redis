@@ -11,6 +11,7 @@ import glide.api.models.commands.RangeOptions.RangeByIndex;
 import glide.api.models.commands.RangeOptions.RangeByLex;
 import glide.api.models.commands.RangeOptions.RangeByScore;
 import glide.api.models.commands.RangeOptions.RangeQuery;
+import glide.api.models.commands.RangeOptions.RangeQueryBinary;
 import glide.api.models.commands.RangeOptions.ScoreBoundary;
 import glide.api.models.commands.RangeOptions.ScoreRange;
 import glide.api.models.commands.RangeOptions.ScoreRangeBinary;
@@ -609,6 +610,40 @@ public interface SortedSetBaseCommands {
      *       <li>For range queries by score, use {@link RangeByScore}.
      *     </ul>
      *
+     * @param reverse If <code>true</code>, reverses the sorted set, with index <code>0</code> as the
+     *     element with the highest score.
+     * @return The number of elements in the resulting sorted set.
+     * @example
+     *     <pre>{@code
+     * RangeByIndex query1 = new RangeByIndex(0, -1); // Query for all members.
+     * Long payload1 = client.zrangestore("destinationKey", "mySortedSet", query1, true).get();
+     * assert payload1 == 7L;
+     *
+     * RangeByScoreBinary query2 = new RangeByScoreBinary(InfScoreBoundBinary.NEGATIVE_INFINITY, new ScoreBoundaryBinary(3)); // Query for members with scores within the range of negative infinity to 3.
+     * Long payload2 = client.zrangestore(gs("destinationKey"), gs("mySortedSet"), query2, false).get();
+     * assert payload2 == 5L;
+     * }</pre>
+     */
+    CompletableFuture<Long> zrangestore(
+            GlideString destination, GlideString source, RangeQueryBinary rangeQuery, boolean reverse);
+
+    /**
+     * Stores a specified range of elements from the sorted set at <code>source</code>, into a new
+     * sorted set at <code>destination</code>. If <code>destination</code> doesn't exist, a new sorted
+     * set is created; if it exists, it's overwritten.<br>
+     *
+     * @apiNote When in cluster mode, <code>destination</code> and <code>source</code> must map to the
+     *     same hash slot.
+     * @see <a href="https://redis.io/commands/zrangestore/">redis.io</a> for more details.
+     * @param destination The key for the destination sorted set.
+     * @param source The key of the source sorted set.
+     * @param rangeQuery The range query object representing the type of range query to perform.<br>
+     *     <ul>
+     *       <li>For range queries by index (rank), use {@link RangeByIndex}.
+     *       <li>For range queries by lexicographical order, use {@link RangeByLex}.
+     *       <li>For range queries by score, use {@link RangeByScore}.
+     *     </ul>
+     *
      * @return The number of elements in the resulting sorted set.
      * @example
      *     <pre>{@code
@@ -622,6 +657,37 @@ public interface SortedSetBaseCommands {
      * }</pre>
      */
     CompletableFuture<Long> zrangestore(String destination, String source, RangeQuery rangeQuery);
+
+    /**
+     * Stores a specified range of elements from the sorted set at <code>source</code>, into a new
+     * sorted set at <code>destination</code>. If <code>destination</code> doesn't exist, a new sorted
+     * set is created; if it exists, it's overwritten.<br>
+     *
+     * @apiNote When in cluster mode, <code>destination</code> and <code>source</code> must map to the
+     *     same hash slot.
+     * @see <a href="https://redis.io/commands/zrangestore/">redis.io</a> for more details.
+     * @param destination The key for the destination sorted set.
+     * @param source The key of the source sorted set.
+     * @param rangeQuery The range query object representing the type of range query to perform.<br>
+     *     <ul>
+     *       <li>For range queries by index (rank), use {@link RangeByIndex}.
+     *       <li>For range queries by lexicographical order, use {@link RangeByLex}.
+     *       <li>For range queries by score, use {@link RangeByScore}.
+     *     </ul>
+     *
+     * @return The number of elements in the resulting sorted set.
+     * @example
+     *     <pre>{@code
+     * RangeByIndexBinary query1 = new RangeByIndexBinary(0, -1); // Query for all members.
+     * Long payload1 = client.zrangestore(gs("destinationKey"), gs("mySortedSet"), query1).get();
+     * assert payload1 == 7L;
+     *
+     * RangeByScoreBinary query2 = new RangeByScoreBinary(InfScoreBoundBinary.NEGATIVE_INFINITY, new ScoreBoundaryBinary(3)); // Query for members with scores within the range of negative infinity to 3.
+     * Long payload2 = client.zrangestore(gs("destinationKey"), gs("mySortedSet"), query2).get();
+     * assert payload2 == 5L;
+     * }</pre>
+     */
+    CompletableFuture<Long> zrangestore(GlideString destination, GlideString source, RangeQueryBinary rangeQuery);
 
     /**
      * Returns the rank of <code>member</code> in the sorted set stored at <code>key</code>, with

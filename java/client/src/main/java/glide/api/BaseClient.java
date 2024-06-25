@@ -191,6 +191,7 @@ import glide.api.models.commands.RangeOptions;
 import glide.api.models.commands.RangeOptions.LexRange;
 import glide.api.models.commands.RangeOptions.LexRangeBinary;
 import glide.api.models.commands.RangeOptions.RangeQuery;
+import glide.api.models.commands.RangeOptions.RangeQueryBinary;
 import glide.api.models.commands.RangeOptions.ScoreRange;
 import glide.api.models.commands.RangeOptions.ScoreRangeBinary;
 import glide.api.models.commands.RangeOptions.ScoredRangeQuery;
@@ -1484,7 +1485,25 @@ public abstract class BaseClient
 
     @Override
     public CompletableFuture<Long> zrangestore(
+            @NonNull GlideString destination,
+            @NonNull GlideString source,
+            @NonNull RangeQueryBinary rangeQuery,
+            boolean reverse) {
+        GlideString[] arguments =
+                RangeOptions.createZRangeStoreArgsBinary(destination, source, rangeQuery, reverse);
+
+        return commandManager.submitNewCommand(ZRangeStore, arguments, this::handleLongResponse);
+    }
+
+    @Override
+    public CompletableFuture<Long> zrangestore(
             @NonNull String destination, @NonNull String source, @NonNull RangeQuery rangeQuery) {
+        return zrangestore(destination, source, rangeQuery, false);
+    }
+
+    @Override
+    public CompletableFuture<Long> zrangestore(
+            @NonNull GlideString destination, @NonNull GlideString source, @NonNull RangeQueryBinary rangeQuery) {
         return zrangestore(destination, source, rangeQuery, false);
     }
 

@@ -259,8 +259,11 @@ import glide.api.models.commands.RangeOptions.InfScoreBoundBinary;
 import glide.api.models.commands.RangeOptions.LexBoundary;
 import glide.api.models.commands.RangeOptions.LexBoundaryBinary;
 import glide.api.models.commands.RangeOptions.RangeByIndex;
+import glide.api.models.commands.RangeOptions.RangeByIndexBinary;
 import glide.api.models.commands.RangeOptions.RangeByLex;
+import glide.api.models.commands.RangeOptions.RangeByLexBinary;
 import glide.api.models.commands.RangeOptions.RangeByScore;
+import glide.api.models.commands.RangeOptions.RangeByScoreBinary;
 import glide.api.models.commands.RangeOptions.ScoreBoundary;
 import glide.api.models.commands.RangeOptions.ScoreBoundaryBinary;
 import glide.api.models.commands.RestoreOptions;
@@ -4004,6 +4007,34 @@ public class RedisClientTest {
 
     @SneakyThrows
     @Test
+    public void zrangestore_binary_by_lex_returns_success() {
+        // setup
+        GlideString source = gs("testSourceKey");
+        GlideString destination = gs("testDestinationKey");
+        RangeByLexBinary rangeByLex =
+                new RangeByLexBinary(InfLexBoundBinary.NEGATIVE_INFINITY, new LexBoundaryBinary(gs("c"), false));
+        GlideString[] arguments =
+                new GlideString[] {source, destination, rangeByLex.getStart(), rangeByLex.getEnd(), gs("BYLEX")};
+        Long value = 2L;
+
+        CompletableFuture<Long> testResponse = new CompletableFuture<>();
+        testResponse.complete(value);
+
+        // match on protobuf request
+        when(commandManager.<Long>submitNewCommand(eq(ZRangeStore), eq(arguments), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<Long> response = service.zrangestore(source, destination, rangeByLex);
+        Long payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(value, payload);
+    }
+
+    @SneakyThrows
+    @Test
     public void zrangestore_by_index_returns_success() {
         // setup
         String source = "testSourceKey";
@@ -4011,6 +4042,33 @@ public class RedisClientTest {
         RangeByIndex rangeByIndex = new RangeByIndex(0, 1);
         String[] arguments =
                 new String[] {source, destination, rangeByIndex.getStart(), rangeByIndex.getEnd()};
+        Long value = 2L;
+
+        CompletableFuture<Long> testResponse = new CompletableFuture<>();
+        testResponse.complete(value);
+
+        // match on protobuf request
+        when(commandManager.<Long>submitNewCommand(eq(ZRangeStore), eq(arguments), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<Long> response = service.zrangestore(source, destination, rangeByIndex);
+        Long payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(value, payload);
+    }
+
+    @SneakyThrows
+    @Test
+    public void zrangestore_binary_by_index_returns_success() {
+        // setup
+        GlideString source = gs("testSourceKey");
+        GlideString destination = gs("testDestinationKey");
+        RangeByIndexBinary rangeByIndex = new RangeByIndexBinary(0, 1);
+        GlideString[] arguments =
+                new GlideString[] {source, destination, rangeByIndex.getStart(), rangeByIndex.getEnd()};
         Long value = 2L;
 
         CompletableFuture<Long> testResponse = new CompletableFuture<>();
@@ -4041,6 +4099,38 @@ public class RedisClientTest {
         String[] arguments =
                 new String[] {
                     source, destination, rangeByScore.getStart(), rangeByScore.getEnd(), "BYSCORE", "REV"
+                };
+        Long value = 2L;
+
+        CompletableFuture<Long> testResponse = new CompletableFuture<>();
+        testResponse.complete(value);
+
+        // match on protobuf request
+        when(commandManager.<Long>submitNewCommand(eq(ZRangeStore), eq(arguments), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<Long> response =
+                service.zrangestore(source, destination, rangeByScore, reversed);
+        Long payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(value, payload);
+    }
+
+    @SneakyThrows
+    @Test
+    public void zrangestore_binary_by_score_with_reverse_returns_success() {
+        // setup
+        GlideString source = gs("testSourceKey");
+        GlideString destination = gs("testDestinationKey");
+        RangeByScoreBinary rangeByScore =
+                new RangeByScoreBinary(new ScoreBoundaryBinary(3, false), InfScoreBoundBinary.NEGATIVE_INFINITY);
+        boolean reversed = true;
+        GlideString[] arguments =
+                new GlideString[] {
+                    source, destination, rangeByScore.getStart(), rangeByScore.getEnd(), gs("BYSCORE"), gs("REV")
                 };
         Long value = 2L;
 

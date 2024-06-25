@@ -432,6 +432,33 @@ public class RangeOptions {
     }
 
     /**
+     * Represents a range by index (rank) in a sorted set.<br>
+     * The <code>start</code> and <code>stop</code> arguments represent zero-based indexes.
+     */
+    @Getter
+    public static class RangeByIndexBinary implements ScoredRangeQueryBinary {
+        private final GlideString start;
+        private final GlideString end;
+
+        /**
+         * Creates a range by index (rank) in a sorted set.<br>
+         * The <code>start</code> and <code>stop</code> arguments represent zero-based indexes.
+         *
+         * @param start The start index of the range.
+         * @param end The stop index of the range.
+         */
+        public RangeByIndexBinary(long start, long end) {
+            this.start = gs(Long.toString(start));
+            this.end = gs(Long.toString(end));
+        }
+
+        @Override
+        public Limit getLimit() {
+            return null;
+        }
+    }
+
+    /**
      * Represents a range by score in a sorted set.<br>
      * The <code>start</code> and <code>stop</code> arguments represent score boundaries.
      */
@@ -581,9 +608,9 @@ public class RangeOptions {
     private static GlideString[] createZRangeBaseArgsBinary(RangeQueryBinary rangeQuery, boolean reverse) {
         GlideString[] arguments = new GlideString[] {rangeQuery.getStart(), rangeQuery.getEnd()};
 
-        if (rangeQuery instanceof RangeByScore) {
+        if (rangeQuery instanceof RangeByScoreBinary) {
             arguments = concatenateArrays(arguments, new GlideString[] {gs("BYSCORE")});
-        } else if (rangeQuery instanceof RangeByLex) {
+        } else if (rangeQuery instanceof RangeByLexBinary) {
             arguments = concatenateArrays(arguments, new GlideString[] {gs("BYLEX")});
         }
 

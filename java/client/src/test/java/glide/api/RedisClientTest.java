@@ -4134,6 +4134,32 @@ public class RedisClientTest {
 
     @SneakyThrows
     @Test
+    public void zlexcount_binary_returns_success() {
+        // setup
+        GlideString key = gs("testKey");
+        GlideString[] arguments = new GlideString[] {key, gs("-"), gs("[c")};
+        Long value = 3L;
+
+        CompletableFuture<Long> testResponse = new CompletableFuture<>();
+        testResponse.complete(value);
+
+        // match on protobuf request
+        when(commandManager.<Long>submitNewCommand(eq(ZLexCount), eq(arguments), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<Long> response =
+                service.zlexcount(
+                        key, InfLexBoundBinary.NEGATIVE_INFINITY, new LexBoundaryBinary(gs("c"), true));
+        Long payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(value, payload);
+    }
+
+    @SneakyThrows
+    @Test
     public void zrangestore_by_lex_returns_success() {
         // setup
         String source = "testSourceKey";

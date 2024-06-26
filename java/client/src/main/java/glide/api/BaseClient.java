@@ -1479,6 +1479,15 @@ public abstract class BaseClient
     }
 
     @Override
+    public CompletableFuture<Long> zlexcount(
+            @NonNull GlideString key, @NonNull LexRangeBinary minLex, @NonNull LexRangeBinary maxLex) {
+        return commandManager.submitNewCommand(
+                ZLexCount,
+                new GlideString[] {key, minLex.toArgs(), maxLex.toArgs()},
+                this::handleLongResponse);
+    }
+
+    @Override
     public CompletableFuture<Long> zrangestore(
             @NonNull String destination,
             @NonNull String source,

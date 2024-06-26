@@ -274,8 +274,11 @@ import glide.api.models.commands.SetOptions.Expiry;
 import glide.api.models.commands.SortBaseOptions;
 import glide.api.models.commands.SortOptions;
 import glide.api.models.commands.WeightAggregateOptions.Aggregate;
+import glide.api.models.commands.WeightAggregateOptions.AggregateBinary;
 import glide.api.models.commands.WeightAggregateOptions.KeyArray;
+import glide.api.models.commands.WeightAggregateOptions.KeyArrayBinary;
 import glide.api.models.commands.WeightAggregateOptions.WeightedKeys;
+import glide.api.models.commands.WeightAggregateOptions.WeightedKeysBinary;
 import glide.api.models.commands.ZAddOptions;
 import glide.api.models.commands.bitmap.BitFieldOptions;
 import glide.api.models.commands.bitmap.BitFieldOptions.BitFieldGet;
@@ -4588,6 +4591,32 @@ public class RedisClientTest {
 
     @SneakyThrows
     @Test
+    public void zinterstore_binary_returns_success() {
+        // setup
+        GlideString destination = gs("destinationKey");
+        GlideString[] keys = new GlideString[] {gs("key1"), gs("key2")};
+        KeyArrayBinary keyArray = new KeyArrayBinary(keys);
+        GlideString[] arguments = concatenateArrays(new GlideString[] {destination}, keyArray.toArgs());
+        Long value = 3L;
+
+        CompletableFuture<Long> testResponse = new CompletableFuture<>();
+        testResponse.complete(value);
+
+        // match on protobuf request
+        when(commandManager.<Long>submitNewCommand(eq(ZInterStore), eq(arguments), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<Long> response = service.zinterstore(destination, keyArray);
+        Long payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(value, payload);
+    }
+
+    @SneakyThrows
+    @Test
     public void zinterstore_with_options_returns_success() {
         // setup
         String destination = "destinationKey";
@@ -4598,6 +4627,37 @@ public class RedisClientTest {
         Aggregate aggregate = Aggregate.MIN;
         String[] arguments =
                 concatenateArrays(new String[] {destination}, weightedKeys.toArgs(), aggregate.toArgs());
+        Long value = 3L;
+
+        CompletableFuture<Long> testResponse = new CompletableFuture<>();
+        testResponse.complete(value);
+
+        // match on protobuf request
+        when(commandManager.<Long>submitNewCommand(eq(ZInterStore), eq(arguments), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<Long> response = service.zinterstore(destination, weightedKeys, aggregate);
+        Long payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(value, payload);
+    }
+
+    @SneakyThrows
+    @Test
+    public void zinterstore_binary_with_options_returns_success() {
+        // setup
+        GlideString destination = gs("destinationKey");
+        List<Pair<GlideString, Double>> keysWeights = new ArrayList<>();
+        keysWeights.add(Pair.of(gs("key1"), 10.0));
+        keysWeights.add(Pair.of(gs("key2"), 20.0));
+        WeightedKeysBinary weightedKeys = new WeightedKeysBinary(keysWeights);
+        AggregateBinary aggregate = AggregateBinary.MIN;
+        GlideString[] arguments =
+                concatenateArrays(
+                        new GlideString[] {destination}, weightedKeys.toArgs(), aggregate.toArgs());
         Long value = 3L;
 
         CompletableFuture<Long> testResponse = new CompletableFuture<>();

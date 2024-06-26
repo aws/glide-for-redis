@@ -1,9 +1,11 @@
 /** Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0 */
 package glide.api.models.commands;
 
+import static glide.api.models.GlideString.gs;
 import static glide.utils.ArrayTransformUtils.concatenateArrays;
 
 import glide.api.commands.SortedSetBaseCommands;
+import glide.api.models.GlideString;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -42,6 +44,23 @@ public abstract class WeightAggregateOptions {
     }
 
     /**
+     * Option for the method of aggregating scores from multiple sets. This option defaults to SUM if
+     * not specified.
+     */
+    public enum AggregateBinary {
+        /** Aggregates by summing the scores of each element across sets. */
+        SUM,
+        /** Aggregates by selecting the minimum score for each element across sets. */
+        MIN,
+        /** Aggregates by selecting the maximum score for each element across sets. */
+        MAX;
+
+        public GlideString[] toArgs() {
+            return new GlideString[] {gs(AGGREGATE_REDIS_API), gs(toString())};
+        }
+    }
+
+    /**
      * Basic interface. Please use one of the following implementations:
      *
      * <ul>
@@ -54,6 +73,19 @@ public abstract class WeightAggregateOptions {
         String[] toArgs();
     }
 
+    /**
+     * Basic interface. Please use one of the following implementations:
+     *
+     * <ul>
+     *   <li>{@link KeyArray}
+     *   <li>{@link WeightedKeys}
+     * </ul>
+     */
+    public interface KeysOrWeightedKeysBinary {
+        /** Convert to command arguments according to the Redis API. */
+        GlideString[] toArgs();
+    }
+
     /** Represents the keys of the sorted sets involved in the aggregation operation. */
     @RequiredArgsConstructor
     public static class KeyArray implements KeysOrWeightedKeys {
@@ -62,6 +94,17 @@ public abstract class WeightAggregateOptions {
         @Override
         public String[] toArgs() {
             return concatenateArrays(new String[] {Integer.toString(keys.length)}, keys);
+        }
+    }
+
+    /** Represents the keys of the sorted sets involved in the aggregation operation. */
+    @RequiredArgsConstructor
+    public static class KeyArrayBinary implements KeysOrWeightedKeysBinary {
+        private final GlideString[] keys;
+
+        @Override
+        public GlideString[] toArgs() {
+            return concatenateArrays(new GlideString[] {gs(Integer.toString(keys.length))}, keys);
         }
     }
 
@@ -92,6 +135,36 @@ public abstract class WeightAggregateOptions {
             }
 
             return argumentsList.toArray(new String[0]);
+        }
+    }
+
+    /**
+     * Represents the mapping of sorted set keys to their score weights. Each weight is used to boost
+     * the scores of elements in the corresponding sorted set by multiplying them before their scores
+     * are aggregated.
+     */
+    @RequiredArgsConstructor
+    public static class WeightedKeysBinary implements KeysOrWeightedKeysBinary {
+        private final List<Pair<GlideString, Double>> keysWeights;
+
+        @Override
+        public GlideString[] toArgs() {
+            List<GlideString> keys = new ArrayList<>();
+            List<Double> weights = new ArrayList<>();
+            List<GlideString> argumentsList = new ArrayList<>();
+
+            for (Pair<GlideString, Double> entry : keysWeights) {
+                keys.add(entry.getLeft());
+                weights.add(entry.getRight());
+            }
+            argumentsList.add(gs(Integer.toString(keys.size())));
+            argumentsList.addAll(keys);
+            argumentsList.add(gs(WEIGHTS_REDIS_API));
+            for (Double weight : weights) {
+                argumentsList.add(gs(weight.toString()));
+            }
+
+            return argumentsList.toArray(new GlideString[0]);
         }
     }
 }

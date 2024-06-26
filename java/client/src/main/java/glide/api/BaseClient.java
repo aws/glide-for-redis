@@ -15,6 +15,7 @@ import static glide.utils.ArrayTransformUtils.castMapOfArrays;
 import static glide.utils.ArrayTransformUtils.concatenateArrays;
 import static glide.utils.ArrayTransformUtils.convertMapToKeyValueStringArray;
 import static glide.utils.ArrayTransformUtils.convertMapToValueKeyStringArray;
+import static glide.utils.ArrayTransformUtils.convertMapToValueKeyStringArrayBinary;
 import static glide.utils.ArrayTransformUtils.mapGeoDataToArray;
 import static redis_request.RedisRequestOuterClass.RequestType.Append;
 import static redis_request.RedisRequestOuterClass.RequestType.BLMPop;
@@ -1205,8 +1206,32 @@ public abstract class BaseClient
 
     @Override
     public CompletableFuture<Long> zadd(
+            @NonNull GlideString key,
+            @NonNull Map<GlideString, Double> membersScoresMap,
+            @NonNull ZAddOptions options,
+            boolean changed) {
+        GlideString[] changedArg = changed ? new GlideString[] {gs("CH")} : new GlideString[] {};
+        GlideString[] membersScores = convertMapToValueKeyStringArrayBinary(membersScoresMap);
+
+        GlideString[] arguments =
+                concatenateArrays(
+                        new GlideString[] {key}, options.toArgsBinary(), changedArg, membersScores);
+
+        return commandManager.submitNewCommand(ZAdd, arguments, this::handleLongResponse);
+    }
+
+    @Override
+    public CompletableFuture<Long> zadd(
             @NonNull String key,
             @NonNull Map<String, Double> membersScoresMap,
+            @NonNull ZAddOptions options) {
+        return this.zadd(key, membersScoresMap, options, false);
+    }
+
+    @Override
+    public CompletableFuture<Long> zadd(
+            @NonNull GlideString key,
+            @NonNull Map<GlideString, Double> membersScoresMap,
             @NonNull ZAddOptions options) {
         return this.zadd(key, membersScoresMap, options, false);
     }
@@ -1219,7 +1244,21 @@ public abstract class BaseClient
 
     @Override
     public CompletableFuture<Long> zadd(
+            @NonNull GlideString key,
+            @NonNull Map<GlideString, Double> membersScoresMap,
+            boolean changed) {
+        return this.zadd(key, membersScoresMap, ZAddOptions.builder().build(), changed);
+    }
+
+    @Override
+    public CompletableFuture<Long> zadd(
             @NonNull String key, @NonNull Map<String, Double> membersScoresMap) {
+        return this.zadd(key, membersScoresMap, ZAddOptions.builder().build(), false);
+    }
+
+    @Override
+    public CompletableFuture<Long> zadd(
+            @NonNull GlideString key, @NonNull Map<GlideString, Double> membersScoresMap) {
         return this.zadd(key, membersScoresMap, ZAddOptions.builder().build(), false);
     }
 
@@ -1237,10 +1276,36 @@ public abstract class BaseClient
 
     @Override
     public CompletableFuture<Double> zaddIncr(
+            @NonNull GlideString key,
+            @NonNull GlideString member,
+            double increment,
+            @NonNull ZAddOptions options) {
+        GlideString[] arguments =
+                concatenateArrays(
+                        new GlideString[] {key},
+                        options.toArgsBinary(),
+                        new GlideString[] {gs("INCR"), gs(Double.toString(increment)), member});
+
+        return commandManager.submitNewCommand(ZAdd, arguments, this::handleDoubleOrNullResponse);
+    }
+
+    @Override
+    public CompletableFuture<Double> zaddIncr(
             @NonNull String key, @NonNull String member, double increment) {
         String[] arguments =
                 concatenateArrays(
                         new String[] {key}, new String[] {"INCR", Double.toString(increment), member});
+
+        return commandManager.submitNewCommand(ZAdd, arguments, this::handleDoubleResponse);
+    }
+
+    @Override
+    public CompletableFuture<Double> zaddIncr(
+            @NonNull GlideString key, @NonNull GlideString member, double increment) {
+        GlideString[] arguments =
+                concatenateArrays(
+                        new GlideString[] {key},
+                        new GlideString[] {gs("INCR"), gs(Double.toString(increment)), member});
 
         return commandManager.submitNewCommand(ZAdd, arguments, this::handleDoubleResponse);
     }

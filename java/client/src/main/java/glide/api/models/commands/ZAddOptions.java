@@ -1,7 +1,10 @@
 /** Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0 */
 package glide.api.models.commands;
 
+import static glide.api.models.GlideString.gs;
+
 import glide.api.commands.SortedSetBaseCommands;
+import glide.api.models.GlideString;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -84,5 +87,31 @@ public final class ZAddOptions {
         }
 
         return optionArgs.toArray(new String[0]);
+    }
+
+    /**
+     * Converts ZaddOptions into a GlideString[].
+     *
+     * @return GlideString[]
+     */
+    public GlideString[] toArgsBinary() {
+        if (conditionalChange == ConditionalChange.ONLY_IF_DOES_NOT_EXIST && updateOptions != null) {
+            throw new IllegalArgumentException(
+                    "The GT, LT, and NX options are mutually exclusive. Cannot choose both "
+                            + updateOptions.redisApi
+                            + " and NX.");
+        }
+
+        List<GlideString> optionArgs = new ArrayList<>();
+
+        if (conditionalChange != null) {
+            optionArgs.add(gs(conditionalChange.redisApi));
+        }
+
+        if (updateOptions != null) {
+            optionArgs.add(gs(updateOptions.redisApi));
+        }
+
+        return optionArgs.toArray(new GlideString[0]);
     }
 }

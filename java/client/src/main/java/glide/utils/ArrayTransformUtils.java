@@ -1,7 +1,10 @@
 /** Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0 */
 package glide.utils;
 
+import static glide.api.models.GlideString.gs;
+
 import glide.api.commands.GeospatialIndicesBaseCommands;
+import glide.api.models.GlideString;
 import glide.api.models.commands.geospatial.GeospatialData;
 import java.lang.reflect.Array;
 import java.util.Arrays;
@@ -37,6 +40,19 @@ public class ArrayTransformUtils {
         return args.entrySet().stream()
                 .flatMap(entry -> Stream.of(entry.getValue().toString(), entry.getKey()))
                 .toArray(String[]::new);
+    }
+
+    /**
+     * Converts a map of string keys and values of any type into an array of strings with alternating
+     * values and keys.
+     *
+     * @param args Map of string keys to values of any type to convert.
+     * @return Array of strings [value1.toString(), key1, value2.toString(), key2, ...].
+     */
+    public static GlideString[] convertMapToValueKeyStringArrayBinary(Map<GlideString, ?> args) {
+        return args.entrySet().stream()
+                .flatMap(entry -> Stream.of(gs(entry.getValue().toString()), entry.getKey()))
+                .toArray(GlideString[]::new);
     }
 
     /**

@@ -82,6 +82,35 @@ public interface SortedSetBaseCommands {
      * @param key The key of the sorted set.
      * @param membersScoresMap A <code>Map</code> of members to their corresponding scores.
      * @param options The ZAdd options.
+     * @param changed Modify the return value from the number of new elements added, to the total
+     *     number of elements changed.
+     * @return The number of elements added to the sorted set.<br>
+     *     If <code>changed</code> is set, returns the number of elements updated in the sorted set.
+     * @example
+     *     <pre>{@code
+     * ZaddOptions options = ZaddOptions.builder().conditionalChange(ONLY_IF_DOES_NOT_EXIST).build();
+     * Long num = client.zadd(gs("mySortedSet"), Map.of(gs("member1"), 10.5, gs("member2"), 8.2), options, false).get();
+     * assert num == 2L; // Indicates that two elements have been added or updated in the sorted set "mySortedSet".
+     *
+     * options = ZaddOptions.builder().conditionalChange(ONLY_IF_EXISTS).build();
+     * Long num = client.zadd(gs("existingSortedSet"), Map.of(gs("member1"), 15.0, gs("member2"), 5.5), options, false).get();
+     * assert num == 2L; // Updates the scores of two existing members in the sorted set "existingSortedSet".
+     * }</pre>
+     */
+    CompletableFuture<Long> zadd(
+            GlideString key,
+            Map<GlideString, Double> membersScoresMap,
+            ZAddOptions options,
+            boolean changed);
+
+    /**
+     * Adds members with their scores to the sorted set stored at <code>key</code>.<br>
+     * If a member is already a part of the sorted set, its score is updated.
+     *
+     * @see <a href="https://redis.io/commands/zadd/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param membersScoresMap A <code>Map</code> of members to their corresponding scores.
+     * @param options The ZAdd options.
      * @return The number of elements added to the sorted set.
      * @example
      *     <pre>{@code
@@ -96,6 +125,29 @@ public interface SortedSetBaseCommands {
      */
     CompletableFuture<Long> zadd(
             String key, Map<String, Double> membersScoresMap, ZAddOptions options);
+
+    /**
+     * Adds members with their scores to the sorted set stored at <code>key</code>.<br>
+     * If a member is already a part of the sorted set, its score is updated.
+     *
+     * @see <a href="https://redis.io/commands/zadd/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param membersScoresMap A <code>Map</code> of members to their corresponding scores.
+     * @param options The ZAdd options.
+     * @return The number of elements added to the sorted set.
+     * @example
+     *     <pre>{@code
+     * ZaddOptions options = ZaddOptions.builder().conditionalChange(ONLY_IF_DOES_NOT_EXIST).build();
+     * Long num = client.zadd(gs("mySortedSet"), Map.of(gs("member1"), 10.5, gs("member2"), 8.2), options).get();
+     * assert num == 2L; // Indicates that two elements have been added to the sorted set "mySortedSet".
+     *
+     * options = ZaddOptions.builder().conditionalChange(ONLY_IF_EXISTS).build();
+     * Long num = client.zadd(gs("existingSortedSet"), Map.of(gs("member1"), 15.0, gs("member2"), 5.5), options).get();
+     * assert num == 0L; // No new members were added to the sorted set "existingSortedSet".
+     * }</pre>
+     */
+    CompletableFuture<Long> zadd(
+            GlideString key, Map<GlideString, Double> membersScoresMap, ZAddOptions options);
 
     /**
      * Adds members with their scores to the sorted set stored at <code>key</code>.<br>
@@ -123,6 +175,26 @@ public interface SortedSetBaseCommands {
      * @see <a href="https://redis.io/commands/zadd/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param membersScoresMap A <code>Map</code> of members to their corresponding scores.
+     * @param changed Modify the return value from the number of new elements added, to the total
+     *     number of elements changed.
+     * @return The number of elements added to the sorted set.<br>
+     *     If <code>changed</code> is set, returns the number of elements updated in the sorted set.
+     * @example
+     *     <pre>{@code
+     * Long num = client.zadd(gs("mySortedSet"), Map.of(gs("member1"), 10.5, gs("member2"), 8.2), true).get();
+     * assert num == 2L; // Indicates that two elements have been added or updated in the sorted set "mySortedSet".
+     * }</pre>
+     */
+    CompletableFuture<Long> zadd(
+            GlideString key, Map<GlideString, Double> membersScoresMap, boolean changed);
+
+    /**
+     * Adds members with their scores to the sorted set stored at <code>key</code>.<br>
+     * If a member is already a part of the sorted set, its score is updated.
+     *
+     * @see <a href="https://redis.io/commands/zadd/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param membersScoresMap A <code>Map</code> of members to their corresponding scores.
      * @return The number of elements added to the sorted set.
      * @example
      *     <pre>{@code
@@ -131,6 +203,22 @@ public interface SortedSetBaseCommands {
      * }</pre>
      */
     CompletableFuture<Long> zadd(String key, Map<String, Double> membersScoresMap);
+
+    /**
+     * Adds members with their scores to the sorted set stored at <code>key</code>.<br>
+     * If a member is already a part of the sorted set, its score is updated.
+     *
+     * @see <a href="https://redis.io/commands/zadd/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param membersScoresMap A <code>Map</code> of members to their corresponding scores.
+     * @return The number of elements added to the sorted set.
+     * @example
+     *     <pre>{@code
+     * Long num = client.zadd(gs("mySortedSet"), Map.of(gs("member1"), 10.5, gs("member2"), 8.2)).get();
+     * assert num == 2L; // Indicates that two elements have been added to the sorted set "mySortedSet".
+     * }</pre>
+     */
+    CompletableFuture<Long> zadd(GlideString key, Map<GlideString, Double> membersScoresMap);
 
     /**
      * Increments the score of member in the sorted set stored at <code>key</code> by <code>increment
@@ -169,6 +257,37 @@ public interface SortedSetBaseCommands {
      * If <code>member</code> does not exist in the sorted set, it is added with <code>
      * increment</code> as its score (as if its previous score was <code>0.0</code>).<br>
      * If <code>key</code> does not exist, a new sorted set with the specified member as its sole
+     * member is created.<br>
+     * <code>zaddIncr</code> with empty option acts as {@link #zincrby(String, double, String)}.
+     *
+     * @see <a href="https://redis.io/commands/zadd/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param member A member in the sorted set to increment.
+     * @param increment The score to increment the member.
+     * @param options The ZAdd options.
+     * @return The score of the member.<br>
+     *     If there was a conflict with the options, the operation aborts and <code>null</code> is
+     *     returned.
+     * @example
+     *     <pre>{@code
+     * ZAddOptions options = ZaddOptions.builder().conditionalChange(ONLY_IF_DOES_NOT_EXIST).build();
+     * Double num = client.zaddIncr(gs("mySortedSet"), member, 5.0, options).get();
+     * assert num == 5.0;
+     *
+     * options = ZAddOptions.builder().updateOptions(SCORE_LESS_THAN_CURRENT).build();
+     * Double num = client.zaddIncr(gs("existingSortedSet"), member, 3.0, options).get();
+     * assert num == null;
+     * }</pre>
+     */
+    CompletableFuture<Double> zaddIncr(
+            GlideString key, GlideString member, double increment, ZAddOptions options);
+
+    /**
+     * Increments the score of member in the sorted set stored at <code>key</code> by <code>increment
+     * </code>.<br>
+     * If <code>member</code> does not exist in the sorted set, it is added with <code>
+     * increment</code> as its score (as if its previous score was <code>0.0</code>).<br>
+     * If <code>key</code> does not exist, a new sorted set with the specified member as its sole
      * member is created.
      *
      * @see <a href="https://redis.io/commands/zadd/">redis.io</a> for more details.
@@ -183,6 +302,27 @@ public interface SortedSetBaseCommands {
      * }</pre>
      */
     CompletableFuture<Double> zaddIncr(String key, String member, double increment);
+
+    /**
+     * Increments the score of member in the sorted set stored at <code>key</code> by <code>increment
+     * </code>.<br>
+     * If <code>member</code> does not exist in the sorted set, it is added with <code>
+     * increment</code> as its score (as if its previous score was <code>0.0</code>).<br>
+     * If <code>key</code> does not exist, a new sorted set with the specified member as its sole
+     * member is created.
+     *
+     * @see <a href="https://redis.io/commands/zadd/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param member A member in the sorted set to increment.
+     * @param increment The score to increment the member.
+     * @return The score of the member.
+     * @example
+     *     <pre>{@code
+     * Double num = client.zaddIncr(gs("mySortedSet"), member, 5.0).get();
+     * assert num == 5.0;
+     * }</pre>
+     */
+    CompletableFuture<Double> zaddIncr(GlideString key, GlideString member, double increment);
 
     /**
      * Removes the specified members from the sorted set stored at <code>key</code>.<br>

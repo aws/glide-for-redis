@@ -52,6 +52,7 @@ import static glide.api.models.commands.stream.StreamTrimOptions.TRIM_NOT_EXACT_
 import static glide.utils.ArrayTransformUtils.concatenateArrays;
 import static glide.utils.ArrayTransformUtils.convertMapToKeyValueStringArray;
 import static glide.utils.ArrayTransformUtils.convertMapToValueKeyStringArray;
+import static glide.utils.ArrayTransformUtils.convertMapToValueKeyStringArrayBinary;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -2669,6 +2670,35 @@ public class RedisClientTest {
 
     @SneakyThrows
     @Test
+    public void zadd_binary_noOptions_returns_success() {
+        // setup
+        GlideString key = gs("testKey");
+        Map<GlideString, Double> membersScores = new LinkedHashMap<>();
+        membersScores.put(gs("testMember1"), 1.0);
+        membersScores.put(gs("testMember2"), 2.0);
+        GlideString[] membersScoresArgs = convertMapToValueKeyStringArrayBinary(membersScores);
+        GlideString[] arguments = ArrayUtils.addFirst(membersScoresArgs, key);
+        Long value = 2L;
+
+        CompletableFuture<Long> testResponse = new CompletableFuture<>();
+        testResponse.complete(value);
+
+        // match on protobuf request
+        when(commandManager.<Long>submitNewCommand(eq(ZAdd), eq(arguments), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<Long> response =
+                service.zadd(key, membersScores, ZAddOptions.builder().build(), false);
+        Long payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(value, payload);
+    }
+
+    @SneakyThrows
+    @Test
     public void zadd_withOptions_returns_success() {
         // setup
         String key = "testKey";
@@ -2682,6 +2712,40 @@ public class RedisClientTest {
         membersScores.put("testMember2", 2.0);
         String[] membersScoresArgs = convertMapToValueKeyStringArray(membersScores);
         String[] arguments = ArrayUtils.addAll(new String[] {key}, options.toArgs());
+        arguments = ArrayUtils.addAll(arguments, membersScoresArgs);
+        Long value = 2L;
+
+        CompletableFuture<Long> testResponse = new CompletableFuture<>();
+        testResponse.complete(value);
+
+        // match on protobuf request
+        when(commandManager.<Long>submitNewCommand(eq(ZAdd), eq(arguments), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<Long> response = service.zadd(key, membersScores, options, false);
+        Long payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(value, payload);
+    }
+
+    @SneakyThrows
+    @Test
+    public void zadd_binary_withOptions_returns_success() {
+        // setup
+        GlideString key = gs("testKey");
+        ZAddOptions options =
+                ZAddOptions.builder()
+                        .conditionalChange(ZAddOptions.ConditionalChange.ONLY_IF_EXISTS)
+                        .updateOptions(ZAddOptions.UpdateOptions.SCORE_GREATER_THAN_CURRENT)
+                        .build();
+        Map<GlideString, Double> membersScores = new LinkedHashMap<>();
+        membersScores.put(gs("testMember1"), 1.0);
+        membersScores.put(gs("testMember2"), 2.0);
+        GlideString[] membersScoresArgs = convertMapToValueKeyStringArrayBinary(membersScores);
+        GlideString[] arguments = ArrayUtils.addAll(new GlideString[] {key}, options.toArgsBinary());
         arguments = ArrayUtils.addAll(arguments, membersScoresArgs);
         Long value = 2L;
 
@@ -2721,12 +2785,58 @@ public class RedisClientTest {
 
     @SneakyThrows
     @Test
+    public void zadd_binary_withIllegalArgument_throws_exception() {
+        // setup
+        GlideString key = gs("testKey");
+        ZAddOptions options =
+                ZAddOptions.builder()
+                        .conditionalChange(ZAddOptions.ConditionalChange.ONLY_IF_DOES_NOT_EXIST)
+                        .updateOptions(ZAddOptions.UpdateOptions.SCORE_GREATER_THAN_CURRENT)
+                        .build();
+        Map<GlideString, Double> membersScores = new LinkedHashMap<>();
+        membersScores.put(gs("testMember1"), 1.0);
+        membersScores.put(gs("testMember2"), 2.0);
+
+        assertThrows(
+                IllegalArgumentException.class, () -> service.zadd(key, membersScores, options, false));
+    }
+
+    @SneakyThrows
+    @Test
     public void zaddIncr_noOptions_returns_success() {
         // setup
         String key = "testKey";
         String member = "member";
         double increment = 3.0;
         String[] arguments = new String[] {key, "INCR", Double.toString(increment), member};
+        Double value = 3.0;
+
+        CompletableFuture<Double> testResponse = new CompletableFuture<>();
+        testResponse.complete(value);
+
+        // match on protobuf request
+        when(commandManager.<Double>submitNewCommand(eq(ZAdd), eq(arguments), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<Double> response =
+                service.zaddIncr(key, member, increment, ZAddOptions.builder().build());
+        Double payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(value, payload);
+    }
+
+    @SneakyThrows
+    @Test
+    public void zaddIncr_binary_noOptions_returns_success() {
+        // setup
+        GlideString key = gs("testKey");
+        GlideString member = gs("member");
+        double increment = 3.0;
+        GlideString[] arguments =
+                new GlideString[] {key, gs("INCR"), gs(Double.toString(increment)), member};
         Double value = 3.0;
 
         CompletableFuture<Double> testResponse = new CompletableFuture<>();
@@ -2762,6 +2872,40 @@ public class RedisClientTest {
                         new String[] {key},
                         options.toArgs(),
                         new String[] {"INCR", Double.toString(increment), member});
+        Double value = 3.0;
+
+        CompletableFuture<Double> testResponse = new CompletableFuture<>();
+        testResponse.complete(value);
+
+        // match on protobuf request
+        when(commandManager.<Double>submitNewCommand(eq(ZAdd), eq(arguments), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<Double> response = service.zaddIncr(key, member, increment, options);
+        Double payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(value, payload);
+    }
+
+    @SneakyThrows
+    @Test
+    public void zaddIncr_binary_withOptions_returns_success() {
+        // setup
+        GlideString key = gs("testKey");
+        ZAddOptions options =
+                ZAddOptions.builder()
+                        .updateOptions(ZAddOptions.UpdateOptions.SCORE_GREATER_THAN_CURRENT)
+                        .build();
+        GlideString member = gs("member");
+        double increment = 3.0;
+        GlideString[] arguments =
+                concatenateArrays(
+                        new GlideString[] {key},
+                        options.toArgsBinary(),
+                        new GlideString[] {gs("INCR"), gs(Double.toString(increment)), member});
         Double value = 3.0;
 
         CompletableFuture<Double> testResponse = new CompletableFuture<>();

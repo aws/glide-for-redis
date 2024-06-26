@@ -203,6 +203,7 @@ import glide.api.models.commands.SetOptions;
 import glide.api.models.commands.WeightAggregateOptions.Aggregate;
 import glide.api.models.commands.WeightAggregateOptions.AggregateBinary;
 import glide.api.models.commands.WeightAggregateOptions.KeyArray;
+import glide.api.models.commands.WeightAggregateOptions.KeyArrayBinary;
 import glide.api.models.commands.WeightAggregateOptions.KeysOrWeightedKeys;
 import glide.api.models.commands.WeightAggregateOptions.KeysOrWeightedKeysBinary;
 import glide.api.models.commands.ZAddOptions;
@@ -1612,6 +1613,14 @@ public abstract class BaseClient
     }
 
     @Override
+    public CompletableFuture<GlideString[]> zinter(@NonNull KeyArrayBinary keys) {
+        return commandManager.submitNewCommand(
+                ZInter,
+                keys.toArgs(),
+                response -> castArray(handleArrayResponseBinary(response), GlideString.class));
+    }
+
+    @Override
     public CompletableFuture<Map<String, Double>> zinterWithScores(
             @NonNull KeysOrWeightedKeys keysOrWeightedKeys, @NonNull Aggregate aggregate) {
         String[] arguments =
@@ -1621,11 +1630,31 @@ public abstract class BaseClient
     }
 
     @Override
+    public CompletableFuture<Map<GlideString, Double>> zinterWithScores(
+            @NonNull KeysOrWeightedKeysBinary keysOrWeightedKeys, @NonNull AggregateBinary aggregate) {
+        GlideString[] arguments =
+                concatenateArrays(
+                        keysOrWeightedKeys.toArgs(),
+                        aggregate.toArgs(),
+                        new GlideString[] {gs(WITH_SCORES_REDIS_API)});
+        return commandManager.submitNewCommand(ZInter, arguments, this::handleBinaryStringMapResponse);
+    }
+
+    @Override
     public CompletableFuture<Map<String, Double>> zinterWithScores(
             @NonNull KeysOrWeightedKeys keysOrWeightedKeys) {
         String[] arguments =
                 concatenateArrays(keysOrWeightedKeys.toArgs(), new String[] {WITH_SCORES_REDIS_API});
         return commandManager.submitNewCommand(ZInter, arguments, this::handleMapResponse);
+    }
+
+    @Override
+    public CompletableFuture<Map<GlideString, Double>> zinterWithScores(
+            @NonNull KeysOrWeightedKeysBinary keysOrWeightedKeys) {
+        GlideString[] arguments =
+                concatenateArrays(
+                        keysOrWeightedKeys.toArgs(), new GlideString[] {gs(WITH_SCORES_REDIS_API)});
+        return commandManager.submitNewCommand(ZInter, arguments, this::handleBinaryStringMapResponse);
     }
 
     @Override

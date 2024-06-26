@@ -4509,6 +4509,31 @@ public class RedisClientTest {
 
     @SneakyThrows
     @Test
+    public void zinter_binary_returns_success() {
+        // setup
+        GlideString[] keys = new GlideString[] {gs("key1"), gs("key2")};
+        KeyArrayBinary keyArray = new KeyArrayBinary(keys);
+        GlideString[] arguments = keyArray.toArgs();
+        GlideString[] value = new GlideString[] {gs("elem1"), gs("elem2")};
+
+        CompletableFuture<GlideString[]> testResponse = new CompletableFuture<>();
+        testResponse.complete(value);
+
+        // match on protobuf request
+        when(commandManager.<GlideString[]>submitNewCommand(eq(ZInter), eq(arguments), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<GlideString[]> response = service.zinter(keyArray);
+        GlideString[] payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(value, payload);
+    }
+
+    @SneakyThrows
+    @Test
     public void zinterWithScores_returns_success() {
         // setup
         String[] keys = new String[] {"key1", "key2"};
@@ -4526,6 +4551,33 @@ public class RedisClientTest {
         // exercise
         CompletableFuture<Map<String, Double>> response = service.zinterWithScores(keyArray);
         Map<String, Double> payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(value, payload);
+    }
+
+    @SneakyThrows
+    @Test
+    public void zinterWithScores_binary_returns_success() {
+        // setup
+        GlideString[] keys = new GlideString[] {gs("key1"), gs("key2")};
+        KeyArrayBinary keyArray = new KeyArrayBinary(keys);
+        GlideString[] arguments =
+                concatenateArrays(keyArray.toArgs(), new GlideString[] {gs(WITH_SCORES_REDIS_API)});
+        Map<GlideString, Double> value = Map.of(gs("elem1"), 1.0, gs("elem2"), 2.0);
+
+        CompletableFuture<Map<GlideString, Double>> testResponse = new CompletableFuture<>();
+        testResponse.complete(value);
+
+        // match on protobuf request
+        when(commandManager.<Map<GlideString, Double>>submitNewCommand(
+                        eq(ZInter), eq(arguments), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<Map<GlideString, Double>> response = service.zinterWithScores(keyArray);
+        Map<GlideString, Double> payload = response.get();
 
         // verify
         assertEquals(testResponse, response);
@@ -4557,6 +4609,40 @@ public class RedisClientTest {
         CompletableFuture<Map<String, Double>> response =
                 service.zinterWithScores(weightedKeys, aggregate);
         Map<String, Double> payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(value, payload);
+    }
+
+    @SneakyThrows
+    @Test
+    public void zinterWithScores_binary_with_aggregation_returns_success() {
+        // setup
+        List<Pair<GlideString, Double>> keysWeights = new ArrayList<>();
+        keysWeights.add(Pair.of(gs("key1"), 10.0));
+        keysWeights.add(Pair.of(gs("key2"), 20.0));
+        WeightedKeysBinary weightedKeys = new WeightedKeysBinary(keysWeights);
+        AggregateBinary aggregate = AggregateBinary.MIN;
+        GlideString[] arguments =
+                concatenateArrays(
+                        weightedKeys.toArgs(),
+                        aggregate.toArgs(),
+                        new GlideString[] {gs(WITH_SCORES_REDIS_API)});
+        Map<GlideString, Double> value = Map.of(gs("elem1"), 1.0, gs("elem2"), 2.0);
+
+        CompletableFuture<Map<GlideString, Double>> testResponse = new CompletableFuture<>();
+        testResponse.complete(value);
+
+        // match on protobuf request
+        when(commandManager.<Map<GlideString, Double>>submitNewCommand(
+                        eq(ZInter), eq(arguments), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<Map<GlideString, Double>> response =
+                service.zinterWithScores(weightedKeys, aggregate);
+        Map<GlideString, Double> payload = response.get();
 
         // verify
         assertEquals(testResponse, response);

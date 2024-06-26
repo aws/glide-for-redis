@@ -21,6 +21,7 @@ import glide.api.models.commands.ScoreFilter;
 import glide.api.models.commands.WeightAggregateOptions.Aggregate;
 import glide.api.models.commands.WeightAggregateOptions.AggregateBinary;
 import glide.api.models.commands.WeightAggregateOptions.KeyArray;
+import glide.api.models.commands.WeightAggregateOptions.KeyArrayBinary;
 import glide.api.models.commands.WeightAggregateOptions.KeysOrWeightedKeys;
 import glide.api.models.commands.WeightAggregateOptions.KeysOrWeightedKeysBinary;
 import glide.api.models.commands.WeightAggregateOptions.WeightedKeys;
@@ -1724,6 +1725,29 @@ public interface SortedSetBaseCommands {
     CompletableFuture<String[]> zinter(KeyArray keys);
 
     /**
+     * Returns the intersection of members from sorted sets specified by the given <code>keys</code>.
+     * <br>
+     * To get the elements with their scores, see {@link #zinterWithScores}.
+     *
+     * @apiNote When in cluster mode, all keys in <code>keys</code> must map to the same hash slot.
+     * @since Redis 6.2 and above.
+     * @see <a href="https://redis.io/commands/zinter/">redis.io</a> for more details.
+     * @param keys The keys of the sorted sets.
+     * @return The resulting sorted set from the intersection.
+     * @example
+     *     <pre>{@code
+     * KeyArrayBinary keyArray = new KeyArray(new GlideString[] {gs("mySortedSet1"), gs("mySortedSet2")});
+     * GlideString[] payload = client.zinter(keyArray).get()
+     * assert payload.equals(new GlideString[] {gs("elem1"), gs("elem2"), gs("elem3")});
+     *
+     * WeightedKeysBinary weightedKeys = new WeightedKeys(List.of(Pair.of(gs("mySortedSet1"), 2.0), Pair.of(gs("mySortedSet2"), 2.0)));
+     * GlideString[] payload = client.zinter(weightedKeys).get()
+     * assert payload.equals(new GlideString[] {gs("elem1"), gs("elem2"), gs("elem3")});
+     * }</pre>
+     */
+    CompletableFuture<GlideString[]> zinter(KeyArrayBinary keys);
+
+    /**
      * Returns the intersection of members and their scores from sorted sets specified by the given
      * <code>keysOrWeightedKeys</code>. To perform a <code>zinter</code> operation while specifying
      * aggregation settings, use {@link #zinterWithScores(KeysOrWeightedKeys, Aggregate)}.
@@ -1751,6 +1775,36 @@ public interface SortedSetBaseCommands {
      * }</pre>
      */
     CompletableFuture<Map<String, Double>> zinterWithScores(KeysOrWeightedKeys keysOrWeightedKeys);
+
+    /**
+     * Returns the intersection of members and their scores from sorted sets specified by the given
+     * <code>keysOrWeightedKeys</code>. To perform a <code>zinter</code> operation while specifying
+     * aggregation settings, use {@link #zinterWithScores(KeysOrWeightedKeys, Aggregate)}.
+     *
+     * @apiNote When in cluster mode, all keys in <code>keysOrWeightedKeys</code> must map to the same
+     *     hash slot.
+     * @since Redis 6.2 and above.
+     * @see <a href="https://redis.io/commands/zinter/">redis.io</a> for more details.
+     * @param keysOrWeightedKeys The keys of the sorted sets with possible formats:
+     *     <ul>
+     *       <li>Use {@link KeyArray} for keys only.
+     *       <li>Use {@link WeightedKeys} for weighted keys with score multipliers.
+     *     </ul>
+     *
+     * @return The resulting sorted set from the intersection.
+     * @example
+     *     <pre>{@code
+     * KeyArrayBinary keyArray = new KeyArray(new String[] {"mySortedSet1", "mySortedSet2"});
+     * Map<GlideString, Double> payload1 = client.zinterWithScores(keyArray).get();
+     * assert payload1.equals(Map.of(gs("elem1"), 1.0, gs("elem2"), 2.0, gs("elem3"), 3.0));
+     *
+     * WeightedKeysBinary weightedKeys = new WeightedKeys(List.of(Pair.of(gs("mySortedSet1"), 2.0), Pair.of(gs("mySortedSet2"), 2.0)));
+     * Map<GlideString, Double> payload2 = client.zinterWithScores(weightedKeys).get();
+     * assert payload2.equals(Map.of(gs("elem1"), 2.0, gs("elem2"), 4.0, gs("elem3"), 6.0));
+     * }</pre>
+     */
+    CompletableFuture<Map<GlideString, Double>> zinterWithScores(
+            KeysOrWeightedKeysBinary keysOrWeightedKeys);
 
     /**
      * Returns the intersection of members and their scores from sorted sets specified by the given
@@ -1782,6 +1836,37 @@ public interface SortedSetBaseCommands {
      */
     CompletableFuture<Map<String, Double>> zinterWithScores(
             KeysOrWeightedKeys keysOrWeightedKeys, Aggregate aggregate);
+
+    /**
+     * Returns the intersection of members and their scores from sorted sets specified by the given
+     * <code>keysOrWeightedKeys</code>.
+     *
+     * @apiNote When in cluster mode, all keys in <code>keysOrWeightedKeys</code> must map to the same
+     *     hash slot.
+     * @since Redis 6.2 and above.
+     * @see <a href="https://redis.io/commands/zinter/">redis.io</a> for more details.
+     * @param keysOrWeightedKeys The keys of the sorted sets with possible formats:
+     *     <ul>
+     *       <li>Use {@link KeyArray} for keys only.
+     *       <li>Use {@link WeightedKeys} for weighted keys with score multipliers.
+     *     </ul>
+     *
+     * @param aggregate Specifies the aggregation strategy to apply when combining the scores of
+     *     elements.
+     * @return The resulting sorted set from the intersection.
+     * @example
+     *     <pre>{@code
+     * KeyArrayBinary keyArray = new KeyArray(new GlideString[] {gs("mySortedSet1"), gs("mySortedSet2")});
+     * Map<GlideString, Double> payload1 = client.zinterWithScores(keyArray, AggregateBinary.MAX).get();
+     * assert payload1.equals(Map.of(gs("elem1"), 1.0, gs("elem2"), 2.0, gs("elem3"), 3.0));
+     *
+     * WeightedKeysBinary weightedKeys = new WeightedKeysBinary(List.of(Pair.of(gs("mySortedSet1"), 2.0), Pair.of(gs("mySortedSet2"), 2.0)));
+     * Map<GlideString, Double> payload2 = client.zinterWithScores(weightedKeys, AggregateBinary.SUM).get();
+     * assert payload2.equals(Map.of(gs("elem1"), 2.0, gs("elem2"), 4.0, gs("elem3"), 6.0));
+     * }</pre>
+     */
+    CompletableFuture<Map<GlideString, Double>> zinterWithScores(
+            KeysOrWeightedKeysBinary keysOrWeightedKeys, AggregateBinary aggregate);
 
     /**
      * Returns a random element from the sorted set stored at <code>key</code>.

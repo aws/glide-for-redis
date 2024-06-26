@@ -2,8 +2,8 @@
 package glide.api.models.commands;
 
 import static glide.api.commands.SortedSetBaseCommands.WITH_SCORES_REDIS_API;
-import static glide.utils.ArrayTransformUtils.concatenateArrays;
 import static glide.api.models.GlideString.gs;
+import static glide.utils.ArrayTransformUtils.concatenateArrays;
 
 import glide.api.commands.SortedSetBaseCommands;
 import glide.api.models.GlideString;
@@ -377,7 +377,8 @@ public class RangeOptions {
          * @param start The start lexicographic boundary.
          * @param end The stop lexicographic boundary.
          */
-        public RangeByLexBinary(@NonNull RangeOptions.LexRangeBinary start, @NonNull RangeOptions.LexRangeBinary end) {
+        public RangeByLexBinary(
+                @NonNull RangeOptions.LexRangeBinary start, @NonNull RangeOptions.LexRangeBinary end) {
             this.start = start.toArgs();
             this.end = end.toArgs();
             this.limit = null;
@@ -605,7 +606,8 @@ public class RangeOptions {
         return arguments;
     }
 
-    private static GlideString[] createZRangeBaseArgsBinary(RangeQueryBinary rangeQuery, boolean reverse) {
+    private static GlideString[] createZRangeBaseArgsBinary(
+            RangeQueryBinary rangeQuery, boolean reverse) {
         GlideString[] arguments = new GlideString[] {rangeQuery.getStart(), rangeQuery.getEnd()};
 
         if (rangeQuery instanceof RangeByScoreBinary) {

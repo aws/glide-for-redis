@@ -1458,7 +1458,9 @@ public abstract class BaseClient
 
     @Override
     public CompletableFuture<Long> zremrangebyscore(
-            @NonNull GlideString key, @NonNull ScoreRangeBinary minScore, @NonNull ScoreRangeBinary maxScore) {
+            @NonNull GlideString key,
+            @NonNull ScoreRangeBinary minScore,
+            @NonNull ScoreRangeBinary maxScore) {
         return commandManager.submitNewCommand(
                 ZRemRangeByScore,
                 new GlideString[] {key, minScore.toArgs(), maxScore.toArgs()},
@@ -1504,7 +1506,9 @@ public abstract class BaseClient
 
     @Override
     public CompletableFuture<Long> zrangestore(
-            @NonNull GlideString destination, @NonNull GlideString source, @NonNull RangeQueryBinary rangeQuery) {
+            @NonNull GlideString destination,
+            @NonNull GlideString source,
+            @NonNull RangeQueryBinary rangeQuery) {
         return zrangestore(destination, source, rangeQuery, false);
     }
 
@@ -1911,7 +1915,8 @@ public abstract class BaseClient
     }
 
     @Override
-    public CompletableFuture<GlideString[]> zrange(@NonNull GlideString key, @NonNull RangeQueryBinary rangeQuery) {
+    public CompletableFuture<GlideString[]> zrange(
+            @NonNull GlideString key, @NonNull RangeQueryBinary rangeQuery) {
         return zrange(key, rangeQuery, false);
     }
 

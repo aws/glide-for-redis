@@ -501,7 +501,8 @@ public interface SortedSetBaseCommands {
      * assert payload2.equals(new GlideString[] {gs('member2'), gs('member3')}); // Returns members with scores within the range of negative infinity to 3, in ascending order.
      * }</pre>
      */
-    CompletableFuture<GlideString[]> zrange(GlideString key, RangeQueryBinary rangeQuery, boolean reverse);
+    CompletableFuture<GlideString[]> zrange(
+            GlideString key, RangeQueryBinary rangeQuery, boolean reverse);
 
     /**
      * Returns the specified range of elements in the sorted set stored at <code>key</code>.<br>
@@ -682,7 +683,8 @@ public interface SortedSetBaseCommands {
      * assert payload2.equals(Map.of(gs('member4'), -2.0, gs('member7'), 1.5)); // Returns members with with scores within the range of negative infinity to 3, with their scores.
      * }</pre>
      */
-    CompletableFuture<Map<GlideString, Double>> zrangeWithScores(GlideString key, ScoredRangeQueryBinary rangeQuery);
+    CompletableFuture<Map<GlideString, Double>> zrangeWithScores(
+            GlideString key, ScoredRangeQueryBinary rangeQuery);
 
     /**
      * Stores a specified range of elements from the sorted set at <code>source</code>, into a new
@@ -812,7 +814,8 @@ public interface SortedSetBaseCommands {
      * assert payload2 == 5L;
      * }</pre>
      */
-    CompletableFuture<Long> zrangestore(GlideString destination, GlideString source, RangeQueryBinary rangeQuery);
+    CompletableFuture<Long> zrangestore(
+            GlideString destination, GlideString source, RangeQueryBinary rangeQuery);
 
     /**
      * Returns the rank of <code>member</code> in the sorted set stored at <code>key</code>, with
@@ -1220,7 +1223,8 @@ public interface SortedSetBaseCommands {
      * assert payload2 == 0L; // Indicates that no elements were removed.
      * }</pre>
      */
-    CompletableFuture<Long> zremrangebylex(GlideString key, LexRangeBinary minLex, LexRangeBinary maxLex);
+    CompletableFuture<Long> zremrangebylex(
+            GlideString key, LexRangeBinary minLex, LexRangeBinary maxLex);
 
     /**
      * Removes all elements in the sorted set stored at <code>key</code> with a score between <code>
@@ -1274,7 +1278,8 @@ public interface SortedSetBaseCommands {
      * assert payload2 == 0L; // Indicates that no elements were removed.
      * }</pre>
      */
-    CompletableFuture<Long> zremrangebyscore(GlideString key, ScoreRangeBinary minScore, ScoreRangeBinary maxScore);
+    CompletableFuture<Long> zremrangebyscore(
+            GlideString key, ScoreRangeBinary minScore, ScoreRangeBinary maxScore);
 
     /**
      * Returns the number of members in the sorted set stored at <code>key</code> with scores between

@@ -1717,6 +1717,24 @@ public interface SortedSetBaseCommands {
     CompletableFuture<String> zrandmember(String key);
 
     /**
+     * Returns a random element from the sorted set stored at <code>key</code>.
+     *
+     * @see <a href="https://redis.io/commands/zrandmember/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @return A <code>String</code> representing a random element from the sorted set.<br>
+     *     If the sorted set does not exist or is empty, the response will be <code>null</code>.
+     * @example
+     *     <pre>{@code
+     * GlideString payload1 = client.zrandmember(gs("mySortedSet")).get();
+     * assert payload1.equals("GLIDE");
+     *
+     * GlideString payload2 = client.zrandmember(gs("nonExistingSortedSet")).get();
+     * assert payload2 == null;
+     * }</pre>
+     */
+    CompletableFuture<GlideString> zrandmember(GlideString key);
+
+    /**
      * Retrieves random elements from the sorted set stored at <code>key</code>.
      *
      * @see <a href="https://redis.io/commands/zrandmember/">redis.io</a> for more details.
@@ -1737,6 +1755,28 @@ public interface SortedSetBaseCommands {
      * }</pre>
      */
     CompletableFuture<String[]> zrandmemberWithCount(String key, long count);
+
+    /**
+     * Retrieves random elements from the sorted set stored at <code>key</code>.
+     *
+     * @see <a href="https://redis.io/commands/zrandmember/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param count The number of elements to return.<br>
+     *     If <code>count</code> is positive, returns unique elements.<br>
+     *     If negative, allows for duplicates.<br>
+     * @return An <code>array</code> of elements from the sorted set.<br>
+     *     If the sorted set does not exist or is empty, the response will be an empty <code>array
+     *     </code>.
+     * @example
+     *     <pre>{@code
+     * GlideString[] payload1 = client.zrandmemberWithCount("mySortedSet", -3).get();
+     * assert payload1.equals(new GlideString[] {"GLIDE", "GLIDE", "JAVA"});
+     *
+     * GlideString[] payload2 = client.zrandmemberWithCount("nonExistingSortedSet", 3).get();
+     * assert payload2.length == 0;
+     * }</pre>
+     */
+    CompletableFuture<GlideString[]> zrandmemberWithCount(GlideString key, long count);
 
     /**
      * Retrieves random elements along with their scores from the sorted set stored at <code>key
@@ -1761,6 +1801,30 @@ public interface SortedSetBaseCommands {
      * }</pre>
      */
     CompletableFuture<Object[][]> zrandmemberWithCountWithScores(String key, long count);
+
+    /**
+     * Retrieves random elements along with their scores from the sorted set stored at <code>key
+     * </code>.
+     *
+     * @see <a href="https://redis.io/commands/zrandmember/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param count The number of elements to return.<br>
+     *     If <code>count</code> is positive, returns unique elements.<br>
+     *     If negative, allows duplicates.<br>
+     * @return An <code>array</code> of <code>[element, score]</code> <code>arrays</code>, where
+     *     element is a <code>String</code> and score is a <code>Double</code>.<br>
+     *     If the sorted set does not exist or is empty, the response will be an empty <code>array
+     *     </code>.
+     * @example
+     *     <pre>{@code
+     * Object[][] data = client.zrandmemberWithCountWithScores(gs("mySortedSet"), -3).get();
+     * assert data.length == 3;
+     * for (Object[] memberScorePair : data) {
+     *     System.out.printf("Member: '%s', score: %d", memberScorePair[0], memberScorePair[1]);
+     * }
+     * }</pre>
+     */
+    CompletableFuture<Object[][]> zrandmemberWithCountWithScores(GlideString key, long count);
 
     /**
      * Increments the score of <code>member</code> in the sorted set stored at <code>key</code> by

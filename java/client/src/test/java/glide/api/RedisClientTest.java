@@ -4715,6 +4715,30 @@ public class RedisClientTest {
 
     @SneakyThrows
     @Test
+    public void zrandmember_binary_returns_success() {
+        // setup
+        GlideString key = gs("testKey");
+        GlideString[] arguments = new GlideString[] {key};
+        GlideString value = gs("testValue");
+
+        CompletableFuture<GlideString> testResponse = new CompletableFuture<>();
+        testResponse.complete(value);
+
+        // match on protobuf request
+        when(commandManager.<GlideString>submitNewCommand(eq(ZRandMember), eq(arguments), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<GlideString> response = service.zrandmember(key);
+        GlideString payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(value, payload);
+    }
+
+    @SneakyThrows
+    @Test
     public void zrandmemberWithCount_returns_success() {
         // setup
         String key = "testKey";
@@ -4740,12 +4764,63 @@ public class RedisClientTest {
 
     @SneakyThrows
     @Test
+    public void zrandmemberWithCount_binary_returns_success() {
+        // setup
+        GlideString key = gs("testKey");
+        long count = 2L;
+        GlideString[] arguments = new GlideString[] {key, gs(Long.toString(count))};
+        GlideString[] value = new GlideString[] {gs("member1"), gs("member2")};
+
+        CompletableFuture<GlideString[]> testResponse = new CompletableFuture<>();
+        testResponse.complete(value);
+
+        // match on protobuf request
+        when(commandManager.<GlideString[]>submitNewCommand(eq(ZRandMember), eq(arguments), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<GlideString[]> response = service.zrandmemberWithCount(key, count);
+        GlideString[] payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(value, payload);
+    }
+
+    @SneakyThrows
+    @Test
     public void zrandmemberWithCountWithScores_returns_success() {
         // setup
         String key = "testKey";
         long count = 2L;
         String[] arguments = new String[] {key, Long.toString(count), WITH_SCORES_REDIS_API};
         Object[][] value = new Object[][] {{"member1", 2.0}, {"member2", 3.0}};
+
+        CompletableFuture<Object[][]> testResponse = new CompletableFuture<>();
+        testResponse.complete(value);
+
+        // match on protobuf request
+        when(commandManager.<Object[][]>submitNewCommand(eq(ZRandMember), eq(arguments), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<Object[][]> response = service.zrandmemberWithCountWithScores(key, count);
+        Object[] payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(value, payload);
+    }
+
+    @SneakyThrows
+    @Test
+    public void zrandmemberWithCountWithScores_binary_returns_success() {
+        // setup
+        GlideString key = gs("testKey");
+        long count = 2L;
+        GlideString[] arguments =
+                new GlideString[] {key, gs(Long.toString(count)), gs(WITH_SCORES_REDIS_API)};
+        Object[][] value = new Object[][] {{gs("member1"), 2.0}, {gs("member2"), 3.0}};
 
         CompletableFuture<Object[][]> testResponse = new CompletableFuture<>();
         testResponse.complete(value);

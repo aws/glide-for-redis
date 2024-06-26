@@ -424,6 +424,10 @@ public abstract class BaseClient
         return handleRedisResponse(Object[].class, EnumSet.of(ResponseFlags.ENCODING_UTF8), response);
     }
 
+    protected Object[] handleArrayResponseBinary(Response response) throws RedisException {
+        return handleRedisResponse(Object[].class, EnumSet.noneOf(ResponseFlags.class), response);
+    }
+
     protected Object[] handleArrayOrNullResponse(Response response) throws RedisException {
         return handleRedisResponse(
                 Object[].class,
@@ -1601,11 +1605,26 @@ public abstract class BaseClient
     }
 
     @Override
+    public CompletableFuture<GlideString> zrandmember(@NonNull GlideString key) {
+        return commandManager.submitNewCommand(
+                ZRandMember, new GlideString[] {key}, this::handleGlideStringOrNullResponse);
+    }
+
+    @Override
     public CompletableFuture<String[]> zrandmemberWithCount(@NonNull String key, long count) {
         return commandManager.submitNewCommand(
                 ZRandMember,
                 new String[] {key, Long.toString(count)},
                 response -> castArray(handleArrayResponse(response), String.class));
+    }
+
+    @Override
+    public CompletableFuture<GlideString[]> zrandmemberWithCount(
+            @NonNull GlideString key, long count) {
+        return commandManager.submitNewCommand(
+                ZRandMember,
+                new GlideString[] {key, gs(Long.toString(count))},
+                response -> castArray(handleArrayResponseBinary(response), GlideString.class));
     }
 
     @Override
@@ -1616,6 +1635,17 @@ public abstract class BaseClient
                 ZRandMember,
                 arguments,
                 response -> castArray(handleArrayResponse(response), Object[].class));
+    }
+
+    @Override
+    public CompletableFuture<Object[][]> zrandmemberWithCountWithScores(
+            @NonNull GlideString key, long count) {
+        GlideString[] arguments =
+                new GlideString[] {key, gs(Long.toString(count)), gs(WITH_SCORES_REDIS_API)};
+        return commandManager.submitNewCommand(
+                ZRandMember,
+                arguments,
+                response -> castArray(handleArrayResponseBinary(response), Object[].class));
     }
 
     @Override

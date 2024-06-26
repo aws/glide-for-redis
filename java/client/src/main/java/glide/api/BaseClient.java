@@ -1435,6 +1435,17 @@ public abstract class BaseClient
     }
 
     @Override
+    public CompletableFuture<Long> zcount(
+            @NonNull GlideString key,
+            @NonNull ScoreRangeBinary minScore,
+            @NonNull ScoreRangeBinary maxScore) {
+        return commandManager.submitNewCommand(
+                ZCount,
+                new GlideString[] {key, minScore.toArgs(), maxScore.toArgs()},
+                this::handleLongResponse);
+    }
+
+    @Override
     public CompletableFuture<Long> zremrangebyrank(@NonNull String key, long start, long end) {
         return commandManager.submitNewCommand(
                 ZRemRangeByRank,

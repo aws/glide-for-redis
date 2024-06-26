@@ -4006,6 +4006,32 @@ public class RedisClientTest {
 
     @SneakyThrows
     @Test
+    public void zcount_binary_returns_success() {
+        // setup
+        GlideString key = gs("testKey");
+        GlideString[] arguments = new GlideString[] {key, gs("-inf"), gs("10.0")};
+        Long value = 3L;
+
+        CompletableFuture<Long> testResponse = new CompletableFuture<>();
+        testResponse.complete(value);
+
+        // match on protobuf request
+        when(commandManager.<Long>submitNewCommand(eq(ZCount), eq(arguments), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<Long> response =
+                service.zcount(
+                        key, InfScoreBoundBinary.NEGATIVE_INFINITY, new ScoreBoundaryBinary(10, true));
+        Long payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(value, payload);
+    }
+
+    @SneakyThrows
+    @Test
     public void zremrangebyrank_returns_success() {
         // setup
         String key = "testKey";

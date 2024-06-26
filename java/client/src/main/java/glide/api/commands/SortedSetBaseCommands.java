@@ -1160,6 +1160,34 @@ public interface SortedSetBaseCommands {
     CompletableFuture<Long> zcount(String key, ScoreRange minScore, ScoreRange maxScore);
 
     /**
+     * Returns the number of members in the sorted set stored at <code>key</code> with scores between
+     * <code>minScore</code> and <code>maxScore</code>.
+     *
+     * @see <a href="https://redis.io/commands/zcount/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param minScore The minimum score to count from. Can be an implementation of {@link
+     *     InfScoreBound} representing positive/negative infinity, or {@link ScoreBoundary}
+     *     representing a specific score and inclusivity.
+     * @param maxScore The maximum score to count up to. Can be an implementation of {@link
+     *     InfScoreBound} representing positive/negative infinity, or {@link ScoreBoundary}
+     *     representing a specific score and inclusivity.
+     * @return The number of members in the specified score range.<br>
+     *     If <code>key</code> does not exist, it is treated as an empty sorted set, and the command
+     *     returns <code>0</code>.<br>
+     *     If <code>maxScore < minScore</code>, <code>0</code> is returned.
+     * @example
+     *     <pre>{@code
+     * Long num1 = client.zcount(gs("my_sorted_set"), new ScoreBoundaryBinary(5.0, true), InfScoreBoundBinary.POSITIVE_INFINITY).get();
+     * assert num1 == 2L; // Indicates that there are 2 members with scores between 5.0 (inclusive) and +inf in the sorted set "my_sorted_set".
+     *
+     * Long num2 = client.zcount(gs("my_sorted_set"), new ScoreBoundaryBinary(5.0, true), new ScoreBoundaryBinary(10.0, false)).get();
+     * assert num2 == 1L; // Indicates that there is one member with ScoreBoundary 5.0 <= score < 10.0 in the sorted set "my_sorted_set".
+     * }</pre>
+     */
+    CompletableFuture<Long> zcount(
+            GlideString key, ScoreRangeBinary minScore, ScoreRangeBinary maxScore);
+
+    /**
      * Removes all elements in the sorted set stored at <code>key</code> with rank between <code>start
      * </code> and <code>end</code>. Both <code>start</code> and <code>end</code> are zero-based
      * indexes with <code>0</code> being the element with the lowest score. These indexes can be

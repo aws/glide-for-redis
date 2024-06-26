@@ -1389,10 +1389,26 @@ public abstract class BaseClient
     }
 
     @Override
+    public CompletableFuture<GlideString[]> zdiff(@NonNull GlideString[] keys) {
+        GlideString[] arguments = ArrayUtils.addFirst(keys, gs(Long.toString(keys.length)));
+        return commandManager.submitNewCommand(
+                ZDiff,
+                arguments,
+                response -> castArray(handleArrayResponseBinary(response), GlideString.class));
+    }
+
+    @Override
     public CompletableFuture<Map<String, Double>> zdiffWithScores(@NonNull String[] keys) {
         String[] arguments = ArrayUtils.addFirst(keys, Long.toString(keys.length));
         arguments = ArrayUtils.add(arguments, WITH_SCORES_REDIS_API);
         return commandManager.submitNewCommand(ZDiff, arguments, this::handleMapResponse);
+    }
+
+    @Override
+    public CompletableFuture<Map<GlideString, Double>> zdiffWithScores(@NonNull GlideString[] keys) {
+        GlideString[] arguments = ArrayUtils.addFirst(keys, gs(Long.toString(keys.length)));
+        arguments = ArrayUtils.add(arguments, gs(WITH_SCORES_REDIS_API));
+        return commandManager.submitNewCommand(ZDiff, arguments, this::handleBinaryStringMapResponse);
     }
 
     @Override

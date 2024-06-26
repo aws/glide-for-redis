@@ -1035,6 +1035,26 @@ public interface SortedSetBaseCommands {
     CompletableFuture<String[]> zdiff(String[] keys);
 
     /**
+     * Returns the difference between the first sorted set and all the successive sorted sets.<br>
+     * To get the elements with their scores, see {@link #zdiffWithScores}.
+     *
+     * @apiNote When in cluster mode, all <code>keys</code> must map to the same hash slot.
+     * @since Redis 6.2 and above.
+     * @see <a href="https://redis.io/commands/zdiff/">redis.io</a> for more details.
+     * @param keys The keys of the sorted sets.
+     * @return An <code>array</code> of elements representing the difference between the sorted sets.
+     *     <br>
+     *     If the first <code>key</code> does not exist, it is treated as an empty sorted set, and the
+     *     command returns an empty <code>array</code>.
+     * @example
+     *     <pre>{@code
+     * GlideString[] payload = client.zdiff(new GlideString[] {gs("sortedSet1"), gs("sortedSet2"), gs("sortedSet3")}).get();
+     * assert payload.equals(new String[]{"element1"});
+     * }</pre>
+     */
+    CompletableFuture<GlideString[]> zdiff(GlideString[] keys);
+
+    /**
      * Returns the difference between the first sorted set and all the successive sorted sets.
      *
      * @apiNote When in cluster mode, all <code>keys</code> must map to the same hash slot.
@@ -1052,6 +1072,25 @@ public interface SortedSetBaseCommands {
      * }</pre>
      */
     CompletableFuture<Map<String, Double>> zdiffWithScores(String[] keys);
+
+    /**
+     * Returns the difference between the first sorted set and all the successive sorted sets.
+     *
+     * @apiNote When in cluster mode, all <code>keys</code> must map to the same hash slot.
+     * @since Redis 6.2 and above.
+     * @see <a href="https://redis.io/commands/zdiff/">redis.io</a> for more details.
+     * @param keys The keys of the sorted sets.
+     * @return A <code>Map</code> of elements and their scores representing the difference between the
+     *     sorted sets.<br>
+     *     If the first <code>key</code> does not exist, it is treated as an empty sorted set, and the
+     *     command returns an empty <code>Map</code>.
+     * @example
+     *     <pre>{@code
+     * Map<GlideString, Double> payload = client.zdiffWithScores(new GlideString[] {gs("sortedSet1"), gs("sortedSet2"), gs("sortedSet3")}).get();
+     * assert payload.equals(Map.of(gs("element1"), 1.0));
+     * }</pre>
+     */
+    CompletableFuture<Map<GlideString, Double>> zdiffWithScores(GlideString[] keys);
 
     /**
      * Calculates the difference between the first sorted set and all the successive sorted sets at

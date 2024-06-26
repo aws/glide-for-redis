@@ -3904,6 +3904,31 @@ public class RedisClientTest {
 
     @SneakyThrows
     @Test
+    public void zdiff_binary_returns_success() {
+        // setup
+        GlideString key1 = gs("testKey1");
+        GlideString key2 = gs("testKey2");
+        GlideString[] arguments = new GlideString[] {gs("2"), key1, key2};
+        GlideString[] value = new GlideString[] {gs("element1")};
+
+        CompletableFuture<GlideString[]> testResponse = new CompletableFuture<>();
+        testResponse.complete(value);
+
+        // match on protobuf request
+        when(commandManager.<GlideString[]>submitNewCommand(eq(ZDiff), eq(arguments), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<GlideString[]> response = service.zdiff(new GlideString[] {key1, key2});
+        GlideString[] payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(value, payload);
+    }
+
+    @SneakyThrows
+    @Test
     public void zdiffWithScores_returns_success() {
         // setup
         String key1 = "testKey1";
@@ -3922,6 +3947,32 @@ public class RedisClientTest {
         CompletableFuture<Map<String, Double>> response =
                 service.zdiffWithScores(new String[] {key1, key2});
         Map<String, Double> payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(value, payload);
+    }
+
+    @SneakyThrows
+    @Test
+    public void zdiffWithScores_binary_returns_success() {
+        // setup
+        GlideString key1 = gs("testKey1");
+        GlideString key2 = gs("testKey2");
+        GlideString[] arguments = new GlideString[] {gs("2"), key1, key2, gs(WITH_SCORES_REDIS_API)};
+        Map<GlideString, Double> value = Map.of(gs("element1"), 2.0);
+
+        CompletableFuture<Map<GlideString, Double>> testResponse = new CompletableFuture<>();
+        testResponse.complete(value);
+
+        // match on protobuf request
+        when(commandManager.<Map<GlideString, Double>>submitNewCommand(eq(ZDiff), eq(arguments), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<Map<GlideString, Double>> response =
+                service.zdiffWithScores(new GlideString[] {key1, key2});
+        Map<GlideString, Double> payload = response.get();
 
         // verify
         assertEquals(testResponse, response);

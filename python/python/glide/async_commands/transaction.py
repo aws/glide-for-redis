@@ -50,7 +50,7 @@ from glide.async_commands.stream import (
     StreamReadOptions,
     StreamTrimOptions,
 )
-from glide.protobuf.redis_request_pb2 import RequestType
+from glide.protobuf.command_request_pb2 import RequestType
 
 TTransaction = TypeVar("TTransaction", bound="BaseTransaction")
 

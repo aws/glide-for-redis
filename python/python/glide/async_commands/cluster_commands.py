@@ -13,7 +13,7 @@ from glide.async_commands.core import (
 )
 from glide.async_commands.transaction import BaseTransaction, ClusterTransaction
 from glide.constants import TOK, TClusterResponse, TResult, TSingleNodeRoute
-from glide.protobuf.redis_request_pb2 import RequestType
+from glide.protobuf.command_request_pb2 import RequestType
 from glide.routes import Route
 
 

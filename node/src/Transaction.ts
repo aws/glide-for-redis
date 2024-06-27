@@ -109,7 +109,7 @@ import {
     createZRemRangeByScore,
     createZScore,
 } from "./Commands";
-import { redis_request } from "./ProtobufMessage";
+import { command_request } from "./ProtobufMessage";
 
 /**
  * Base class encompassing shared commands for both standalone and cluster mode implementations in a transaction.
@@ -134,7 +134,7 @@ export class BaseTransaction<T extends BaseTransaction<T>> {
     /**
      * @internal
      */
-    readonly commands: redis_request.Command[] = [];
+    readonly commands: command_request.Command[] = [];
     /**
      * Array of command indexes indicating commands that need to be converted into a `Set` within the transaction.
      * @internal
@@ -148,7 +148,7 @@ export class BaseTransaction<T extends BaseTransaction<T>> {
      * @returns The updated transaction instance.
      */
     protected addAndReturn(
-        command: redis_request.Command,
+        command: command_request.Command,
         shouldConvertToSet: boolean = false,
     ): T {
         if (shouldConvertToSet) {

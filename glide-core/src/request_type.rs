@@ -4,7 +4,7 @@
 use redis::{cmd, Cmd};
 
 #[cfg(feature = "socket-layer")]
-use crate::redis_request::RequestType as ProtobufRequestType;
+use crate::command_request::RequestType as ProtobufRequestType;
 
 #[repr(C)]
 #[derive(Debug)]

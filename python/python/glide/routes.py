@@ -4,8 +4,8 @@ from enum import Enum
 from typing import Optional
 
 from glide.exceptions import RequestError
-from glide.protobuf.redis_request_pb2 import RedisRequest, SimpleRoutes
-from glide.protobuf.redis_request_pb2 import SlotTypes as ProtoSlotTypes
+from glide.protobuf.command_request_pb2 import CommandRequest, SimpleRoutes
+from glide.protobuf.command_request_pb2 import SlotTypes as ProtoSlotTypes
 
 
 class SlotType(Enum):
@@ -92,7 +92,7 @@ def to_protobuf_slot_type(slot_type: SlotType) -> ProtoSlotTypes.ValueType:
     )
 
 
-def set_protobuf_route(request: RedisRequest, route: Optional[Route]) -> None:
+def set_protobuf_route(request: CommandRequest, route: Optional[Route]) -> None:
     if route is None:
         return
     elif isinstance(route, AllNodes):

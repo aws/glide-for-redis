@@ -20,7 +20,7 @@ from typing import List, Optional, Union, cast
 from glide.async_commands.core import ConditionalChange
 from glide.constants import TOK, TJsonResponse
 from glide.glide_client import TGlideClient
-from glide.protobuf.redis_request_pb2 import RequestType
+from glide.protobuf.command_request_pb2 import RequestType
 
 
 class JsonGetOptions:

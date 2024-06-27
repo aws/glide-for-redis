@@ -65,8 +65,8 @@ impl RotatingBuffer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::redis_request::{command, redis_request};
-    use crate::redis_request::{Command, RedisRequest, RequestType};
+    use crate::command_request::{command, command_request};
+    use crate::command_request::{Command, CommandRequest, RequestType};
     use bytes::BufMut;
     use rand::{distributions::Alphanumeric, Rng};
     use rstest::rstest;
@@ -83,8 +83,8 @@ mod tests {
         args: Vec<Bytes>,
         request_type: RequestType,
         args_pointer: bool,
-    ) -> RedisRequest {
-        let mut request = RedisRequest::new();
+    ) -> CommandRequest {
+        let mut request = CommandRequest::new();
         request.callback_idx = callback_index;
         let mut command = Command::new();
         command.request_type = request_type.into();
@@ -97,7 +97,7 @@ mod tests {
             args_array.args.clone_from(&args);
             command.args = Some(command::Args::ArgsArray(args_array));
         }
-        request.command = Some(redis_request::Command::SingleCommand(command));
+        request.command = Some(command_request::Command::SingleCommand(command));
         request
     }
 
@@ -141,14 +141,14 @@ mod tests {
     }
 
     fn assert_request(
-        request: &RedisRequest,
+        request: &CommandRequest,
         expected_type: RequestType,
         expected_index: u32,
         expected_args: Vec<Bytes>,
         args_pointer: bool,
     ) {
         assert_eq!(request.callback_idx, expected_index);
-        let Some(redis_request::Command::SingleCommand(ref command)) = request.command else {
+        let Some(command_request::Command::SingleCommand(ref command)) = request.command else {
             panic!("expected single command");
         };
         assert_eq!(command.request_type, expected_type.into());
@@ -312,7 +312,7 @@ mod tests {
         let required_varint_length = u32::required_space(KEY_LENGTH as u32);
         assert!(required_varint_length > 1); // so we could split the write of the varint
         buffer.extend_from_slice(&request_bytes[..NUM_OF_LENGTH_BYTES]);
-        let requests = rotating_buffer.get_requests::<RedisRequest>().unwrap();
+        let requests = rotating_buffer.get_requests::<CommandRequest>().unwrap();
         assert_eq!(requests.len(), 0);
         let buffer = rotating_buffer.current_buffer();
         buffer.extend_from_slice(&request_bytes[NUM_OF_LENGTH_BYTES..]);

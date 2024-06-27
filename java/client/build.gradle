@@ -69,7 +69,7 @@ tasks.register('protobuf', Exec) {
         '-Iprotobuf=glide-core/src/protobuf/',
         '--java_out=java/client/src/main/java/glide/models/protobuf',
         'glide-core/src/protobuf/connection_request.proto',
-        'glide-core/src/protobuf/redis_request.proto',
+        'glide-core/src/protobuf/command_request.proto',
         'glide-core/src/protobuf/response.proto'
     workingDir Paths.get(project.rootDir.path, '..').toFile()
 }

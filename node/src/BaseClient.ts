@@ -113,7 +113,11 @@ import {
     TimeoutError,
 } from "./Errors";
 import { Logger } from "./Logger";
-import { connection_request, redis_request, response } from "./ProtobufMessage";
+import {
+    command_request,
+    connection_request,
+    response,
+} from "./ProtobufMessage";
 
 /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
 type PromiseFunction = (value?: any) => void;
@@ -373,10 +377,10 @@ export class BaseClient {
      */
     protected createWritePromise<T>(
         command:
-            | redis_request.Command
-            | redis_request.Command[]
-            | redis_request.ScriptInvocation,
-        route?: redis_request.Routes,
+            | command_request.Command
+            | command_request.Command[]
+            | command_request.ScriptInvocation,
+        route?: command_request.Routes,
     ): Promise<T> {
         if (this.isClosed) {
             throw new ClosingError(
@@ -387,31 +391,31 @@ export class BaseClient {
         return new Promise((resolve, reject) => {
             const callbackIndex = this.getCallbackIndex();
             this.promiseCallbackFunctions[callbackIndex] = [resolve, reject];
-            this.writeOrBufferRedisRequest(callbackIndex, command, route);
+            this.writeOrBufferCommandRequest(callbackIndex, command, route);
         });
     }
 
-    private writeOrBufferRedisRequest(
+    private writeOrBufferCommandRequest(
         callbackIdx: number,
         command:
-            | redis_request.Command
-            | redis_request.Command[]
-            | redis_request.ScriptInvocation,
-        route?: redis_request.Routes,
+            | command_request.Command
+            | command_request.Command[]
+            | command_request.ScriptInvocation,
+        route?: command_request.Routes,
     ) {
         const message = Array.isArray(command)
-            ? redis_request.RedisRequest.create({
+            ? command_request.CommandRequest.create({
                   callbackIdx,
-                  transaction: redis_request.Transaction.create({
+                  transaction: command_request.Transaction.create({
                       commands: command,
                   }),
               })
-            : command instanceof redis_request.Command
-              ? redis_request.RedisRequest.create({
+            : command instanceof command_request.Command
+              ? command_request.CommandRequest.create({
                     callbackIdx,
                     singleCommand: command,
                 })
-              : redis_request.RedisRequest.create({
+              : command_request.CommandRequest.create({
                     callbackIdx,
                     scriptInvocation: command,
                 });
@@ -419,8 +423,8 @@ export class BaseClient {
 
         this.writeOrBufferRequest(
             message,
-            (message: redis_request.RedisRequest, writer: Writer) => {
-                redis_request.RedisRequest.encodeDelimited(message, writer);
+            (message: command_request.CommandRequest, writer: Writer) => {
+                command_request.CommandRequest.encodeDelimited(message, writer);
             },
         );
     }
@@ -1627,7 +1631,7 @@ export class BaseClient {
         script: Script,
         option?: ScriptOptions,
     ): Promise<ReturnType> {
-        const scriptInvocation = redis_request.ScriptInvocation.create({
+        const scriptInvocation = command_request.ScriptInvocation.create({
             hash: script.getHash(),
             keys: option?.keys,
             args: option?.args,

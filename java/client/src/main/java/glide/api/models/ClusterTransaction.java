@@ -1,16 +1,16 @@
 /** Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0 */
 package glide.api.models;
 
+import static command_request.CommandRequestOuterClass.RequestType.Sort;
+import static command_request.CommandRequestOuterClass.RequestType.SortReadOnly;
 import static glide.api.models.commands.SortBaseOptions.STORE_COMMAND_STRING;
 import static glide.utils.ArrayTransformUtils.concatenateArrays;
-import static redis_request.RedisRequestOuterClass.RequestType.Sort;
-import static redis_request.RedisRequestOuterClass.RequestType.SortReadOnly;
 
+import command_request.CommandRequestOuterClass;
 import glide.api.models.commands.SortClusterOptions;
 import lombok.AllArgsConstructor;
 import lombok.NonNull;
 import org.apache.commons.lang3.ArrayUtils;
-import redis_request.RedisRequestOuterClass;
 
 /**
  * Extends BaseTransaction class for cluster mode commands. Transactions allow the execution of a
@@ -50,7 +50,7 @@ public class ClusterTransaction extends BaseTransaction<ClusterTransaction> {
      */
     public ClusterTransaction sort(
             @NonNull String key, @NonNull SortClusterOptions sortClusterOptions) {
-        RedisRequestOuterClass.Command.ArgsArray commandArgs =
+        CommandRequestOuterClass.Command.ArgsArray commandArgs =
                 buildArgs(ArrayUtils.addFirst(sortClusterOptions.toArgs(), key));
         protobufTransaction.addCommands(buildCommand(Sort, commandArgs));
         return this;
@@ -69,7 +69,7 @@ public class ClusterTransaction extends BaseTransaction<ClusterTransaction> {
      */
     public ClusterTransaction sortReadOnly(
             @NonNull String key, @NonNull SortClusterOptions sortClusterOptions) {
-        RedisRequestOuterClass.Command.ArgsArray commandArgs =
+        CommandRequestOuterClass.Command.ArgsArray commandArgs =
                 buildArgs(ArrayUtils.addFirst(sortClusterOptions.toArgs(), key));
         protobufTransaction.addCommands(buildCommand(SortReadOnly, commandArgs));
         return this;
@@ -94,7 +94,7 @@ public class ClusterTransaction extends BaseTransaction<ClusterTransaction> {
             @NonNull String destination,
             @NonNull SortClusterOptions sortClusterOptions) {
         String[] storeArguments = new String[] {STORE_COMMAND_STRING, destination};
-        RedisRequestOuterClass.Command.ArgsArray commandArgs =
+        CommandRequestOuterClass.Command.ArgsArray commandArgs =
                 buildArgs(
                         concatenateArrays(new String[] {key}, sortClusterOptions.toArgs(), storeArguments));
         protobufTransaction.addCommands(buildCommand(Sort, commandArgs));

@@ -7,6 +7,7 @@ import static glide.api.models.commands.SetOptions.ExpiryType.SECONDS;
 import static glide.api.models.commands.SetOptions.ExpiryType.UNIX_MILLISECONDS;
 import static glide.api.models.commands.SetOptions.ExpiryType.UNIX_SECONDS;
 
+import command_request.CommandRequestOuterClass.Command;
 import glide.api.commands.StringBaseCommands;
 import glide.api.models.GlideString;
 import java.util.ArrayList;
@@ -14,7 +15,6 @@ import java.util.List;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import redis_request.RedisRequestOuterClass.Command;
 
 /**
  * Optional arguments for {@link StringBaseCommands#set(String, String, SetOptions)} command.

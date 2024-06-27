@@ -22,13 +22,13 @@ mod socket_listener {
     use crate::utilities::mocks::{Mock, ServerMock};
 
     use super::*;
-    use glide_core::redis_request::command::{Args, ArgsArray};
-    use glide_core::redis_request::{Command, Transaction};
+    use command_request::{CommandRequest, RequestType};
+    use glide_core::command_request::command::{Args, ArgsArray};
+    use glide_core::command_request::{Command, Transaction};
     use glide_core::response::{response, ConstantResponse, Response};
     use glide_core::scripts_container::add_script;
     use protobuf::{EnumOrUnknown, Message};
     use redis::{Cmd, ConnectionAddr, FromRedisValue, Value};
-    use redis_request::{RedisRequest, RequestType};
     use rstest::rstest;
     use std::mem::size_of;
     use tokio::{net::UnixListener, runtime::Builder};
@@ -256,11 +256,11 @@ mod socket_listener {
         args: Vec<bytes::Bytes>,
         request_type: EnumOrUnknown<RequestType>,
         args_pointer: bool,
-    ) -> RedisRequest {
-        let mut request = RedisRequest::new();
+    ) -> CommandRequest {
+        let mut request = CommandRequest::new();
         request.callback_idx = callback_index;
 
-        request.command = Some(redis_request::redis_request::Command::SingleCommand(
+        request.command = Some(command_request::command_request::Command::SingleCommand(
             get_command(CommandComponents {
                 args,
                 request_type,
@@ -270,7 +270,7 @@ mod socket_listener {
         request
     }
 
-    fn write_request(buffer: &mut Vec<u8>, socket: &mut UnixStream, request: RedisRequest) {
+    fn write_request(buffer: &mut Vec<u8>, socket: &mut UnixStream, request: CommandRequest) {
         write_message(buffer, request);
         socket.write_all(buffer).unwrap();
     }
@@ -294,7 +294,7 @@ mod socket_listener {
         callback_index: u32,
         commands_components: Vec<CommandComponents>,
     ) {
-        let mut request = RedisRequest::new();
+        let mut request = CommandRequest::new();
         request.callback_idx = callback_index;
         let mut transaction = Transaction::new();
         transaction.commands.reserve(commands_components.len());
@@ -303,7 +303,7 @@ mod socket_listener {
             transaction.commands.push(get_command(components));
         }
 
-        request.command = Some(redis_request::redis_request::Command::Transaction(
+        request.command = Some(command_request::command_request::Command::Transaction(
             transaction,
         ));
 
@@ -685,8 +685,8 @@ mod socket_listener {
             RequestType::CustomCommand.into(),
             false,
         );
-        let mut routes = redis_request::Routes::default();
-        routes.set_simple_routes(redis_request::SimpleRoutes::AllPrimaries);
+        let mut routes = command_request::Routes::default();
+        routes.set_simple_routes(command_request::SimpleRoutes::AllPrimaries);
         request.route = Some(routes).into();
         write_request(&mut buffer, &mut test_basics.socket, request);
 
@@ -733,8 +733,8 @@ mod socket_listener {
             RequestType::CustomCommand.into(),
             false,
         );
-        let mut routes = redis_request::Routes::default();
-        routes.set_simple_routes(redis_request::SimpleRoutes::Random);
+        let mut routes = command_request::Routes::default();
+        routes.set_simple_routes(command_request::SimpleRoutes::Random);
         request.route = Some(routes).into();
         write_request(&mut buffer, &mut test_basics.socket, request.clone());
 
@@ -755,8 +755,8 @@ mod socket_listener {
             .unwrap();
 
         buffer.clear();
-        let mut routes = redis_request::Routes::default();
-        let by_address_route = glide_core::redis_request::ByAddressRoute {
+        let mut routes = command_request::Routes::default();
+        let by_address_route = glide_core::command_request::ByAddressRoute {
             host: host.into(),
             port,
             ..Default::default()
@@ -1216,10 +1216,10 @@ mod socket_listener {
         let approx_message_length = hash.len() + value.len() + key.len() + APPROX_RESP_HEADER_LEN;
         let mut buffer = Vec::with_capacity(approx_message_length);
 
-        let mut request = RedisRequest::new();
+        let mut request = CommandRequest::new();
         request.callback_idx = CALLBACK_INDEX;
-        request.command = Some(redis_request::redis_request::Command::ScriptInvocation(
-            redis_request::ScriptInvocation {
+        request.command = Some(command_request::command_request::Command::ScriptInvocation(
+            command_request::ScriptInvocation {
                 hash: hash.into(),
                 keys: vec![key.into()],
                 args: vec![value.clone().into()],

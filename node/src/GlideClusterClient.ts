@@ -19,7 +19,7 @@ import {
     createTime,
 } from "./Commands";
 import { RequestError } from "./Errors";
-import { connection_request, redis_request } from "./ProtobufMessage";
+import { command_request, connection_request } from "./ProtobufMessage";
 import { ClusterTransaction } from "./Transaction";
 
 /**
@@ -130,48 +130,48 @@ export type SingleNodeRoute =
 
 function toProtobufRoute(
     route: Routes | undefined,
-): redis_request.Routes | undefined {
+): command_request.Routes | undefined {
     if (route === undefined) {
         return undefined;
     }
 
     if (route === "allPrimaries") {
-        return redis_request.Routes.create({
-            simpleRoutes: redis_request.SimpleRoutes.AllPrimaries,
+        return command_request.Routes.create({
+            simpleRoutes: command_request.SimpleRoutes.AllPrimaries,
         });
     } else if (route === "allNodes") {
-        return redis_request.Routes.create({
-            simpleRoutes: redis_request.SimpleRoutes.AllNodes,
+        return command_request.Routes.create({
+            simpleRoutes: command_request.SimpleRoutes.AllNodes,
         });
     } else if (route === "randomNode") {
-        return redis_request.Routes.create({
-            simpleRoutes: redis_request.SimpleRoutes.Random,
+        return command_request.Routes.create({
+            simpleRoutes: command_request.SimpleRoutes.Random,
         });
     } else if (route.type === "primarySlotKey") {
-        return redis_request.Routes.create({
-            slotKeyRoute: redis_request.SlotKeyRoute.create({
-                slotType: redis_request.SlotTypes.Primary,
+        return command_request.Routes.create({
+            slotKeyRoute: command_request.SlotKeyRoute.create({
+                slotType: command_request.SlotTypes.Primary,
                 slotKey: route.key,
             }),
         });
     } else if (route.type === "replicaSlotKey") {
-        return redis_request.Routes.create({
-            slotKeyRoute: redis_request.SlotKeyRoute.create({
-                slotType: redis_request.SlotTypes.Replica,
+        return command_request.Routes.create({
+            slotKeyRoute: command_request.SlotKeyRoute.create({
+                slotType: command_request.SlotTypes.Replica,
                 slotKey: route.key,
             }),
         });
     } else if (route.type === "primarySlotId") {
-        return redis_request.Routes.create({
-            slotKeyRoute: redis_request.SlotIdRoute.create({
-                slotType: redis_request.SlotTypes.Primary,
+        return command_request.Routes.create({
+            slotKeyRoute: command_request.SlotIdRoute.create({
+                slotType: command_request.SlotTypes.Primary,
                 slotId: route.id,
             }),
         });
     } else if (route.type === "replicaSlotId") {
-        return redis_request.Routes.create({
-            slotKeyRoute: redis_request.SlotIdRoute.create({
-                slotType: redis_request.SlotTypes.Replica,
+        return command_request.Routes.create({
+            slotKeyRoute: command_request.SlotIdRoute.create({
+                slotType: command_request.SlotTypes.Replica,
                 slotId: route.id,
             }),
         });
@@ -193,7 +193,7 @@ function toProtobufRoute(
             port = Number(split[1]);
         }
 
-        return redis_request.Routes.create({
+        return command_request.Routes.create({
             byAddressRoute: { host, port },
         });
     }

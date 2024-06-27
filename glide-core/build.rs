@@ -11,7 +11,7 @@ fn build_protobuf() {
     protobuf_codegen::Codegen::new()
         .cargo_out_dir("protobuf")
         .include("src")
-        .input("src/protobuf/redis_request.proto")
+        .input("src/protobuf/command_request.proto")
         .input("src/protobuf/response.proto")
         .input("src/protobuf/connection_request.proto")
         .customize(customization_options)

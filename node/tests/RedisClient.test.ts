@@ -14,7 +14,7 @@ import { BufferReader, BufferWriter } from "protobufjs";
 import { v4 as uuidv4 } from "uuid";
 import { GlideClient, ProtocolVersion, Transaction } from "..";
 import { RedisCluster } from "../../utils/TestUtils.js";
-import { redis_request } from "../src/ProtobufMessage";
+import { command_request } from "../src/ProtobufMessage";
 import { runBaseTests } from "./SharedTests";
 import {
     checkSimple,
@@ -69,7 +69,7 @@ describe("GlideClient", () => {
             callbackIdx: 1,
             singleCommand: {
                 requestType: 2,
-                argsArray: redis_request.Command.ArgsArray.create({
+                argsArray: command_request.Command.ArgsArray.create({
                     args: convertStringArrayToBuffer(["bar1", "bar2"]),
                 }),
             },
@@ -78,24 +78,24 @@ describe("GlideClient", () => {
             callbackIdx: 3,
             singleCommand: {
                 requestType: 4,
-                argsArray: redis_request.Command.ArgsArray.create({
+                argsArray: command_request.Command.ArgsArray.create({
                     args: convertStringArrayToBuffer(["bar3", "bar4"]),
                 }),
             },
         };
-        redis_request.RedisRequest.encodeDelimited(request, writer);
-        redis_request.RedisRequest.encodeDelimited(request2, writer);
+        command_request.CommandRequest.encodeDelimited(request, writer);
+        command_request.CommandRequest.encodeDelimited(request2, writer);
         const buffer = writer.finish();
         const reader = new BufferReader(buffer);
 
-        const dec_msg1 = redis_request.RedisRequest.decodeDelimited(reader);
+        const dec_msg1 = command_request.CommandRequest.decodeDelimited(reader);
         expect(dec_msg1.callbackIdx).toEqual(1);
         expect(dec_msg1.singleCommand?.requestType).toEqual(2);
         expect(dec_msg1.singleCommand?.argsArray?.args).toEqual(
             convertStringArrayToBuffer(["bar1", "bar2"]),
         );
 
-        const dec_msg2 = redis_request.RedisRequest.decodeDelimited(reader);
+        const dec_msg2 = command_request.CommandRequest.decodeDelimited(reader);
         expect(dec_msg2.callbackIdx).toEqual(3);
         expect(dec_msg2.singleCommand?.requestType).toEqual(4);
         expect(dec_msg2.singleCommand?.argsArray?.args).toEqual(

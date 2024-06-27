@@ -3,11 +3,12 @@
  */
 use super::rotating_buffer::RotatingBuffer;
 use crate::client::Client;
+use crate::command_request::{
+    command, command_request, Command, CommandRequest, Routes, ScriptInvocation, SlotTypes,
+    Transaction,
+};
 use crate::connection_request::ConnectionRequest;
 use crate::errors::{error_message, error_type, RequestErrorType};
-use crate::redis_request::{
-    command, redis_request, Command, RedisRequest, Routes, ScriptInvocation, SlotTypes, Transaction,
-};
 use crate::response;
 use crate::response::Response;
 use crate::retry_strategies::get_fixed_interval_backoff;
@@ -353,7 +354,7 @@ fn get_route(
     route: Option<Box<Routes>>,
     cmd: Option<&Cmd>,
 ) -> ClientUsageResult<Option<RoutingInfo>> {
-    use crate::redis_request::routes::Value;
+    use crate::command_request::routes::Value;
     let Some(route) = route.and_then(|route| route.value) else {
         return Ok(None);
     };
@@ -369,17 +370,16 @@ fn get_route(
                 ClienUsageError::Internal(format!("Received unexpected simple route type {id}"))
             })?;
             match simple_route {
-                crate::redis_request::SimpleRoutes::AllNodes => Ok(Some(RoutingInfo::MultiNode((
-                    MultipleNodeRoutingInfo::AllNodes,
-                    get_response_policy(cmd),
-                )))),
-                crate::redis_request::SimpleRoutes::AllPrimaries => {
+                crate::command_request::SimpleRoutes::AllNodes => Ok(Some(RoutingInfo::MultiNode(
+                    (MultipleNodeRoutingInfo::AllNodes, get_response_policy(cmd)),
+                ))),
+                crate::command_request::SimpleRoutes::AllPrimaries => {
                     Ok(Some(RoutingInfo::MultiNode((
                         MultipleNodeRoutingInfo::AllMasters,
                         get_response_policy(cmd),
                     ))))
                 }
-                crate::redis_request::SimpleRoutes::Random => {
+                crate::command_request::SimpleRoutes::Random => {
                     Ok(Some(RoutingInfo::SingleNode(SingleNodeRoutingInfo::Random)))
                 }
             }
@@ -411,11 +411,11 @@ fn get_route(
     }
 }
 
-fn handle_request(request: RedisRequest, client: Client, writer: Rc<Writer>) {
+fn handle_request(request: CommandRequest, client: Client, writer: Rc<Writer>) {
     task::spawn_local(async move {
         let result = match request.command {
             Some(action) => match action {
-                redis_request::Command::SingleCommand(command) => {
+                command_request::Command::SingleCommand(command) => {
                     match get_redis_command(&command) {
                         Ok(cmd) => match get_route(request.route.0, Some(&cmd)) {
                             Ok(routes) => send_command(cmd, client, routes).await,
@@ -424,13 +424,13 @@ fn handle_request(request: RedisRequest, client: Client, writer: Rc<Writer>) {
                         Err(e) => Err(e),
                     }
                 }
-                redis_request::Command::Transaction(transaction) => {
+                command_request::Command::Transaction(transaction) => {
                     match get_route(request.route.0, None) {
                         Ok(routes) => send_transaction(transaction, client, routes).await,
                         Err(e) => Err(e),
                     }
                 }
-                redis_request::Command::ScriptInvocation(script) => {
+                command_request::Command::ScriptInvocation(script) => {
                     match get_route(request.route.0, None) {
                         Ok(routes) => invoke_script(script, client, routes).await,
                         Err(e) => Err(e),
@@ -456,7 +456,7 @@ fn handle_request(request: RedisRequest, client: Client, writer: Rc<Writer>) {
 }
 
 async fn handle_requests(
-    received_requests: Vec<RedisRequest>,
+    received_requests: Vec<CommandRequest>,
     client: &Client,
     writer: &Rc<Writer>,
 ) {

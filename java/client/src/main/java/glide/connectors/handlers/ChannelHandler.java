@@ -1,6 +1,7 @@
 /** Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0 */
 package glide.connectors.handlers;
 
+import command_request.CommandRequestOuterClass.CommandRequest;
 import connection_request.ConnectionRequestOuterClass.ConnectionRequest;
 import glide.connectors.resources.ThreadPoolResource;
 import io.netty.bootstrap.Bootstrap;
@@ -12,7 +13,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import redis_request.RedisRequestOuterClass.RedisRequest;
 import response.ResponseOuterClass.Response;
 
 /**
@@ -62,7 +62,7 @@ public class ChannelHandler {
      * @param flush True to flush immediately
      * @return A response promise
      */
-    public CompletableFuture<Response> write(RedisRequest.Builder request, boolean flush) {
+    public CompletableFuture<Response> write(CommandRequest.Builder request, boolean flush) {
         var commandId = callbackDispatcher.registerRequest();
         request.setCallbackIdx(commandId.getKey());
 

@@ -11,7 +11,7 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Any, Dict, List, Union, cast
 
 import pytest
-from glide import ClosingError, RequestError, Script
+from glide import ClosingError, ClusterScanCursor, RequestError, Script
 from glide.async_commands.bitmap import (
     BitFieldGet,
     BitFieldIncrBy,
@@ -26,7 +26,7 @@ from glide.async_commands.bitmap import (
     SignedEncoding,
     UnsignedEncoding,
 )
-from glide.async_commands.command_args import Limit, ListDirection, OrderBy
+from glide.async_commands.command_args import Limit, ListDirection, ObjectType, OrderBy
 from glide.async_commands.core import (
     ConditionalChange,
     ExpireOptions,
@@ -7865,6 +7865,349 @@ class TestCommands:
         assert await redis_client.sadd(lcs_non_string_key, ["Hello", "world"]) == 2
         with pytest.raises(RequestError):
             await redis_client.lcs_idx(key1, lcs_non_string_key)
+    # Cluster scan tests
+    @pytest.mark.parametrize("cluster_mode", [True])
+    @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
+    async def test_simple_cluster_scan(self, redis_client: GlideClusterClient):
+        expected_keys = [f"key:{i}" for i in range(100)]
+        for key in expected_keys:
+            await redis_client.set(key, "value")
+        cursor = ClusterScanCursor(None)
+        keys = []
+        while not cursor.is_finished():
+            result = await redis_client.scan(cursor)
+            cursor = result[0]
+            keys.extend(result[1])
+
+        assert set(expected_keys) == set(keys)
+
+    @pytest.mark.parametrize("cluster_mode", [True])
+    @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
+    async def test_cluster_scan_with_object_type_and_pattern(
+        self, redis_client: GlideClusterClient
+    ):
+        expected_keys = [f"key:{i}" for i in range(100)]
+        for key in expected_keys:
+            await redis_client.set(key, "value")
+        unexpected_type_keys = [f"key:{i}" for i in range(100, 200)]
+        for key in unexpected_type_keys:
+            await redis_client.sadd(key, ["value"])
+        unexpected_pattern_keys = [f"{i}" for i in range(200, 300)]
+        for key in unexpected_pattern_keys:
+            await redis_client.set(key, "value")
+        keys = []
+        cursor = ClusterScanCursor(None)
+        while not cursor.is_finished():
+            result = await redis_client.scan(
+                cursor, match="key:*", type=ObjectType.STRING
+            )
+            cursor = result[0]
+            keys.extend(result[1])
+
+        assert set(expected_keys) == set(keys)
+        assert not set(unexpected_type_keys).intersection(set(keys))
+        assert not set(unexpected_pattern_keys).intersection(set(keys))
+
+    @pytest.mark.parametrize("cluster_mode", [True])
+    @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
+    async def test_cluster_scan_with_count(self, redis_client: GlideClusterClient):
+        expected_keys = [f"key:{i}" for i in range(1000)]
+        for key in expected_keys:
+            await redis_client.set(key, "value")
+        cursor = ClusterScanCursor(None)
+        keys = []
+        succefull_compared_scans = 0
+        while not cursor.is_finished():
+            result_of_1 = await redis_client.scan(cursor, count=1)
+            cursor = result_of_1[0]
+            keys_of_1 = result_of_1[1]
+            keys.extend(keys_of_1)
+            if cursor.is_finished():
+                break
+            result_of_100 = await redis_client.scan(cursor, count=100)
+            cursor = result_of_100[0]
+            keys_of_100 = result_of_100[1]
+            keys.extend(keys_of_100)
+            if keys_of_100 > keys_of_1:
+                succefull_compared_scans += 1
+
+        assert set(expected_keys) == set(keys)
+        assert succefull_compared_scans > 0
+
+    @pytest.mark.parametrize("cluster_mode", [True])
+    @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
+    async def test_cluster_scan_with_match(self, redis_client: GlideClusterClient):
+        unexpected_keys = [f"{i}" for i in range(100)]
+        for key in unexpected_keys:
+            await redis_client.set(key, "value")
+        expected_keys = [f"key:{i}" for i in range(100, 200)]
+        for key in expected_keys:
+            await redis_client.set(key, "value")
+        cursor = ClusterScanCursor(None)
+        keys = []
+        while not cursor.is_finished():
+            result = await redis_client.scan(cursor, match="key:*")
+            cursor = result[0]
+            keys.extend(result[1])
+        assert set(expected_keys) == set(keys)
+        assert not set(unexpected_keys).intersection(set(keys))
+
+    @pytest.mark.parametrize("cluster_mode", [True])
+    @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
+    # We test whther the cursor is cleaned up after it is deleted, which we expect to happen when th GC is called
+    async def test_cluster_scan_cleaning_cursor(self, redis_client: GlideClusterClient):
+        keys = [f"key:{i}" for i in range(100)]
+        for key in keys:
+            await redis_client.set(key, "value")
+        cursor = ClusterScanCursor(None)
+        result = await redis_client.scan(cursor)
+        cursor = result[0]
+        cursor_string = str(cursor)
+        cursor.__del__()
+        new_cursor_with_same_id = ClusterScanCursor(cursor_string)
+        with pytest.raises(RequestError) as e_info:
+            await redis_client.scan(new_cursor_with_same_id)
+        assert "Invalid scan_state_cursor hash" in str(e_info.value)
+
+    @pytest.mark.parametrize("cluster_mode", [True])
+    @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
+    async def test_cluster_scan_all_types(self, redis_client: GlideClusterClient):
+        # We test that the scan command work for all types of keys
+        string_keys = [f"key:{i}" for i in range(100)]
+        for key in string_keys:
+            await redis_client.set(key, "value")
+
+        set_keys = [f"key:{i}" for i in range(100, 200)]
+        for key in set_keys:
+            await redis_client.sadd(key, ["value"])
+
+        hash_keys = [f"key:{i}" for i in range(200, 300)]
+        for key in hash_keys:
+            await redis_client.hset(key, {"field": "value"})
+
+        list_keys = [f"key:{i}" for i in range(300, 400)]
+        for key in list_keys:
+            await redis_client.lpush(key, ["value"])
+
+        zset_keys = [f"key:{i}" for i in range(400, 500)]
+        for key in zset_keys:
+            await redis_client.zadd(key, {"value": 1})
+
+        cursor = ClusterScanCursor(None)
+        keys = []
+        while not cursor.is_finished():
+            result = await redis_client.scan(cursor, type=ObjectType.STRING)
+            cursor = result[0]
+            keys.extend(result[1])
+        assert set(string_keys) == set(keys)
+        assert not set(set_keys).intersection(set(keys))
+        assert not set(hash_keys).intersection(set(keys))
+        assert not set(list_keys).intersection(set(keys))
+        assert not set(zset_keys).intersection(set(keys))
+
+        cursor = ClusterScanCursor(None)
+        keys = []
+        while not cursor.is_finished():
+            result = await redis_client.scan(cursor, type=ObjectType.SET)
+            cursor = result[0]
+            keys.extend(result[1])
+        assert set(set_keys) == set(keys)
+        assert not set(string_keys).intersection(set(keys))
+        assert not set(hash_keys).intersection(set(keys))
+        assert not set(list_keys).intersection(set(keys))
+        assert not set(zset_keys).intersection(set(keys))
+
+        cursor = ClusterScanCursor(None)
+        keys = []
+        while not cursor.is_finished():
+            result = await redis_client.scan(cursor, type=ObjectType.HASH)
+            cursor = result[0]
+            keys.extend(result[1])
+        assert set(hash_keys) == set(keys)
+        assert not set(string_keys).intersection(set(keys))
+        assert not set(set_keys).intersection(set(keys))
+        assert not set(list_keys).intersection(set(keys))
+        assert not set(zset_keys).intersection(set(keys))
+
+        cursor = ClusterScanCursor(None)
+        keys = []
+        while not cursor.is_finished():
+            result = await redis_client.scan(cursor, type=ObjectType.LIST)
+            cursor = result[0]
+            keys.extend(result[1])
+        assert set(list_keys) == set(keys)
+        assert not set(string_keys).intersection(set(keys))
+        assert not set(set_keys).intersection(set(keys))
+        assert not set(hash_keys).intersection(set(keys))
+        assert not set(zset_keys).intersection(set(keys))
+
+    # Standalone scan tests
+    @pytest.mark.parametrize("cluster_mode", [False])
+    @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
+    async def test_simple_scan(self, redis_client: GlideClient):
+        expected_keys = [f"key:{i}" for i in range(100)]
+        for key in expected_keys:
+            await redis_client.set(key, "value")
+        keys = []
+        cursor = 0
+        while True:
+            result = await redis_client.scan(cursor)
+            cursor = result[0]
+            keys.extend(result[1])
+            if cursor == 0:
+                break
+        assert set(expected_keys) == set(keys)
+
+    @pytest.mark.parametrize("cluster_mode", [False])
+    @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
+    async def test_scan_with_object_type_and_pattern(self, redis_client: GlideClient):
+        expected_keys = [f"key:{i}" for i in range(100)]
+        for key in expected_keys:
+            await redis_client.set(key, "value")
+        unexpected_type_keys = [f"key:{i}" for i in range(100, 200)]
+        for key in unexpected_type_keys:
+            await redis_client.sadd(key, ["value"])
+        unexpected_pattern_keys = [f"{i}" for i in range(200, 300)]
+        for key in unexpected_pattern_keys:
+            await redis_client.set(key, "value")
+        keys = []
+        cursor = 0
+        while True:
+            result = await redis_client.scan(
+                cursor, match="key:*", type=ObjectType.STRING
+            )
+            cursor = result[0]
+            keys.extend(result[1])
+            if cursor == 0:
+                break
+        assert set(expected_keys) == set(keys)
+        assert not set(unexpected_type_keys).intersection(set(keys))
+        assert not set(unexpected_pattern_keys).intersection(set(keys))
+
+    @pytest.mark.parametrize("cluster_mode", [False])
+    @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
+    async def test_scan_with_count(self, redis_client: GlideClient):
+        expected_keys = [f"key:{i}" for i in range(1000)]
+        for key in expected_keys:
+            await redis_client.set(key, "value")
+        cursor = 0
+        keys = []
+        succefull_compared_scans = 0
+        while True:
+            result_of_1 = await redis_client.scan(cursor, count=1)
+            cursor = result_of_1[0]
+            keys_of_1 = result_of_1[1]
+            keys.extend(keys_of_1)
+            result_of_100 = await redis_client.scan(cursor, count=100)
+            cursor = result_of_100[0]
+            keys_of_100 = result_of_100[1]
+            keys.extend(keys_of_100)
+            if keys_of_100 > keys_of_1:
+                succefull_compared_scans += 1
+            if cursor == 0:
+                break
+        assert set(expected_keys) == set(keys)
+        assert succefull_compared_scans > 0
+
+    @pytest.mark.parametrize("cluster_mode", [False])
+    @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
+    async def test_cluster_with_match(self, redis_client: GlideClient):
+        unexpected_keys = [f"{i}" for i in range(100)]
+        for key in unexpected_keys:
+            await redis_client.set(key, "value")
+        expected_keys = [f"key:{i}" for i in range(100, 200)]
+        for key in expected_keys:
+            await redis_client.set(key, "value")
+        cursor = 0
+        keys = []
+        while True:
+            result = await redis_client.scan(cursor, match="key:*")
+            cursor = result[0]
+            keys.extend(result[1])
+            if cursor == 0:
+                break
+        assert set(expected_keys) == set(keys)
+        assert not set(unexpected_keys).intersection(set(keys))
+
+    @pytest.mark.parametrize("cluster_mode", [False])
+    @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
+    async def test_scan_all_types(self, redis_client: GlideClient):
+        # We test that the scan command work for all types of keys
+        string_keys = [f"key:{i}" for i in range(100)]
+        for key in string_keys:
+            await redis_client.set(key, "value")
+
+        set_keys = [f"key:{i}" for i in range(100, 200)]
+        for key in set_keys:
+            await redis_client.sadd(key, ["value"])
+
+        hash_keys = [f"key:{i}" for i in range(200, 300)]
+        for key in hash_keys:
+            await redis_client.hset(key, {"field": "value"})
+
+        list_keys = [f"key:{i}" for i in range(300, 400)]
+        for key in list_keys:
+            await redis_client.lpush(key, ["value"])
+
+        zset_keys = [f"key:{i}" for i in range(400, 500)]
+        for key in zset_keys:
+            await redis_client.zadd(key, {"value": 1})
+
+        cursor = 0
+        keys = []
+        while True:
+            result = await redis_client.scan(cursor, type=ObjectType.STRING)
+            cursor = result[0]
+            keys.extend(result[1])
+            if cursor == 0:
+                break
+        assert set(string_keys) == set(keys)
+        assert not set(set_keys).intersection(set(keys))
+        assert not set(hash_keys).intersection(set(keys))
+        assert not set(list_keys).intersection(set(keys))
+        assert not set(zset_keys).intersection(set(keys))
+
+        cursor = 0
+        keys = []
+        while True:
+            result = await redis_client.scan(cursor, type=ObjectType.SET)
+            cursor = result[0]
+            keys.extend(result[1])
+            if cursor == 0:
+                break
+        assert set(set_keys) == set(keys)
+        assert not set(string_keys).intersection(set(keys))
+        assert not set(hash_keys).intersection(set(keys))
+        assert not set(list_keys).intersection(set(keys))
+        assert not set(zset_keys).intersection(set(keys))
+
+        cursor = 0
+        keys = []
+        while True:
+            result = await redis_client.scan(cursor, type=ObjectType.HASH)
+            cursor = result[0]
+            keys.extend(result[1])
+            if cursor == 0:
+                break
+        assert set(hash_keys) == set(keys)
+        assert not set(string_keys).intersection(set(keys))
+        assert not set(set_keys).intersection(set(keys))
+        assert not set(list_keys).intersection(set(keys))
+        assert not set(zset_keys).intersection(set(keys))
+
+        cursor = 0
+        keys = []
+        while True:
+            result = await redis_client.scan(cursor, type=ObjectType.LIST)
+            cursor = result[0]
+            keys.extend(result[1])
+            if cursor == 0:
+                break
+        assert set(list_keys) == set(keys)
+        assert not set(string_keys).intersection(set(keys))
+        assert not set(set_keys).intersection(set(keys))
+        assert not set(hash_keys).intersection(set(keys))
+        assert not set(zset_keys).intersection(set(keys))
 
     @pytest.mark.parametrize("cluster_mode", [True, False])
     @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])

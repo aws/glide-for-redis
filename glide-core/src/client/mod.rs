@@ -15,6 +15,7 @@ pub use standalone_client::StandaloneClient;
 use std::io;
 use std::time::Duration;
 pub use types::*;
+use value_conversion::ExpectedReturnType;
 
 use self::value_conversion::{convert_to_expected_type, expected_type_for_cmd, get_value_type};
 mod reconnecting_connection;
@@ -218,6 +219,55 @@ fn get_request_timeout(cmd: &Cmd, default_timeout: Duration) -> RedisResult<Opti
 }
 
 impl Client {
+    // Cluster scan is not passed to redis-rs as a regular command, so we need to handle it separately.
+    // We send the command to a specific function in the redis-rs cluster client, which internally handles the
+    // the complication of a command scan, and generate the command base on the logic in the redis-rs library.
+    //
+    // The function returns a tuple with the cursor and the keys found in the scan.
+    // The cursor is is not a regular cursor, but an ARC to a struct that contains the cursor and the data needed
+    // to continue the scan called ScanState.
+    // In order to avoid passing Rust GC to clean the ScanState when the cursor (ref) is passed to the warp layer,
+    // which mean that Rust layer is not aware of the cursor anymore, we need to keep the ScanState alive.
+    // We do that by storing the ScanState in a global container, and return a hash of the cursor to the warp layer.
+    //
+    // The warp layer create an object contain the hash with a drop function that will remove the cursor from the container.
+    // When the ref is removed from the hash map, there's no more references to the ScanState, and the GC will clean it.
+    pub async fn cluster_scan<'a>(
+        &'a mut self,
+        scan_state_cursor: &'a ScanStateRC,
+        match_pattern: &'a Option<&str>,
+        count: Option<usize>,
+        object_type: Option<ObjectType>,
+    ) -> RedisResult<Value> {
+        match self.internal_client {
+            ClientWrapper::Standalone(_) => {
+                unreachable!("Cluster scan is not supported in standalone mode")
+            }
+            ClientWrapper::Cluster { ref mut client } => {
+                let (cursor, keys) = client
+                    .cluster_scan(
+                        scan_state_cursor.clone(),
+                        *match_pattern,
+                        count,
+                        object_type,
+                    )
+                    .await?;
+
+                let cluster_hash = if cursor.is_finished() {
+                    "finished".to_string()
+                } else {
+                    insert_cluster_scan_cursor(cursor)
+                };
+                convert_to_expected_type(
+                    Value::Array(vec![Value::SimpleString(cluster_hash), Value::Array(keys)]),
+                    Some(ExpectedReturnType::ClusterScanReturnType {
+                        cursor: &ExpectedReturnType::BulkString,
+                        keys: &ExpectedReturnType::ArrayOfStrings,
+                    }),
+                )
+            }
+        }
+    }
     pub fn send_command<'a>(
         &'a mut self,
         cmd: &'a Cmd,

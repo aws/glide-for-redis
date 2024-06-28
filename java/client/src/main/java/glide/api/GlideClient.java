@@ -53,7 +53,7 @@ import glide.api.models.commands.FlushMode;
 import glide.api.models.commands.InfoOptions;
 import glide.api.models.commands.SortOptions;
 import glide.api.models.commands.function.FunctionRestorePolicy;
-import glide.api.models.configuration.RedisClientConfiguration;
+import glide.api.models.configuration.GlideClientConfiguration;
 import glide.managers.CommandManager;
 import glide.managers.ConnectionManager;
 import java.util.Arrays;
@@ -66,14 +66,14 @@ import org.apache.commons.lang3.ArrayUtils;
  * Async (non-blocking) client for Redis in Standalone mode. Use {@link #CreateClient} to request a
  * client to Redis.
  */
-public class RedisClient extends BaseClient
+public class GlideClient extends BaseClient
         implements GenericCommands,
                 ServerManagementCommands,
                 ConnectionManagementCommands,
                 ScriptingAndFunctionsCommands,
                 TransactionsCommands {
 
-    protected RedisClient(ConnectionManager connectionManager, CommandManager commandManager) {
+    protected GlideClient(ConnectionManager connectionManager, CommandManager commandManager) {
         super(connectionManager, commandManager);
     }
 
@@ -81,11 +81,11 @@ public class RedisClient extends BaseClient
      * Async request for an async (non-blocking) Redis client in Standalone mode.
      *
      * @param config Redis client Configuration
-     * @return A Future to connect and return a RedisClient
+     * @return A Future to connect and return a GlideClient
      */
-    public static CompletableFuture<RedisClient> CreateClient(
-            @NonNull RedisClientConfiguration config) {
-        return CreateClient(config, RedisClient::new);
+    public static CompletableFuture<GlideClient> CreateClient(
+            @NonNull GlideClientConfiguration config) {
+        return CreateClient(config, GlideClient::new);
     }
 
     @Override

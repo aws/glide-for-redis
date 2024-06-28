@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-import glide.api.RedisClusterClient;
+import glide.api.GlideClusterClient;
 import glide.api.models.configuration.RedisCredentials;
 import glide.api.models.exceptions.ClosingException;
 import glide.api.models.exceptions.RequestException;
@@ -30,8 +30,8 @@ public class ClusterClientTests {
                 REDIS_VERSION.isGreaterThanOrEqualTo(minVersion),
                 "Redis version required >= " + minVersion);
 
-        RedisClusterClient client =
-                RedisClusterClient.CreateClient(commonClusterClientConfig().build()).get();
+        GlideClusterClient client =
+                GlideClusterClient.CreateClient(commonClusterClientConfig().build()).get();
 
         String info =
                 (String) client.customCommand(new String[] {"CLIENT", "INFO"}).get().getSingleValue();
@@ -44,8 +44,8 @@ public class ClusterClientTests {
     @SneakyThrows
     @Test
     public void can_connect_with_auth_requirepass() {
-        RedisClusterClient client =
-                RedisClusterClient.CreateClient(commonClusterClientConfig().build()).get();
+        GlideClusterClient client =
+                GlideClusterClient.CreateClient(commonClusterClientConfig().build()).get();
 
         String password = "TEST_AUTH";
         client.customCommand(new String[] {"CONFIG", "SET", "requirepass", password}).get();
@@ -54,12 +54,12 @@ public class ClusterClientTests {
         ExecutionException exception =
                 assertThrows(
                         ExecutionException.class,
-                        () -> RedisClusterClient.CreateClient(commonClusterClientConfig().build()).get());
+                        () -> GlideClusterClient.CreateClient(commonClusterClientConfig().build()).get());
         assertTrue(exception.getCause() instanceof ClosingException);
 
         // Creation of a new client with credentials
-        RedisClusterClient auth_client =
-                RedisClusterClient.CreateClient(
+        GlideClusterClient auth_client =
+                GlideClusterClient.CreateClient(
                                 commonClusterClientConfig()
                                         .credentials(RedisCredentials.builder().password(password).build())
                                         .build())
@@ -81,8 +81,8 @@ public class ClusterClientTests {
     @SneakyThrows
     @Test
     public void can_connect_with_auth_acl() {
-        RedisClusterClient client =
-                RedisClusterClient.CreateClient(commonClusterClientConfig().build()).get();
+        GlideClusterClient client =
+                GlideClusterClient.CreateClient(commonClusterClientConfig().build()).get();
 
         String username = "testuser";
         String password = "TEST_AUTH";
@@ -112,8 +112,8 @@ public class ClusterClientTests {
         assertEquals(OK, client.set(key, value).get());
 
         // Creation of a new cluster client with credentials
-        RedisClusterClient testUserClient =
-                RedisClusterClient.CreateClient(
+        GlideClusterClient testUserClient =
+                GlideClusterClient.CreateClient(
                                 commonClusterClientConfig()
                                         .credentials(
                                                 RedisCredentials.builder().username(username).password(password).build())
@@ -135,8 +135,8 @@ public class ClusterClientTests {
     @SneakyThrows
     @Test
     public void client_name() {
-        RedisClusterClient client =
-                RedisClusterClient.CreateClient(
+        GlideClusterClient client =
+                GlideClusterClient.CreateClient(
                                 commonClusterClientConfig().clientName("TEST_CLIENT_NAME").build())
                         .get();
 
@@ -150,8 +150,8 @@ public class ClusterClientTests {
     @Test
     @SneakyThrows
     public void closed_client_throws_ExecutionException_with_ClosingException_as_cause() {
-        RedisClusterClient client =
-                RedisClusterClient.CreateClient(commonClusterClientConfig().build()).get();
+        GlideClusterClient client =
+                GlideClusterClient.CreateClient(commonClusterClientConfig().build()).get();
 
         client.close();
         ExecutionException executionException =

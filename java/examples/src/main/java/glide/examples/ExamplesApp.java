@@ -1,9 +1,9 @@
 /** Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0 */
 package glide.examples;
 
-import glide.api.RedisClient;
+import glide.api.GlideClient;
+import glide.api.models.configuration.GlideClientConfiguration;
 import glide.api.models.configuration.NodeAddress;
-import glide.api.models.configuration.RedisClientConfiguration;
 import java.util.concurrent.ExecutionException;
 
 public class ExamplesApp {
@@ -18,14 +18,14 @@ public class ExamplesApp {
         Integer port = 6379;
         boolean useSsl = false;
 
-        RedisClientConfiguration config =
-                RedisClientConfiguration.builder()
+        GlideClientConfiguration config =
+                GlideClientConfiguration.builder()
                         .address(NodeAddress.builder().host(host).port(port).build())
                         .useTLS(useSsl)
                         .build();
 
         try {
-            RedisClient client = RedisClient.CreateClient(config).get();
+            GlideClient client = GlideClient.CreateClient(config).get();
 
             System.out.println("PING: " + client.ping().get());
             System.out.println("PING(found you): " + client.ping("found you").get());

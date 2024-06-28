@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-import glide.api.RedisClient;
+import glide.api.GlideClient;
 import glide.api.models.configuration.RedisCredentials;
 import glide.api.models.exceptions.ClosingException;
 import glide.api.models.exceptions.RequestException;
@@ -30,7 +30,7 @@ public class StandaloneClientTests {
                 REDIS_VERSION.isGreaterThanOrEqualTo(minVersion),
                 "Redis version required >= " + minVersion);
 
-        RedisClient client = RedisClient.CreateClient(commonClientConfig().build()).get();
+        GlideClient client = GlideClient.CreateClient(commonClientConfig().build()).get();
 
         String info = (String) client.customCommand(new String[] {"CLIENT", "INFO"}).get();
         assertTrue(info.contains("lib-name=GlideJava"));
@@ -42,7 +42,7 @@ public class StandaloneClientTests {
     @SneakyThrows
     @Test
     public void can_connect_with_auth_require_pass() {
-        RedisClient client = RedisClient.CreateClient(commonClientConfig().build()).get();
+        GlideClient client = GlideClient.CreateClient(commonClientConfig().build()).get();
 
         String password = "TEST_AUTH";
         client.customCommand(new String[] {"CONFIG", "SET", "requirepass", password}).get();
@@ -51,12 +51,12 @@ public class StandaloneClientTests {
         ExecutionException exception =
                 assertThrows(
                         ExecutionException.class,
-                        () -> RedisClient.CreateClient(commonClientConfig().build()).get());
+                        () -> GlideClient.CreateClient(commonClientConfig().build()).get());
         assertTrue(exception.getCause() instanceof ClosingException);
 
         // Creation of a new client with credentials
-        RedisClient auth_client =
-                RedisClient.CreateClient(
+        GlideClient auth_client =
+                GlideClient.CreateClient(
                                 commonClientConfig()
                                         .credentials(RedisCredentials.builder().password(password).build())
                                         .build())
@@ -78,7 +78,7 @@ public class StandaloneClientTests {
     @SneakyThrows
     @Test
     public void can_connect_with_auth_acl() {
-        RedisClient client = RedisClient.CreateClient(commonClientConfig().build()).get();
+        GlideClient client = GlideClient.CreateClient(commonClientConfig().build()).get();
 
         String username = "testuser";
         String password = "TEST_AUTH";
@@ -107,8 +107,8 @@ public class StandaloneClientTests {
         assertEquals(OK, client.set(key, value).get());
 
         // Creation of a new client with credentials
-        RedisClient testUserClient =
-                RedisClient.CreateClient(
+        GlideClient testUserClient =
+                GlideClient.CreateClient(
                                 commonClientConfig()
                                         .credentials(
                                                 RedisCredentials.builder().username(username).password(password).build())
@@ -129,7 +129,7 @@ public class StandaloneClientTests {
     @SneakyThrows
     @Test
     public void select_standalone_database_id() {
-        RedisClient client = RedisClient.CreateClient(commonClientConfig().databaseId(4).build()).get();
+        GlideClient client = GlideClient.CreateClient(commonClientConfig().databaseId(4).build()).get();
 
         String clientInfo = (String) client.customCommand(new String[] {"CLIENT", "INFO"}).get();
         assertTrue(clientInfo.contains("db=4"));
@@ -140,8 +140,8 @@ public class StandaloneClientTests {
     @SneakyThrows
     @Test
     public void client_name() {
-        RedisClient client =
-                RedisClient.CreateClient(commonClientConfig().clientName("TEST_CLIENT_NAME").build()).get();
+        GlideClient client =
+                GlideClient.CreateClient(commonClientConfig().clientName("TEST_CLIENT_NAME").build()).get();
 
         String clientInfo = (String) client.customCommand(new String[] {"CLIENT", "INFO"}).get();
         assertTrue(clientInfo.contains("name=TEST_CLIENT_NAME"));
@@ -152,7 +152,7 @@ public class StandaloneClientTests {
     @Test
     @SneakyThrows
     public void closed_client_throws_ExecutionException_with_ClosingException_as_cause() {
-        RedisClient client = RedisClient.CreateClient(commonClientConfig().build()).get();
+        GlideClient client = GlideClient.CreateClient(commonClientConfig().build()).get();
 
         client.close();
         ExecutionException executionException =

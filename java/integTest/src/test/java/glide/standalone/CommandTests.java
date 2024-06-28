@@ -38,7 +38,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-import glide.api.RedisClient;
+import glide.api.GlideClient;
 import glide.api.models.GlideString;
 import glide.api.models.commands.InfoOptions;
 import glide.api.models.commands.SortOptions;
@@ -63,13 +63,13 @@ public class CommandTests {
 
     private static final String INITIAL_VALUE = "VALUE";
 
-    private static RedisClient regularClient = null;
+    private static GlideClient regularClient = null;
 
     @BeforeAll
     @SneakyThrows
     public static void init() {
         regularClient =
-                RedisClient.CreateClient(commonClientConfig().requestTimeout(7000).build()).get();
+                GlideClient.CreateClient(commonClientConfig().requestTimeout(7000).build()).get();
     }
 
     @AfterAll
@@ -627,7 +627,7 @@ public class CommandTests {
             assertEquals(libName, regularClient.functionLoad(code, true).get());
 
             try (var testClient =
-                    RedisClient.CreateClient(commonClientConfig().requestTimeout(7000).build()).get()) {
+                    GlideClient.CreateClient(commonClientConfig().requestTimeout(7000).build()).get()) {
                 // call the function without await
                 var promise = testClient.fcall(funcName);
 
@@ -698,7 +698,7 @@ public class CommandTests {
             assertEquals(libName, regularClient.functionLoad(code, true).get());
 
             try (var testClient =
-                    RedisClient.CreateClient(commonClientConfig().requestTimeout(7000).build()).get()) {
+                    GlideClient.CreateClient(commonClientConfig().requestTimeout(7000).build()).get()) {
                 // call the function without await
                 var promise = testClient.fcall(funcName, new String[] {key}, new String[0]);
 

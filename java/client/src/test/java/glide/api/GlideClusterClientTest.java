@@ -10,9 +10,6 @@ import static glide.api.models.commands.SortBaseOptions.ALPHA_COMMAND_STRING;
 import static glide.api.models.commands.SortBaseOptions.LIMIT_COMMAND_STRING;
 import static glide.api.models.commands.SortBaseOptions.OrderBy.DESC;
 import static glide.api.models.commands.SortBaseOptions.STORE_COMMAND_STRING;
-import static glide.api.models.commands.SortOptions.ALPHA_COMMAND_STRING;
-import static glide.api.models.commands.SortOptions.LIMIT_COMMAND_STRING;
-import static glide.api.models.commands.SortOptions.STORE_COMMAND_STRING;
 import static glide.api.models.commands.function.FunctionListOptions.LIBRARY_NAME_REDIS_API;
 import static glide.api.models.commands.function.FunctionListOptions.WITH_CODE_REDIS_API;
 import static glide.api.models.configuration.RequestRoutingConfiguration.SimpleMultiNodeRoute.ALL_NODES;
@@ -82,9 +79,9 @@ import redis_request.RedisRequestOuterClass.RedisRequest;
 import response.ResponseOuterClass.ConstantResponse;
 import response.ResponseOuterClass.Response;
 
-public class RedisClusterClientTest {
+public class GlideClusterClientTest {
 
-    RedisClusterClient service;
+    GlideClusterClient service;
 
     ConnectionManager connectionManager;
 
@@ -96,7 +93,7 @@ public class RedisClusterClientTest {
     public void setUp() {
         connectionManager = mock(ConnectionManager.class);
         commandManager = mock(CommandManager.class);
-        service = new RedisClusterClient(connectionManager, commandManager);
+        service = new GlideClusterClient(connectionManager, commandManager);
     }
 
     @Test
@@ -160,7 +157,7 @@ public class RedisClusterClientTest {
         }
     }
 
-    private static class TestClient extends RedisClusterClient {
+    private static class TestClient extends GlideClusterClient {
 
         private final Object object;
 
@@ -726,7 +723,7 @@ public class RedisClusterClientTest {
         assertEquals(OK, payload);
     }
 
-    // TODO copy/move tests from RedisClientTest which call super for coverage
+    // TODO copy/move tests from GlideClientTest which call super for coverage
     @SneakyThrows
     @Test
     public void configGet_returns_success() {

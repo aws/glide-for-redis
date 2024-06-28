@@ -4,11 +4,11 @@ package glide.benchmarks.clients.glide;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 import glide.api.BaseClient;
-import glide.api.RedisClient;
-import glide.api.RedisClusterClient;
+import glide.api.GlideClient;
+import glide.api.GlideClusterClient;
+import glide.api.models.configuration.GlideClientConfiguration;
+import glide.api.models.configuration.GlideClusterClientConfiguration;
 import glide.api.models.configuration.NodeAddress;
-import glide.api.models.configuration.RedisClientConfiguration;
-import glide.api.models.configuration.RedisClusterClientConfiguration;
 import glide.benchmarks.clients.AsyncClient;
 import glide.benchmarks.utils.ConnectionSettings;
 import java.util.concurrent.CompletableFuture;
@@ -23,8 +23,8 @@ public class GlideAsyncClient implements AsyncClient<String> {
     public void connectToRedis(ConnectionSettings connectionSettings) {
 
         if (connectionSettings.clusterMode) {
-            RedisClusterClientConfiguration config =
-                    RedisClusterClientConfiguration.builder()
+            GlideClusterClientConfiguration config =
+                    GlideClusterClientConfiguration.builder()
                             .address(
                                     NodeAddress.builder()
                                             .host(connectionSettings.host)
@@ -33,14 +33,14 @@ public class GlideAsyncClient implements AsyncClient<String> {
                             .useTLS(connectionSettings.useSsl)
                             .build();
             try {
-                redisClient = RedisClusterClient.CreateClient(config).get(10, SECONDS);
+                redisClient = GlideClusterClient.CreateClient(config).get(10, SECONDS);
             } catch (InterruptedException | ExecutionException | TimeoutException e) {
                 throw new RuntimeException(e);
             }
 
         } else {
-            RedisClientConfiguration config =
-                    RedisClientConfiguration.builder()
+            GlideClientConfiguration config =
+                    GlideClientConfiguration.builder()
                             .address(
                                     NodeAddress.builder()
                                             .host(connectionSettings.host)
@@ -50,7 +50,7 @@ public class GlideAsyncClient implements AsyncClient<String> {
                             .build();
 
             try {
-                redisClient = RedisClient.CreateClient(config).get(10, SECONDS);
+                redisClient = GlideClient.CreateClient(config).get(10, SECONDS);
             } catch (InterruptedException | ExecutionException | TimeoutException e) {
                 throw new RuntimeException(e);
             }

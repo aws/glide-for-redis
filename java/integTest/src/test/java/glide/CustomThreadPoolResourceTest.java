@@ -3,9 +3,9 @@ package glide;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import glide.api.RedisClient;
+import glide.api.GlideClient;
+import glide.api.models.configuration.GlideClientConfiguration;
 import glide.api.models.configuration.NodeAddress;
-import glide.api.models.configuration.RedisClientConfiguration;
 import glide.connectors.resources.EpollResource;
 import glide.connectors.resources.KQueuePoolResource;
 import glide.connectors.resources.Platform;
@@ -32,8 +32,8 @@ public class CustomThreadPoolResourceTest {
         }
 
         var regularClient =
-                RedisClient.CreateClient(
-                                RedisClientConfiguration.builder()
+                GlideClient.CreateClient(
+                                GlideClientConfiguration.builder()
                                         .address(
                                                 NodeAddress.builder().port(TestConfiguration.STANDALONE_PORTS[0]).build())
                                         .threadPoolResource(customThreadPoolResource)

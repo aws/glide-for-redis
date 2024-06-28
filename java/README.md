@@ -95,9 +95,9 @@ Other useful gradle developer commands:
 ### Standalone Redis:
 
 ```java
-import glide.api.RedisClient;
+import glide.api.GlideClient;
 
-RedisClient client = RedisClient.CreateClient().get();
+GlideClient client = GlideClient.CreateClient().get();
 
 CompletableFuture<String> setResponse = client.set("key", "foobar");
 assert setResponse.get() == "OK" : "Failed on client.set("key", "foobar") request";

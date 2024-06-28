@@ -16,11 +16,11 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import glide.TestConfiguration;
 import glide.TransactionTestUtilities.TransactionBuilder;
-import glide.api.RedisClusterClient;
+import glide.api.GlideClusterClient;
 import glide.api.models.ClusterTransaction;
 import glide.api.models.commands.SortClusterOptions;
+import glide.api.models.configuration.GlideClusterClientConfiguration;
 import glide.api.models.configuration.NodeAddress;
-import glide.api.models.configuration.RedisClusterClientConfiguration;
 import glide.api.models.configuration.RequestRoutingConfiguration.SingleNodeRoute;
 import glide.api.models.configuration.RequestRoutingConfiguration.SlotIdRoute;
 import glide.api.models.configuration.RequestRoutingConfiguration.SlotType;
@@ -39,14 +39,14 @@ import org.junit.jupiter.params.provider.MethodSource;
 @Timeout(10) // seconds
 public class ClusterTransactionTests {
 
-    private static RedisClusterClient clusterClient = null;
+    private static GlideClusterClient clusterClient = null;
 
     @BeforeAll
     @SneakyThrows
     public static void init() {
         clusterClient =
-                RedisClusterClient.CreateClient(
-                                RedisClusterClientConfiguration.builder()
+                GlideClusterClient.CreateClient(
+                                GlideClusterClientConfiguration.builder()
                                         .address(NodeAddress.builder().port(TestConfiguration.CLUSTER_PORTS[0]).build())
                                         .requestTimeout(5000)
                                         .build())

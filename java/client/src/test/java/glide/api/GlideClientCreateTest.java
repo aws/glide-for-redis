@@ -1,10 +1,11 @@
 /** Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0 */
 package glide.api;
 
+import static glide.api.BaseClient.CreateClient;
 import static glide.api.BaseClient.buildChannelHandler;
-import static glide.api.RedisClient.CreateClient;
-import static glide.api.RedisClient.buildCommandManager;
-import static glide.api.RedisClient.buildConnectionManager;
+import static glide.api.BaseClient.buildCommandManager;
+import static glide.api.BaseClient.buildConnectionManager;
+import static glide.api.GlideClient.CreateClient;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -13,7 +14,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
-import glide.api.models.configuration.RedisClientConfiguration;
+import glide.api.models.configuration.GlideClientConfiguration;
 import glide.api.models.exceptions.ClosingException;
 import glide.connectors.handlers.ChannelHandler;
 import glide.connectors.resources.ThreadPoolResource;
@@ -28,7 +29,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 
-public class RedisClientCreateTest {
+public class GlideClientCreateTest {
 
     private MockedStatic<BaseClient> mockedClient;
     private ChannelHandler channelHandler;
@@ -64,17 +65,17 @@ public class RedisClientCreateTest {
 
     @Test
     @SneakyThrows
-    public void createClient_with_default_config_successfully_returns_RedisClient() {
+    public void createClient_with_default_config_successfully_returns_GlideClient() {
         // setup
         CompletableFuture<Void> connectToRedisFuture = new CompletableFuture<>();
         connectToRedisFuture.complete(null);
-        RedisClientConfiguration config = RedisClientConfiguration.builder().build();
+        GlideClientConfiguration config = GlideClientConfiguration.builder().build();
 
         when(connectionManager.connectToRedis(eq(config))).thenReturn(connectToRedisFuture);
 
         // exercise
-        CompletableFuture<RedisClient> result = CreateClient(config);
-        RedisClient client = result.get();
+        CompletableFuture<GlideClient> result = CreateClient(config);
+        GlideClient client = result.get();
 
         // verify
         assertEquals(connectionManager, client.connectionManager);
@@ -83,18 +84,18 @@ public class RedisClientCreateTest {
 
     @Test
     @SneakyThrows
-    public void createClient_with_custom_config_successfully_returns_RedisClient() {
+    public void createClient_with_custom_config_successfully_returns_GlideClient() {
         // setup
         CompletableFuture<Void> connectToRedisFuture = new CompletableFuture<>();
         connectToRedisFuture.complete(null);
-        RedisClientConfiguration config =
-                RedisClientConfiguration.builder().threadPoolResource(threadPoolResource).build();
+        GlideClientConfiguration config =
+                GlideClientConfiguration.builder().threadPoolResource(threadPoolResource).build();
 
         when(connectionManager.connectToRedis(eq(config))).thenReturn(connectToRedisFuture);
 
         // exercise
-        CompletableFuture<RedisClient> result = CreateClient(config);
-        RedisClient client = result.get();
+        CompletableFuture<GlideClient> result = CreateClient(config);
+        GlideClient client = result.get();
 
         // verify
         assertEquals(connectionManager, client.connectionManager);
@@ -108,13 +109,13 @@ public class RedisClientCreateTest {
         CompletableFuture<Void> connectToRedisFuture = new CompletableFuture<>();
         ClosingException exception = new ClosingException("disconnected");
         connectToRedisFuture.completeExceptionally(exception);
-        RedisClientConfiguration config =
-                RedisClientConfiguration.builder().threadPoolResource(threadPoolResource).build();
+        GlideClientConfiguration config =
+                GlideClientConfiguration.builder().threadPoolResource(threadPoolResource).build();
 
         when(connectionManager.connectToRedis(eq(config))).thenReturn(connectToRedisFuture);
 
         // exercise
-        CompletableFuture<RedisClient> result = CreateClient(config);
+        CompletableFuture<GlideClient> result = CreateClient(config);
 
         ExecutionException executionException = assertThrows(ExecutionException.class, result::get);
 

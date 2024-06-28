@@ -29,8 +29,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import glide.api.BaseClient;
-import glide.api.RedisClient;
-import glide.api.RedisClusterClient;
+import glide.api.GlideClient;
+import glide.api.GlideClusterClient;
 import glide.api.models.GlideString;
 import glide.api.models.Script;
 import glide.api.models.commands.ConditionalChange;
@@ -78,9 +78,9 @@ import glide.api.models.commands.stream.StreamReadGroupOptions;
 import glide.api.models.commands.stream.StreamReadOptions;
 import glide.api.models.commands.stream.StreamTrimOptions.MaxLen;
 import glide.api.models.commands.stream.StreamTrimOptions.MinId;
+import glide.api.models.configuration.GlideClientConfiguration;
+import glide.api.models.configuration.GlideClusterClientConfiguration;
 import glide.api.models.configuration.NodeAddress;
-import glide.api.models.configuration.RedisClientConfiguration;
-import glide.api.models.configuration.RedisClusterClientConfiguration;
 import glide.api.models.exceptions.RequestException;
 import java.time.Instant;
 import java.util.Arrays;
@@ -109,8 +109,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 @Timeout(10) // seconds
 public class SharedCommandTests {
 
-    private static RedisClient standaloneClient = null;
-    private static RedisClusterClient clusterClient = null;
+    private static GlideClient standaloneClient = null;
+    private static GlideClusterClient clusterClient = null;
 
     @Getter private static List<Arguments> clients;
 
@@ -122,16 +122,16 @@ public class SharedCommandTests {
     @SneakyThrows
     public static void init() {
         standaloneClient =
-                RedisClient.CreateClient(
-                                RedisClientConfiguration.builder()
+                GlideClient.CreateClient(
+                                GlideClientConfiguration.builder()
                                         .address(NodeAddress.builder().port(STANDALONE_PORTS[0]).build())
                                         .requestTimeout(5000)
                                         .build())
                         .get();
 
         clusterClient =
-                RedisClusterClient.CreateClient(
-                                RedisClusterClientConfiguration.builder()
+                GlideClusterClient.CreateClient(
+                                GlideClusterClientConfiguration.builder()
                                         .address(NodeAddress.builder().port(CLUSTER_PORTS[0]).build())
                                         .requestTimeout(5000)
                                         .build())
@@ -2509,9 +2509,9 @@ public class SharedCommandTests {
         String key = UUID.randomUUID().toString();
         // create new client with default request timeout (250 millis)
         try (var testClient =
-                client instanceof RedisClient
-                        ? RedisClient.CreateClient(commonClientConfig().build()).get()
-                        : RedisClusterClient.CreateClient(commonClusterClientConfig().build()).get()) {
+                client instanceof GlideClient
+                        ? GlideClient.CreateClient(commonClientConfig().build()).get()
+                        : GlideClusterClient.CreateClient(commonClusterClientConfig().build()).get()) {
 
             // ensure that commands doesn't time out even if timeout > request timeout
             assertNull(testClient.bzpopmin(new String[] {key}, 1).get());
@@ -2581,9 +2581,9 @@ public class SharedCommandTests {
         String key = UUID.randomUUID().toString();
         // create new client with default request timeout (250 millis)
         try (var testClient =
-                client instanceof RedisClient
-                        ? RedisClient.CreateClient(commonClientConfig().build()).get()
-                        : RedisClusterClient.CreateClient(commonClusterClientConfig().build()).get()) {
+                client instanceof GlideClient
+                        ? GlideClient.CreateClient(commonClientConfig().build()).get()
+                        : GlideClusterClient.CreateClient(commonClusterClientConfig().build()).get()) {
 
             // ensure that commands doesn't time out even if timeout > request timeout
             assertNull(testClient.bzpopmax(new String[] {key}, 1).get());
@@ -2725,7 +2725,8 @@ public class SharedCommandTests {
                         .zmscore(
                                 gs(key1),
                                 new GlideString[] {
-                                    gs("one"), gs("nonExistentMember"), gs("nonExistentMember"), gs("three")
+                                    gs("one"), gs("nonExistentMember"),
+                                    gs("nonExistentMember"), gs("three")
                                 })
                         .get());
         assertArrayEquals(
@@ -3570,9 +3571,9 @@ public class SharedCommandTests {
         String key = UUID.randomUUID().toString();
         // create new client with default request timeout (250 millis)
         try (var testClient =
-                client instanceof RedisClient
-                        ? RedisClient.CreateClient(commonClientConfig().build()).get()
-                        : RedisClusterClient.CreateClient(commonClusterClientConfig().build()).get()) {
+                client instanceof GlideClient
+                        ? GlideClient.CreateClient(commonClientConfig().build()).get()
+                        : GlideClusterClient.CreateClient(commonClusterClientConfig().build()).get()) {
 
             // ensure that commands doesn't time out even if timeout > request timeout
             assertNull(testClient.bzmpop(new String[] {key}, MAX, 1).get());
@@ -3755,9 +3756,9 @@ public class SharedCommandTests {
         assertInstanceOf(RequestException.class, executionException.getCause());
 
         try (var testClient =
-                client instanceof RedisClient
-                        ? RedisClient.CreateClient(commonClientConfig().build()).get()
-                        : RedisClusterClient.CreateClient(commonClusterClientConfig().build()).get()) {
+                client instanceof GlideClient
+                        ? GlideClient.CreateClient(commonClientConfig().build()).get()
+                        : GlideClusterClient.CreateClient(commonClusterClientConfig().build()).get()) {
 
             // ensure that commands doesn't time out even if timeout > request timeout
             long oneSecondInMS = 1000L;
@@ -4199,9 +4200,9 @@ public class SharedCommandTests {
         assertEquals(0, emptyResult.get(key).size());
 
         try (var testClient =
-                client instanceof RedisClient
-                        ? RedisClient.CreateClient(commonClientConfig().build()).get()
-                        : RedisClusterClient.CreateClient(commonClusterClientConfig().build()).get()) {
+                client instanceof GlideClient
+                        ? GlideClient.CreateClient(commonClientConfig().build()).get()
+                        : GlideClusterClient.CreateClient(commonClusterClientConfig().build()).get()) {
             String timeoutKey = "{key}:2" + UUID.randomUUID();
             String timeoutGroupName = "group" + UUID.randomUUID();
             String timeoutConsumerName = "consumer" + UUID.randomUUID();
@@ -5655,9 +5656,9 @@ public class SharedCommandTests {
         assertEquals(1, client.getbit(gs(key1), 1).get());
         assertEquals(0, client.getbit(gs(key1), 1000).get());
         assertEquals(0, client.getbit(gs(missingKey), 1).get());
-        if (client instanceof RedisClient) {
+        if (client instanceof GlideClient) {
             assertEquals(
-                    1L, ((RedisClient) client).customCommand(new String[] {"SETBIT", key1, "5", "0"}).get());
+                    1L, ((GlideClient) client).customCommand(new String[] {"SETBIT", key1, "5", "0"}).get());
             assertEquals(0, client.getbit(key1, 5).get());
         }
 
@@ -5904,9 +5905,9 @@ public class SharedCommandTests {
         String key = UUID.randomUUID().toString();
         // create new client with default request timeout (250 millis)
         try (var testClient =
-                client instanceof RedisClient
-                        ? RedisClient.CreateClient(commonClientConfig().build()).get()
-                        : RedisClusterClient.CreateClient(commonClusterClientConfig().build()).get()) {
+                client instanceof GlideClient
+                        ? GlideClient.CreateClient(commonClientConfig().build()).get()
+                        : GlideClusterClient.CreateClient(commonClusterClientConfig().build()).get()) {
 
             // ensure that commands doesn't time out even if timeout > request timeout
             assertNull(testClient.blmpop(new String[] {key}, ListDirection.LEFT, 1).get());
@@ -6127,9 +6128,9 @@ public class SharedCommandTests {
         String key2 = "{key}-2" + UUID.randomUUID();
         // create new client with default request timeout (250 millis)
         try (var testClient =
-                client instanceof RedisClient
-                        ? RedisClient.CreateClient(commonClientConfig().build()).get()
-                        : RedisClusterClient.CreateClient(commonClusterClientConfig().build()).get()) {
+                client instanceof GlideClient
+                        ? GlideClient.CreateClient(commonClientConfig().build()).get()
+                        : GlideClusterClient.CreateClient(commonClusterClientConfig().build()).get()) {
 
             // ensure that commands doesn't time out even if timeout > request timeout
             assertNull(testClient.blmove(key1, key2, ListDirection.LEFT, ListDirection.LEFT, 1).get());

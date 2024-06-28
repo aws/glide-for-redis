@@ -5,9 +5,9 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import glide.api.RedisClient;
+import glide.api.GlideClient;
+import glide.api.models.configuration.GlideClientConfiguration;
 import glide.api.models.configuration.NodeAddress;
-import glide.api.models.configuration.RedisClientConfiguration;
 import glide.api.models.exceptions.ClosingException;
 import glide.api.models.exceptions.RequestException;
 import java.net.ServerSocket;
@@ -26,8 +26,8 @@ public class ErrorHandlingTests {
                 assertThrows(
                         ExecutionException.class,
                         () ->
-                                RedisClient.CreateClient(
-                                                RedisClientConfiguration.builder()
+                                GlideClient.CreateClient(
+                                                GlideClientConfiguration.builder()
                                                         .address(NodeAddress.builder().port(getFreePort()).build())
                                                         .build())
                                         .get());
@@ -40,8 +40,8 @@ public class ErrorHandlingTests {
     @SneakyThrows
     public void basic_client_tries_wrong_command() {
         try (var regularClient =
-                RedisClient.CreateClient(
-                                RedisClientConfiguration.builder()
+                GlideClient.CreateClient(
+                                GlideClientConfiguration.builder()
                                         .address(
                                                 NodeAddress.builder().port(TestConfiguration.STANDALONE_PORTS[0]).build())
                                         .build())
@@ -60,8 +60,8 @@ public class ErrorHandlingTests {
     @SneakyThrows
     public void basic_client_tries_wrong_command_arguments() {
         try (var regularClient =
-                RedisClient.CreateClient(
-                                RedisClientConfiguration.builder()
+                GlideClient.CreateClient(
+                                GlideClientConfiguration.builder()
                                         .address(
                                                 NodeAddress.builder().port(TestConfiguration.STANDALONE_PORTS[0]).build())
                                         .build())

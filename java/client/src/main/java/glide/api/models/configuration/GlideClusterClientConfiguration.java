@@ -9,4 +9,4 @@ import lombok.experimental.SuperBuilder;
  * values is used.
  */
 @SuperBuilder
-public class RedisClusterClientConfiguration extends BaseClientConfiguration {}
+public class GlideClusterClientConfiguration extends BaseClientConfiguration {}

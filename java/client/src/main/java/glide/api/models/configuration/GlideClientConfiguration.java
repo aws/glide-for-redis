@@ -4,10 +4,10 @@ package glide.api.models.configuration;
 import lombok.Getter;
 import lombok.experimental.SuperBuilder;
 
-/** Represents the configuration settings for a Standalone Redis client. */
+/** Represents the configuration settings for a Standalone Glide client. */
 @Getter
 @SuperBuilder
-public class RedisClientConfiguration extends BaseClientConfiguration {
+public class GlideClientConfiguration extends BaseClientConfiguration {
     /** Strategy used to determine how and when to reconnect, in case of connection failures. */
     private final BackoffStrategy reconnectStrategy;
 

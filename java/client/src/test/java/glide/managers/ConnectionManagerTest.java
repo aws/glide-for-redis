@@ -19,10 +19,10 @@ import connection_request.ConnectionRequestOuterClass.ConnectionRequest;
 import connection_request.ConnectionRequestOuterClass.ConnectionRetryStrategy;
 import connection_request.ConnectionRequestOuterClass.TlsMode;
 import glide.api.models.configuration.BackoffStrategy;
+import glide.api.models.configuration.GlideClientConfiguration;
+import glide.api.models.configuration.GlideClusterClientConfiguration;
 import glide.api.models.configuration.NodeAddress;
 import glide.api.models.configuration.ReadFrom;
-import glide.api.models.configuration.RedisClientConfiguration;
-import glide.api.models.configuration.RedisClusterClientConfiguration;
 import glide.api.models.configuration.RedisCredentials;
 import glide.api.models.exceptions.ClosingException;
 import glide.connectors.handlers.ChannelHandler;
@@ -69,7 +69,7 @@ public class ConnectionManagerTest {
     @Test
     public void connection_request_protobuf_generation_default_standalone_configuration() {
         // setup
-        RedisClientConfiguration redisClientConfiguration = RedisClientConfiguration.builder().build();
+        GlideClientConfiguration glideClientConfiguration = GlideClientConfiguration.builder().build();
         ConnectionRequest expectedProtobufConnectionRequest =
                 ConnectionRequest.newBuilder()
                         .setTlsMode(TlsMode.NoTls)
@@ -82,7 +82,7 @@ public class ConnectionManagerTest {
 
         // execute
         when(channel.connect(eq(expectedProtobufConnectionRequest))).thenReturn(completedFuture);
-        CompletableFuture<Void> result = connectionManager.connectToRedis(redisClientConfiguration);
+        CompletableFuture<Void> result = connectionManager.connectToRedis(glideClientConfiguration);
 
         // verify
         // no exception
@@ -93,8 +93,8 @@ public class ConnectionManagerTest {
     @Test
     public void connection_request_protobuf_generation_default_cluster_configuration() {
         // setup
-        RedisClusterClientConfiguration redisClusterClientConfiguration =
-                RedisClusterClientConfiguration.builder().build();
+        GlideClusterClientConfiguration glideClusterClientConfiguration =
+                GlideClusterClientConfiguration.builder().build();
         ConnectionRequest expectedProtobufConnectionRequest =
                 ConnectionRequest.newBuilder()
                         .setTlsMode(TlsMode.NoTls)
@@ -108,7 +108,7 @@ public class ConnectionManagerTest {
         // execute
         when(channel.connect(eq(expectedProtobufConnectionRequest))).thenReturn(completedFuture);
         CompletableFuture<Void> result =
-                connectionManager.connectToRedis(redisClusterClientConfiguration);
+                connectionManager.connectToRedis(glideClusterClientConfiguration);
 
         // verify
         assertNull(result.get());
@@ -119,8 +119,8 @@ public class ConnectionManagerTest {
     @Test
     public void connection_request_protobuf_generation_with_all_fields_set() {
         // setup
-        RedisClientConfiguration redisClientConfiguration =
-                RedisClientConfiguration.builder()
+        GlideClientConfiguration redisClientConfiguration =
+                GlideClientConfiguration.builder()
                         .address(NodeAddress.builder().host(HOST).port(PORT).build())
                         .address(NodeAddress.builder().host(DEFAULT_HOST).port(DEFAULT_PORT).build())
                         .useTLS(true)
@@ -180,7 +180,7 @@ public class ConnectionManagerTest {
     @Test
     public void response_validation_on_constant_response_returns_successfully() {
         // setup
-        RedisClientConfiguration redisClientConfiguration = RedisClientConfiguration.builder().build();
+        GlideClientConfiguration redisClientConfiguration = GlideClientConfiguration.builder().build();
         CompletableFuture<Response> completedFuture = new CompletableFuture<>();
         Response response = Response.newBuilder().setConstantResponse(ConstantResponse.OK).build();
         completedFuture.complete(response);
@@ -197,7 +197,7 @@ public class ConnectionManagerTest {
     @Test
     public void connection_on_empty_response_throws_ClosingException() {
         // setup
-        RedisClientConfiguration redisClientConfiguration = RedisClientConfiguration.builder().build();
+        GlideClientConfiguration redisClientConfiguration = GlideClientConfiguration.builder().build();
         CompletableFuture<Response> completedFuture = new CompletableFuture<>();
         Response response = Response.newBuilder().build();
         completedFuture.complete(response);
@@ -217,7 +217,7 @@ public class ConnectionManagerTest {
     @Test
     public void connection_on_resp_pointer_throws_ClosingException() {
         // setup
-        RedisClientConfiguration redisClientConfiguration = RedisClientConfiguration.builder().build();
+        GlideClientConfiguration glideClientConfiguration = GlideClientConfiguration.builder().build();
         CompletableFuture<Response> completedFuture = new CompletableFuture<>();
         Response response = Response.newBuilder().setRespPointer(42).build();
         completedFuture.complete(response);
@@ -227,7 +227,7 @@ public class ConnectionManagerTest {
         ExecutionException executionException =
                 assertThrows(
                         ExecutionException.class,
-                        () -> connectionManager.connectToRedis(redisClientConfiguration).get());
+                        () -> connectionManager.connectToRedis(glideClientConfiguration).get());
 
         assertTrue(executionException.getCause() instanceof ClosingException);
         assertEquals("Unexpected data in response", executionException.getCause().getMessage());

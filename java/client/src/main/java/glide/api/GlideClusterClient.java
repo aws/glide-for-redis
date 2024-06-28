@@ -54,7 +54,7 @@ import glide.api.models.commands.FlushMode;
 import glide.api.models.commands.InfoOptions;
 import glide.api.models.commands.SortClusterOptions;
 import glide.api.models.commands.function.FunctionRestorePolicy;
-import glide.api.models.configuration.RedisClusterClientConfiguration;
+import glide.api.models.configuration.GlideClusterClientConfiguration;
 import glide.api.models.configuration.RequestRoutingConfiguration.Route;
 import glide.api.models.configuration.RequestRoutingConfiguration.SingleNodeRoute;
 import glide.managers.CommandManager;
@@ -72,14 +72,14 @@ import response.ResponseOuterClass.Response;
  * Async (non-blocking) client for Redis in Cluster mode. Use {@link #CreateClient} to request a
  * client to Redis.
  */
-public class RedisClusterClient extends BaseClient
+public class GlideClusterClient extends BaseClient
         implements ConnectionManagementClusterCommands,
                 GenericClusterCommands,
                 ServerManagementClusterCommands,
                 ScriptingAndFunctionsClusterCommands,
                 TransactionsClusterCommands {
 
-    protected RedisClusterClient(ConnectionManager connectionManager, CommandManager commandManager) {
+    protected GlideClusterClient(ConnectionManager connectionManager, CommandManager commandManager) {
         super(connectionManager, commandManager);
     }
 
@@ -87,11 +87,11 @@ public class RedisClusterClient extends BaseClient
      * Async request for an async (non-blocking) Redis client in Cluster mode.
      *
      * @param config Redis cluster client Configuration
-     * @return A Future to connect and return a RedisClusterClient
+     * @return A Future to connect and return a GlideClusterClient
      */
-    public static CompletableFuture<RedisClusterClient> CreateClient(
-            @NonNull RedisClusterClientConfiguration config) {
-        return CreateClient(config, RedisClusterClient::new);
+    public static CompletableFuture<GlideClusterClient> CreateClient(
+            @NonNull GlideClusterClientConfiguration config) {
+        return CreateClient(config, GlideClusterClient::new);
     }
 
     @Override

@@ -8,8 +8,8 @@ import static glide.api.BaseClient.OK;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import glide.api.BaseClient;
-import glide.api.RedisClient;
-import glide.api.RedisClusterClient;
+import glide.api.GlideClient;
+import glide.api.GlideClusterClient;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -28,17 +28,17 @@ import org.junit.jupiter.params.provider.MethodSource;
 @Timeout(25) // seconds
 public class SharedClientTests {
 
-    private static RedisClient standaloneClient = null;
-    private static RedisClusterClient clusterClient = null;
+    private static GlideClient standaloneClient = null;
+    private static GlideClusterClient clusterClient = null;
 
     @Getter private static List<Arguments> clients;
 
     @BeforeAll
     @SneakyThrows
     public static void init() {
-        standaloneClient = RedisClient.CreateClient(commonClientConfig().build()).get();
+        standaloneClient = GlideClient.CreateClient(commonClientConfig().build()).get();
         clusterClient =
-                RedisClusterClient.CreateClient(commonClusterClientConfig().requestTimeout(10000).build())
+                GlideClusterClient.CreateClient(commonClusterClientConfig().requestTimeout(10000).build())
                         .get();
 
         clients = List.of(Arguments.of(standaloneClient), Arguments.of(clusterClient));

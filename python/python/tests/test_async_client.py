@@ -7865,6 +7865,7 @@ class TestCommands:
         assert await redis_client.sadd(lcs_non_string_key, ["Hello", "world"]) == 2
         with pytest.raises(RequestError):
             await redis_client.lcs_idx(key1, lcs_non_string_key)
+
     # Cluster scan tests
     @pytest.mark.parametrize("cluster_mode", [True])
     @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
@@ -7873,11 +7874,12 @@ class TestCommands:
         for key in expected_keys:
             await redis_client.set(key, "value")
         cursor = ClusterScanCursor(None)
-        keys = []
+        keys: list[str] = []
         while not cursor.is_finished():
             result = await redis_client.scan(cursor)
-            cursor = result[0]
-            keys.extend(result[1])
+            cursor = cast(ClusterScanCursor, result[0])
+            result_keys = cast(list[str], result[1])
+            keys.extend(result_keys)
 
         assert set(expected_keys) == set(keys)
 
@@ -7895,14 +7897,15 @@ class TestCommands:
         unexpected_pattern_keys = [f"{i}" for i in range(200, 300)]
         for key in unexpected_pattern_keys:
             await redis_client.set(key, "value")
-        keys = []
+        keys: list[str] = []
         cursor = ClusterScanCursor(None)
         while not cursor.is_finished():
             result = await redis_client.scan(
                 cursor, match="key:*", type=ObjectType.STRING
             )
-            cursor = result[0]
-            keys.extend(result[1])
+            cursor = cast(ClusterScanCursor, result[0])
+            result_keys = cast(list[str], result[1])
+            keys.extend(result_keys)
 
         assert set(expected_keys) == set(keys)
         assert not set(unexpected_type_keys).intersection(set(keys))
@@ -7915,20 +7918,20 @@ class TestCommands:
         for key in expected_keys:
             await redis_client.set(key, "value")
         cursor = ClusterScanCursor(None)
-        keys = []
+        keys: list[str] = []
         succefull_compared_scans = 0
         while not cursor.is_finished():
             result_of_1 = await redis_client.scan(cursor, count=1)
-            cursor = result_of_1[0]
-            keys_of_1 = result_of_1[1]
-            keys.extend(keys_of_1)
+            cursor = cast(ClusterScanCursor, result_of_1[0])
+            result_keys_of_1 = cast(list[str], result_of_1[1])
+            keys.extend(result_keys_of_1)
             if cursor.is_finished():
                 break
             result_of_100 = await redis_client.scan(cursor, count=100)
-            cursor = result_of_100[0]
-            keys_of_100 = result_of_100[1]
-            keys.extend(keys_of_100)
-            if keys_of_100 > keys_of_1:
+            cursor = cast(ClusterScanCursor, result_of_100[0])
+            result_keys_of_100 = cast(list[str], result_of_100[1])
+            keys.extend(result_keys_of_100)
+            if len(result_keys_of_100) > len(result_keys_of_1):
                 succefull_compared_scans += 1
 
         assert set(expected_keys) == set(keys)
@@ -7944,11 +7947,12 @@ class TestCommands:
         for key in expected_keys:
             await redis_client.set(key, "value")
         cursor = ClusterScanCursor(None)
-        keys = []
+        keys: list[str] = []
         while not cursor.is_finished():
             result = await redis_client.scan(cursor, match="key:*")
-            cursor = result[0]
-            keys.extend(result[1])
+            cursor = cast(ClusterScanCursor, result[0])
+            result_keys = cast(list[str], result[1])
+            keys.extend(result_keys)
         assert set(expected_keys) == set(keys)
         assert not set(unexpected_keys).intersection(set(keys))
 
@@ -7961,7 +7965,7 @@ class TestCommands:
             await redis_client.set(key, "value")
         cursor = ClusterScanCursor(None)
         result = await redis_client.scan(cursor)
-        cursor = result[0]
+        cursor = cast(ClusterScanCursor, result[0])
         cursor_string = str(cursor)
         cursor.__del__()
         new_cursor_with_same_id = ClusterScanCursor(cursor_string)
@@ -7994,11 +7998,12 @@ class TestCommands:
             await redis_client.zadd(key, {"value": 1})
 
         cursor = ClusterScanCursor(None)
-        keys = []
+        keys: list[str] = []
         while not cursor.is_finished():
             result = await redis_client.scan(cursor, type=ObjectType.STRING)
-            cursor = result[0]
-            keys.extend(result[1])
+            cursor = cast(ClusterScanCursor, result[0])
+            result_keys = cast(list[str], result[1])
+            keys.extend(result_keys)
         assert set(string_keys) == set(keys)
         assert not set(set_keys).intersection(set(keys))
         assert not set(hash_keys).intersection(set(keys))
@@ -8006,11 +8011,12 @@ class TestCommands:
         assert not set(zset_keys).intersection(set(keys))
 
         cursor = ClusterScanCursor(None)
-        keys = []
+        keys.clear()
         while not cursor.is_finished():
             result = await redis_client.scan(cursor, type=ObjectType.SET)
-            cursor = result[0]
-            keys.extend(result[1])
+            cursor = cast(ClusterScanCursor, result[0])
+            result_keys = cast(list[str], result[1])
+            keys.extend(result_keys)
         assert set(set_keys) == set(keys)
         assert not set(string_keys).intersection(set(keys))
         assert not set(hash_keys).intersection(set(keys))
@@ -8018,11 +8024,12 @@ class TestCommands:
         assert not set(zset_keys).intersection(set(keys))
 
         cursor = ClusterScanCursor(None)
-        keys = []
+        keys.clear()
         while not cursor.is_finished():
             result = await redis_client.scan(cursor, type=ObjectType.HASH)
-            cursor = result[0]
-            keys.extend(result[1])
+            cursor = cast(ClusterScanCursor, result[0])
+            result_keys = cast(list[str], result[1])
+            keys.extend(result_keys)
         assert set(hash_keys) == set(keys)
         assert not set(string_keys).intersection(set(keys))
         assert not set(set_keys).intersection(set(keys))
@@ -8030,11 +8037,12 @@ class TestCommands:
         assert not set(zset_keys).intersection(set(keys))
 
         cursor = ClusterScanCursor(None)
-        keys = []
+        keys.clear()
         while not cursor.is_finished():
             result = await redis_client.scan(cursor, type=ObjectType.LIST)
-            cursor = result[0]
-            keys.extend(result[1])
+            cursor = cast(ClusterScanCursor, result[0])
+            result_keys = cast(list[str], result[1])
+            keys.extend(result_keys)
         assert set(list_keys) == set(keys)
         assert not set(string_keys).intersection(set(keys))
         assert not set(set_keys).intersection(set(keys))
@@ -8048,12 +8056,13 @@ class TestCommands:
         expected_keys = [f"key:{i}" for i in range(100)]
         for key in expected_keys:
             await redis_client.set(key, "value")
-        keys = []
+        keys: list[str] = []
         cursor = 0
         while True:
             result = await redis_client.scan(cursor)
-            cursor = result[0]
-            keys.extend(result[1])
+            cursor = cast(int, result[0])
+            new_keys = cast(list[str], result[1])
+            keys.extend(new_keys)
             if cursor == 0:
                 break
         assert set(expected_keys) == set(keys)
@@ -8070,14 +8079,15 @@ class TestCommands:
         unexpected_pattern_keys = [f"{i}" for i in range(200, 300)]
         for key in unexpected_pattern_keys:
             await redis_client.set(key, "value")
-        keys = []
+        keys: list[str] = []
         cursor = 0
         while True:
             result = await redis_client.scan(
                 cursor, match="key:*", type=ObjectType.STRING
             )
-            cursor = result[0]
-            keys.extend(result[1])
+            cursor = cast(int, result[0])
+            new_keys = cast(list[str], result[1])
+            keys.extend(new_keys)
             if cursor == 0:
                 break
         assert set(expected_keys) == set(keys)
@@ -8091,16 +8101,16 @@ class TestCommands:
         for key in expected_keys:
             await redis_client.set(key, "value")
         cursor = 0
-        keys = []
+        keys: list[str] = []
         succefull_compared_scans = 0
         while True:
             result_of_1 = await redis_client.scan(cursor, count=1)
-            cursor = result_of_1[0]
-            keys_of_1 = result_of_1[1]
+            cursor = cast(int, result_of_1[0])
+            keys_of_1 = cast(list[str], result_of_1[1])
             keys.extend(keys_of_1)
             result_of_100 = await redis_client.scan(cursor, count=100)
-            cursor = result_of_100[0]
-            keys_of_100 = result_of_100[1]
+            cursor = cast(int, result_of_100[0])
+            keys_of_100 = cast(list[str], result_of_100[1])
             keys.extend(keys_of_100)
             if keys_of_100 > keys_of_1:
                 succefull_compared_scans += 1
@@ -8119,11 +8129,12 @@ class TestCommands:
         for key in expected_keys:
             await redis_client.set(key, "value")
         cursor = 0
-        keys = []
+        keys: list[str] = []
         while True:
             result = await redis_client.scan(cursor, match="key:*")
-            cursor = result[0]
-            keys.extend(result[1])
+            cursor = cast(int, result[0])
+            new_keys = cast(list[str], result[1])
+            keys.extend(new_keys)
             if cursor == 0:
                 break
         assert set(expected_keys) == set(keys)
@@ -8154,11 +8165,12 @@ class TestCommands:
             await redis_client.zadd(key, {"value": 1})
 
         cursor = 0
-        keys = []
+        keys: list[str] = []
         while True:
             result = await redis_client.scan(cursor, type=ObjectType.STRING)
-            cursor = result[0]
-            keys.extend(result[1])
+            cursor = cast(int, result[0])
+            new_keys = cast(list[str], result[1])
+            keys.extend(new_keys)
             if cursor == 0:
                 break
         assert set(string_keys) == set(keys)
@@ -8168,11 +8180,12 @@ class TestCommands:
         assert not set(zset_keys).intersection(set(keys))
 
         cursor = 0
-        keys = []
+        keys.clear()
         while True:
             result = await redis_client.scan(cursor, type=ObjectType.SET)
-            cursor = result[0]
-            keys.extend(result[1])
+            cursor = cast(int, result[0])
+            new_keys = cast(list[str], result[1])
+            keys.extend(new_keys)
             if cursor == 0:
                 break
         assert set(set_keys) == set(keys)
@@ -8182,11 +8195,12 @@ class TestCommands:
         assert not set(zset_keys).intersection(set(keys))
 
         cursor = 0
-        keys = []
+        keys.clear()
         while True:
             result = await redis_client.scan(cursor, type=ObjectType.HASH)
-            cursor = result[0]
-            keys.extend(result[1])
+            cursor = cast(int, result[0])
+            new_keys = cast(list[str], result[1])
+            keys.extend(new_keys)
             if cursor == 0:
                 break
         assert set(hash_keys) == set(keys)
@@ -8196,11 +8210,12 @@ class TestCommands:
         assert not set(zset_keys).intersection(set(keys))
 
         cursor = 0
-        keys = []
+        keys.clear()
         while True:
             result = await redis_client.scan(cursor, type=ObjectType.LIST)
-            cursor = result[0]
-            keys.extend(result[1])
+            cursor = cast(int, result[0])
+            new_keys = cast(list[str], result[1])
+            keys.extend(new_keys)
             if cursor == 0:
                 break
         assert set(list_keys) == set(keys)

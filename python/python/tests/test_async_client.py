@@ -7967,7 +7967,7 @@ class TestCommands:
         new_cursor_with_same_id = ClusterScanCursor(cursor_string)
         with pytest.raises(RequestError) as e_info:
             await redis_client.scan(new_cursor_with_same_id)
-        assert "Invalid scan_state_cursor hash" in str(e_info.value)
+        assert "Invalid scan_state_cursor id" in str(e_info.value)
 
     @pytest.mark.parametrize("cluster_mode", [True])
     @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])

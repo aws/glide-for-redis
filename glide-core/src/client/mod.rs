@@ -228,10 +228,10 @@ impl Client {
     // to continue the scan called ScanState.
     // In order to avoid passing Rust GC to clean the ScanState when the cursor (ref) is passed to the warp layer,
     // which mean that Rust layer is not aware of the cursor anymore, we need to keep the ScanState alive.
-    // We do that by storing the ScanState in a global container, and return a hash of the cursor to the warp layer.
+    // We do that by storing the ScanState in a global container, and return a cursor-id of the cursor to the warp layer.
     //
-    // The warp layer create an object contain the hash with a drop function that will remove the cursor from the container.
-    // When the ref is removed from the hash map, there's no more references to the ScanState, and the GC will clean it.
+    // The warp layer create an object contain the cursor-id with a drop function that will remove the cursor from the container.
+    // When the ref is removed from the hash-map, there's no more references to the ScanState, and the GC will clean it.
     pub async fn cluster_scan<'a>(
         &'a mut self,
         scan_state_cursor: &'a ScanStateRC,
@@ -253,13 +253,16 @@ impl Client {
                     )
                     .await?;
 
-                let cluster_hash = if cursor.is_finished() {
+                let cluster_cursor_id = if cursor.is_finished() {
                     "finished".to_string()
                 } else {
                     insert_cluster_scan_cursor(cursor)
                 };
                 convert_to_expected_type(
-                    Value::Array(vec![Value::SimpleString(cluster_hash), Value::Array(keys)]),
+                    Value::Array(vec![
+                        Value::SimpleString(cluster_cursor_id),
+                        Value::Array(keys),
+                    ]),
                     Some(ExpectedReturnType::ClusterScanReturnType {
                         cursor: &ExpectedReturnType::BulkString,
                         keys: &ExpectedReturnType::ArrayOfStrings,

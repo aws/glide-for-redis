@@ -1102,17 +1102,17 @@ mod tests {
     // Test conversion of cluster scan return type
     #[test]
     fn convert_cluster_scan_return_type() {
-        let cluster_hash = "hash".to_string();
+        let cluster_cursor_id = "id".to_string();
         let keys = Value::Array(vec![
             Value::BulkString("key:340".to_string().into_bytes()),
             Value::BulkString("value:341".to_string().into_bytes()),
         ]);
         let value = Value::Array(vec![
-            Value::SimpleString(cluster_hash.clone()),
+            Value::SimpleString(cluster_cursor_id.clone()),
             keys.clone(),
         ]);
         let expected_result = Value::Array(vec![
-            Value::BulkString(cluster_hash.clone().into_bytes()),
+            Value::BulkString(cluster_cursor_id.clone().into_bytes()),
             keys.clone(),
         ]);
         assert_eq!(
@@ -1129,14 +1129,14 @@ mod tests {
     }
     #[test]
     fn convert_cluster_scan_return_finished() {
-        let cluster_hash = "finished".to_string();
+        let cluster_cursor_id = "finished".to_string();
         let keys = Value::Array(vec![]);
         let value = Value::Array(vec![
-            Value::SimpleString(cluster_hash.clone()),
+            Value::SimpleString(cluster_cursor_id.clone()),
             keys.clone(),
         ]);
         let expected_result = Value::Array(vec![
-            Value::BulkString(cluster_hash.clone().into_bytes()),
+            Value::BulkString(cluster_cursor_id.clone().into_bytes()),
             keys.clone(),
         ]);
         assert_eq!(
@@ -1154,8 +1154,8 @@ mod tests {
 
     #[test]
     fn convert_cluster_scan_fail_on_bad_return() {
-        let cluster_hash = "hash".to_string();
-        let value = Value::Array(vec![Value::SimpleString(cluster_hash.clone())]);
+        let cluster_cursor_id = "id".to_string();
+        let value = Value::Array(vec![Value::SimpleString(cluster_cursor_id.clone())]);
         assert!(convert_to_expected_type(
             value,
             Some(ExpectedReturnType::ClusterScanReturnType {

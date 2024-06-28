@@ -56,7 +56,7 @@ pub(crate) fn convert_to_expected_type(
             Value::Nil => Ok(value),
             Value::Array(array) => {
                 if array.len() != 2 {
-                    return Err((
+                    Err((
                         ErrorKind::TypeError,
                         "Array must contain exactly two elements",
                     )

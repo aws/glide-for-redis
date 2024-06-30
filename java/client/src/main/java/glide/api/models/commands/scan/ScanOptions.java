@@ -4,7 +4,9 @@ package glide.api.models.commands.scan;
 import glide.api.commands.GenericCommands;
 import glide.api.commands.GenericClusterCommands;
 import glide.utils.ArrayTransformUtils;
+import lombok.NonNull;
 import lombok.experimental.SuperBuilder;
+import redis_request.RedisRequestOuterClass;
 
 /**
  * Optional arguments for {@link GenericCommands#scan} and {@link GenericClusterCommands#scan}.
@@ -39,5 +41,19 @@ public class ScanOptions extends BaseScanOptions {
             return ArrayTransformUtils.concatenateArrays(super.toArgs(), new String[]{TYPE_OPTION_STRING, type.toString()});
         }
         return super.toArgs();
+    }
+
+    public void populate(@NonNull RedisRequestOuterClass.ClusterScan.Builder clusterScanMessage) {
+        if (matchPattern != null) {
+            clusterScanMessage.setMatchPattern(matchPattern);
+        }
+
+        if (count != null) {
+            clusterScanMessage.setCount(count);
+        }
+
+        if (type != null) {
+            clusterScanMessage.setObjectType(type.toString());
+        }
     }
 }

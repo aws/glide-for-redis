@@ -316,3 +316,24 @@ pub extern "system" fn Java_glide_ffi_resolvers_ScriptResolver_dropScript<'local
     )
     .unwrap_or(())
 }
+
+#[no_mangle]
+pub extern "system" fn Java_glide_ffi_resolvers_NativeClusterScanCursor_releaseNativeCursor<'local>(
+    mut env: JNIEnv<'local>,
+    _class: JClass<'local>,
+    cursor: JString,
+) {
+    handle_panics(
+        move || {
+            fn release_native_cursor(env: &mut JNIEnv<'_>, cursor: JString) -> Result<(), FFIError> {
+                let cursor_str: String = env.get_string(&cursor)?.into();
+                glide_core::cluster_scan_container::remove_scan_state_cursor(cursor_str);
+                Ok(())
+            }
+            let result = release_native_cursor(&mut env, cursor);
+            handle_errors(&mut env, result)
+        },
+        "releaseNativeCursor",
+    )
+    .unwrap_or(())
+}

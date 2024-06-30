@@ -910,10 +910,13 @@ public class RedisClusterClient extends BaseClient
                 RandomKey, new String[0], this::handleStringOrNullResponse);
     }
 
-    // This can't share a common base method due to having a ClusterScanCursor object input.
-    public CompletableFuture<Object[]> scan(ClusterScanCursor cursor, @NonNull ScanOptions options) {
-        // Create ClusterScan RedisRequest message here based on inputs.
-        return null;
+    @Override
+    public CompletableFuture<Object[]> scan(@NonNull ClusterScanCursor cursor, @NonNull ScanOptions options) {
+        final CompletableFuture<Object[]> result =
+            commandManager.submitClusterScan(cursor, options, this::handleArrayResponse);
+
+        // Wrap the cursor string from the internal layer into a ClusterScanCursor before exposing to the caller.
+        return result.thenApply(internalResult -> new Object[] { internalResult[0].toString(), internalResult[1] });
     }
 
     @Override

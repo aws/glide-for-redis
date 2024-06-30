@@ -1,31 +1,23 @@
 /** Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0 */
 package glide.api.models.commands.scan;
 
-public class ClusterScanCursor implements AutoCloseable {
-    private String cursor;
+public interface ClusterScanCursor extends AutoCloseable {
+    String getCursor();
 
-    public ClusterScanCursor() {
-        this("0");
+    static ClusterScanCursor initialCursor() {
+        return new InitialCursor();
     }
 
-    ClusterScanCursor(String nativeCursor) {
-        this.cursor = nativeCursor;
-    }
+    final class InitialCursor implements ClusterScanCursor {
 
-    @Override
-    public void close() throws Exception {
-        // Release the native cursor and set the cursor field to "0".
-    }
+        private InitialCursor() {}
 
-    @Override
-    protected void finalize() throws Throwable {
-        try {
-            // Release the native cursor
-            this.close();
-        } finally {
-            super.finalize();
+        @Override
+        public String getCursor() {
+            return "0";
         }
-    }
 
-    // TODO: Add a native function to release the Rust cursor.
+        @Override
+        public void close() throws Exception {}
+    }
 }

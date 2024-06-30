@@ -2,10 +2,14 @@
 package glide.managers;
 
 import com.google.protobuf.ByteString;
+import com.google.protobuf.Message;
+
 import glide.api.models.ClusterTransaction;
 import glide.api.models.GlideString;
 import glide.api.models.Script;
 import glide.api.models.Transaction;
+import glide.api.models.commands.scan.ClusterScanCursor;
+import glide.api.models.commands.scan.ScanOptions;
 import glide.api.models.configuration.RequestRoutingConfiguration.ByAddressRoute;
 import glide.api.models.configuration.RequestRoutingConfiguration.Route;
 import glide.api.models.configuration.RequestRoutingConfiguration.SimpleMultiNodeRoute;
@@ -166,6 +170,15 @@ public class CommandManager {
         return submitCommandToChannel(command, responseHandler);
     }
 
+    public <T> CompletableFuture<T> submitClusterScan(
+        ClusterScanCursor cursor,
+        ScanOptions options,
+        RedisExceptionCheckedFunction<Response, T> responseHandler) {
+
+        final RedisRequest.Builder command = prepareRedisRequest(cursor, options);
+        return submitCommandToChannel(command, responseHandler);
+    }
+
     /**
      * Take a redis request and send to channel.
      *
@@ -286,6 +299,19 @@ public class CommandManager {
                 RedisRequest.newBuilder().setTransaction(transaction.getProtobufTransaction().build());
 
         return route.isPresent() ? prepareRedisRequestRoute(builder, route.get()) : builder;
+    }
+
+    protected RedisRequest.Builder prepareRedisRequest(ClusterScanCursor cursor, ScanOptions options) {
+
+        RedisRequestOuterClass.ClusterScan.Builder clusterScanBuilder = RedisRequestOuterClass.ClusterScan.newBuilder();
+
+        String cursorStr = cursor.getCursor();
+        if (cursorStr != null && !cursorStr.equals("0")) {
+            clusterScanBuilder.setCursor(cursor.getCursor());
+        }
+
+        options.populate(clusterScanBuilder);
+        return RedisRequest.newBuilder().setClusterScan(clusterScanBuilder.build());
     }
 
     /**

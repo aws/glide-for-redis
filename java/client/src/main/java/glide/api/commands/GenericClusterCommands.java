@@ -6,9 +6,13 @@ import glide.api.models.ClusterValue;
 import glide.api.models.GlideString;
 import glide.api.models.Transaction;
 import glide.api.models.commands.SortClusterOptions;
+import glide.api.models.commands.scan.ClusterScanCursor;
+import glide.api.models.commands.scan.ScanOptions;
 import glide.api.models.configuration.ReadFrom;
 import glide.api.models.configuration.RequestRoutingConfiguration.Route;
 import glide.api.models.configuration.RequestRoutingConfiguration.SingleNodeRoute;
+import lombok.NonNull;
+
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -151,6 +155,8 @@ public interface GenericClusterCommands {
      * }</pre>
      */
     CompletableFuture<String> randomKey();
+
+    CompletableFuture<Object[]> scan(ClusterScanCursor cursor, ScanOptions options);
 
     /**
      * Sorts the elements in the list, set, or sorted set at <code>key</code> and returns the result.

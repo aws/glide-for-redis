@@ -46,52 +46,6 @@ pub(crate) fn convert_to_expected_type(
     };
 
     match expected {
-        // In case of a cluster scan, the response we expect is an array of two elements.
-        // The first element is the hash key of the ref in the cluster scan container.
-        // The second element is the actual array of keys returned by the scan.
-        ExpectedReturnType::ClusterScanReturnType {
-            cursor,
-            keys,
-        } => match &value {
-            Value::Nil => Ok(value),
-            Value::Array(array) => {
-                if array.len() != 2 {
-                    Err((
-                        ErrorKind::TypeError,
-                        "Array must contain exactly two elements",
-                    )
-                        .into())
-                } else {
-                match cursor {
-                    ExpectedReturnType::BulkString => {
-                        let cursor = convert_to_expected_type(array[0].clone(), Some(*cursor))?;
-                        match keys {
-                            ExpectedReturnType::ArrayOfStrings => {
-                                let keys = convert_to_expected_type(array[1].clone(), Some(*keys))?;
-                                Ok(Value::Array(vec![cursor, keys]))
-                            },
-                            _ => Err((
-                                ErrorKind::TypeError,
-                                "Response couldn't be converted to Array",
-                                format!("(response was {:?})", get_value_type(&value)),
-                            )
-                                .into()),
-                        }
-                    },
-                    _ => Err((
-                        ErrorKind::TypeError,
-                        "Response couldn't be converted to map",
-                        format!("(response was {:?})", get_value_type(&value)),
-                    )
-                        .into())}}},
-            _ => Err((
-                ErrorKind::TypeError,
-                "Response couldn't be converted to map",
-                format!("(response was {:?})", get_value_type(&value)),
-            )
-                .into()),
-        },
-
         ExpectedReturnType::Map {
             key_type,
             value_type,
@@ -1095,76 +1049,7 @@ pub(crate) fn get_value_type<'a>(value: &Value) -> &'a str {
 
 #[cfg(test)]
 mod tests {
-    use std::vec;
-
     use super::*;
-
-    // Test conversion of cluster scan return type
-    #[test]
-    fn convert_cluster_scan_return_type() {
-        let cluster_cursor_id = "id".to_string();
-        let keys = Value::Array(vec![
-            Value::BulkString("key:340".to_string().into_bytes()),
-            Value::BulkString("value:341".to_string().into_bytes()),
-        ]);
-        let value = Value::Array(vec![
-            Value::SimpleString(cluster_cursor_id.clone()),
-            keys.clone(),
-        ]);
-        let expected_result = Value::Array(vec![
-            Value::BulkString(cluster_cursor_id.clone().into_bytes()),
-            keys.clone(),
-        ]);
-        assert_eq!(
-            convert_to_expected_type(
-                value,
-                Some(ExpectedReturnType::ClusterScanReturnType {
-                    cursor: &ExpectedReturnType::BulkString,
-                    keys: &ExpectedReturnType::ArrayOfStrings
-                })
-            )
-            .unwrap(),
-            expected_result
-        );
-    }
-    #[test]
-    fn convert_cluster_scan_return_finished() {
-        let cluster_cursor_id = "finished".to_string();
-        let keys = Value::Array(vec![]);
-        let value = Value::Array(vec![
-            Value::SimpleString(cluster_cursor_id.clone()),
-            keys.clone(),
-        ]);
-        let expected_result = Value::Array(vec![
-            Value::BulkString(cluster_cursor_id.clone().into_bytes()),
-            keys.clone(),
-        ]);
-        assert_eq!(
-            convert_to_expected_type(
-                value,
-                Some(ExpectedReturnType::ClusterScanReturnType {
-                    cursor: &ExpectedReturnType::BulkString,
-                    keys: &ExpectedReturnType::ArrayOfStrings
-                })
-            )
-            .unwrap(),
-            expected_result
-        );
-    }
-
-    #[test]
-    fn convert_cluster_scan_fail_on_bad_return() {
-        let cluster_cursor_id = "id".to_string();
-        let value = Value::Array(vec![Value::SimpleString(cluster_cursor_id.clone())]);
-        assert!(convert_to_expected_type(
-            value,
-            Some(ExpectedReturnType::ClusterScanReturnType {
-                cursor: &ExpectedReturnType::BulkString,
-                keys: &ExpectedReturnType::ArrayOfStrings
-            })
-        )
-        .is_err());
-    }
 
     #[test]
     fn convert_function_list() {

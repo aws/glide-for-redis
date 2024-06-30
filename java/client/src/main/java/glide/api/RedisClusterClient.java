@@ -57,6 +57,8 @@ import glide.api.models.commands.FlushMode;
 import glide.api.models.commands.InfoOptions;
 import glide.api.models.commands.SortClusterOptions;
 import glide.api.models.commands.function.FunctionRestorePolicy;
+import glide.api.models.commands.scan.ClusterScanCursor;
+import glide.api.models.commands.scan.ScanOptions;
 import glide.api.models.configuration.RedisClusterClientConfiguration;
 import glide.api.models.configuration.RequestRoutingConfiguration.Route;
 import glide.api.models.configuration.RequestRoutingConfiguration.SingleNodeRoute;
@@ -906,6 +908,12 @@ public class RedisClusterClient extends BaseClient
     public CompletableFuture<String> randomKey() {
         return commandManager.submitNewCommand(
                 RandomKey, new String[0], this::handleStringOrNullResponse);
+    }
+
+    // This can't share a common base method due to having a ClusterScanCursor object input.
+    public CompletableFuture<Object[]> scan(ClusterScanCursor cursor, @NonNull ScanOptions options) {
+        // Create ClusterScan RedisRequest message here based on inputs.
+        return null;
     }
 
     @Override

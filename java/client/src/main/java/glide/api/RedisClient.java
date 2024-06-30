@@ -54,6 +54,7 @@ import glide.api.models.commands.InfoOptions;
 import glide.api.models.commands.SortOptions;
 import glide.api.models.commands.SortOptionsBinary;
 import glide.api.models.commands.function.FunctionRestorePolicy;
+import glide.api.models.commands.scan.ScanOptions;
 import glide.api.models.configuration.RedisClientConfiguration;
 import java.util.Arrays;
 import java.util.Map;

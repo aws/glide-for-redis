@@ -184,7 +184,7 @@ public interface GenericCommands {
     /**
      * Returns a random key from currently selected database.
      *
-     * @see <a href="https://redis.io/docs/latest/commands/randomkey/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/randomkey/">valkey.io</a> for details.
      * @return A random <code>key</code> from the database.
      * @example
      *     <pre>{@code
@@ -203,6 +203,7 @@ public interface GenericCommands {
      * apply transformations on sorted elements.<br>
      * To store the result into a new key, see {@link #sortStore(String, String, SortOptions)}.
      *
+     * @see <a href="https://valkey.io/commands/sort/">valkey.io</a> for details.
      * @param key The key of the list, set, or sorted set to be sorted.
      * @param sortOptions The {@link SortOptions}.
      * @return An <code>Array</code> of sorted elements.
@@ -247,6 +248,7 @@ public interface GenericCommands {
      * This command is routed depending on the client's {@link ReadFrom} strategy.
      *
      * @since Redis 7.0 and above.
+     * @see <a href="https://valkey.io/commands/sort/">valkey.io</a> for details.
      * @param key The key of the list, set, or sorted set to be sorted.
      * @param sortOptions The {@link SortOptions}.
      * @return An <code>Array</code> of sorted elements.
@@ -291,6 +293,7 @@ public interface GenericCommands {
      * key.<br>
      * To get the sort result without storing it into a key, see {@link #sort(String, SortOptions)}.
      *
+     * @see <a href="https://valkey.io/commands/sort/">valkey.io</a> for details.
      * @param key The key of the list, set, or sorted set to be sorted.
      * @param sortOptions The {@link SortOptions}.
      * @param destination The key where the sorted result will be stored.

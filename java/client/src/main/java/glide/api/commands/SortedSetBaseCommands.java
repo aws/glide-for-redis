@@ -1429,7 +1429,7 @@ public interface SortedSetBaseCommands {
      * Long payload1 = client.zremrangebylex(gs("mySortedSet"), new LexBoundaryBinary(gs("a"), false), new LexBoundaryBinary(gs("e"))).get();
      * assert payload1 == 4L; // Indicates that 4 members, with lexicographical values ranging from "a" (exclusive) to "e" (inclusive), have been removed from "mySortedSet".
      *
-     * Long payload2 = client.zremrangebylex(gs("mySortedSet"), InfLexBoundBinary.NEGATIVE_INFINITY , new LexBoundaryBinary(gs("e"))).get();
+     * Long payload2 = client.zremrangebylex(gs("mySortedSet"), InfLexBoundBinary.NEGATIVE_INFINITY, new LexBoundaryBinary(gs("e"))).get();
      * assert payload2 == 0L; // Indicates that no elements were removed.
      * }</pre>
      */

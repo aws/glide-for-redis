@@ -17,6 +17,7 @@ public class Script implements AutoCloseable {
 
     /** Hash string representing the code. */
     @Getter private final String hash;
+
     private boolean isDropped = false;
 
     /** Indicatoin if script invocation output can return binary data. */

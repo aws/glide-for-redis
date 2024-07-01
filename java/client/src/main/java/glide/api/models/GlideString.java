@@ -98,6 +98,9 @@ public class GlideString {
 
     // Method to concatenate two GlideString objects
     public GlideString concat(GlideString other) {
-        return of(concatenateArrays(this.bytes, other.bytes));
+        byte[] concatenatedBytes = new byte[this.bytes.length + other.bytes.length];
+        System.arraycopy(this.bytes, 0, concatenatedBytes, 0, this.bytes.length);
+        System.arraycopy(other.bytes, 0, concatenatedBytes, this.bytes.length, other.bytes.length);
+        return GlideString.of(concatenatedBytes);
     }
 }

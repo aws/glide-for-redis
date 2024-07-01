@@ -2087,7 +2087,7 @@ public abstract class BaseClient
         return commandManager.submitNewCommand(
                 ZRange,
                 arguments,
-                response -> castArray(handleArrayOrNullResponse(response), GlideString.class));
+                response -> castArray(handleArrayOrNullResponseBinary(response), GlideString.class));
     }
 
     @Override

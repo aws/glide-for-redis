@@ -44,6 +44,15 @@ public class ScanOptions extends BaseScanOptions {
         return super.toArgs();
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof ScanOptions)) return false;
+        if (!super.equals(o)) return false;
+        ScanOptions that = (ScanOptions) o;
+        return type == that.type;
+    }
+
     public void populate(@NonNull RedisRequestOuterClass.ClusterScan.Builder clusterScanMessage) {
         if (matchPattern != null) {
             clusterScanMessage.setMatchPattern(matchPattern);

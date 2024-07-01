@@ -3,6 +3,7 @@ package glide.api.models.commands.scan;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import lombok.experimental.SuperBuilder;
 
 /**
@@ -35,6 +36,14 @@ public abstract class BaseScanOptions {
      * packed encoding.
      */
     protected final Long count;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof BaseScanOptions)) return false;
+        BaseScanOptions that = (BaseScanOptions) o;
+        return Objects.equals(matchPattern, that.matchPattern) && Objects.equals(count, that.count);
+    }
 
     /**
      * Creates the arguments to be used in <code>SCAN</code> commands.

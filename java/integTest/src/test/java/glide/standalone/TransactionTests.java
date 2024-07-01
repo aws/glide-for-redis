@@ -7,10 +7,17 @@ import static glide.TestUtilities.commonClientConfig;
 import static glide.api.BaseClient.OK;
 import static glide.api.models.GlideString.gs;
 import static glide.api.models.commands.SortBaseOptions.OrderBy.DESC;
+import static glide.api.models.commands.scan.ScanOptions.ObjectType.HASH;
+import static glide.api.models.commands.scan.ScanOptions.ObjectType.LIST;
+import static glide.api.models.commands.scan.ScanOptions.ObjectType.SET;
+import static glide.api.models.commands.scan.ScanOptions.ObjectType.STREAM;
+import static glide.api.models.commands.scan.ScanOptions.ObjectType.STRING;
+import static glide.api.models.commands.scan.ScanOptions.ObjectType.ZSET;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -22,6 +29,7 @@ import glide.api.models.GlideString;
 import glide.api.models.Transaction;
 import glide.api.models.commands.InfoOptions;
 import glide.api.models.commands.SortOptions;
+import glide.api.models.commands.scan.ScanOptions;
 import glide.api.models.exceptions.RequestException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -29,6 +37,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import lombok.SneakyThrows;
+import org.apache.commons.lang3.ArrayUtils;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -513,5 +522,85 @@ public class TransactionTests {
                 };
         assertEquals(expectedResult[0], results[0]);
         assertTrue((long) expectedResult[1] <= (long) results[1]);
+    }
+
+    @SneakyThrows
+    @Test
+    public void scan_test() {
+        // setup
+        String key = UUID.randomUUID().toString();
+        Map<String, String> msetMap = Map.of(key, UUID.randomUUID().toString());
+        assertEquals(OK, client.mset(msetMap).get());
+
+        String cursor = "0";
+        Object[] keysFound = new Object[0];
+        do {
+            Transaction transaction = new Transaction();
+            transaction.scan(cursor);
+            Object[] results = client.exec(transaction).get();
+            cursor = (String) ((Object[]) results[0])[0];
+            keysFound = ArrayUtils.addAll(keysFound, (Object[]) ((Object[]) results[0])[1]);
+        } while (!cursor.equals("0"));
+
+        assertTrue(ArrayUtils.contains(keysFound, key));
+    }
+
+    @SneakyThrows
+    @Test
+    public void scan_with_options_test() {
+        // setup
+        Transaction setupTransaction = new Transaction();
+
+        Map<ScanOptions.ObjectType, String> typeKeys =
+                Map.of(
+                        STRING, "{string}-" + UUID.randomUUID(),
+                        LIST, "{list}-" + UUID.randomUUID(),
+                        SET, "{set}-" + UUID.randomUUID(),
+                        ZSET, "{zset}-" + UUID.randomUUID(),
+                        HASH, "{hash}-" + UUID.randomUUID(),
+                        STREAM, "{stream}-" + UUID.randomUUID());
+
+        setupTransaction.set(typeKeys.get(STRING), UUID.randomUUID().toString());
+        setupTransaction.lpush(typeKeys.get(LIST), new String[] {UUID.randomUUID().toString()});
+        setupTransaction.sadd(typeKeys.get(SET), new String[] {UUID.randomUUID().toString()});
+        setupTransaction.zadd(typeKeys.get(ZSET), Map.of(UUID.randomUUID().toString(), 1.0));
+        setupTransaction.hset(
+                typeKeys.get(HASH), Map.of(UUID.randomUUID().toString(), UUID.randomUUID().toString()));
+        setupTransaction.xadd(
+                typeKeys.get(STREAM), Map.of(UUID.randomUUID().toString(), UUID.randomUUID().toString()));
+        assertNotNull(client.exec(setupTransaction).get());
+
+        for (var type : ScanOptions.ObjectType.values()) {
+            ScanOptions options = ScanOptions.builder().type(type).count(99L).build();
+
+            String cursor = "0";
+            Object[] keysFound = new Object[0];
+            do {
+                Transaction transaction = new Transaction();
+                transaction.scan(cursor, options);
+                Object[] results = client.exec(transaction).get();
+                cursor = (String) ((Object[]) results[0])[0];
+                keysFound = ArrayUtils.addAll(keysFound, (Object[]) ((Object[]) results[0])[1]);
+            } while (!cursor.equals("0"));
+
+            assertTrue(
+                    ArrayUtils.contains(keysFound, typeKeys.get(type)),
+                    "Unable to find " + typeKeys.get(type) + " in a scan by type");
+
+            options = ScanOptions.builder().matchPattern(typeKeys.get(type)).count(42L).build();
+            cursor = "0";
+            keysFound = new Object[0];
+            do {
+                Transaction transaction = new Transaction();
+                transaction.scan(cursor, options);
+                Object[] results = client.exec(transaction).get();
+                cursor = (String) ((Object[]) results[0])[0];
+                keysFound = ArrayUtils.addAll(keysFound, (Object[]) ((Object[]) results[0])[1]);
+            } while (!cursor.equals("0"));
+
+            assertTrue(
+                    ArrayUtils.contains(keysFound, typeKeys.get(type)),
+                    "Unable to find " + typeKeys.get(type) + " in a scan by match pattern");
+        }
     }
 }

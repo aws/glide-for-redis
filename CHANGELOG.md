@@ -71,6 +71,8 @@
 * Python: Add ZSCAN and HSCAN commands ([#1732](https://github.com/aws/glide-for-redis/pull/1732))
 * Python: Added FCALL_RO command ([#1721](https://github.com/aws/glide-for-redis/pull/1721))
 * Python: Added WATCH and UNWATCH command ([#1736](https://github.com/aws/glide-for-redis/pull/1736))
+* Java: Added SCAN command ([#TODO](TODO))
+
 
 ### Breaking Changes
 * Node: Update XREAD to return a Map of Map ([#1494](https://github.com/aws/glide-for-redis/pull/1494))

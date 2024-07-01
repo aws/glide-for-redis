@@ -244,6 +244,7 @@ enum RequestType {
     XAutoClaim = 203;
     Wait = 208;
     XClaim = 209;
+    Scan = 210;
 }
 
 message Command {

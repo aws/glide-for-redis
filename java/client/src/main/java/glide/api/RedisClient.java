@@ -36,6 +36,7 @@ import static redis_request.RedisRequestOuterClass.RequestType.Lolwut;
 import static redis_request.RedisRequestOuterClass.RequestType.Move;
 import static redis_request.RedisRequestOuterClass.RequestType.Ping;
 import static redis_request.RedisRequestOuterClass.RequestType.RandomKey;
+import static redis_request.RedisRequestOuterClass.RequestType.Scan;
 import static redis_request.RedisRequestOuterClass.RequestType.Select;
 import static redis_request.RedisRequestOuterClass.RequestType.Sort;
 import static redis_request.RedisRequestOuterClass.RequestType.SortReadOnly;
@@ -53,6 +54,7 @@ import glide.api.models.commands.FlushMode;
 import glide.api.models.commands.InfoOptions;
 import glide.api.models.commands.SortOptions;
 import glide.api.models.commands.function.FunctionRestorePolicy;
+import glide.api.models.commands.scan.ScanOptions;
 import glide.api.models.configuration.RedisClientConfiguration;
 import java.util.Arrays;
 import java.util.Map;
@@ -420,5 +422,16 @@ public class RedisClient extends BaseClient
         String[] arguments =
                 concatenateArrays(new String[] {key}, sortOptions.toArgs(), storeArguments);
         return commandManager.submitNewCommand(Sort, arguments, this::handleLongResponse);
+    }
+
+    @Override
+    public CompletableFuture<Object[]> scan(@NonNull String cursor) {
+        return commandManager.submitNewCommand(Scan, new String[] {cursor}, this::handleArrayResponse);
+    }
+
+    @Override
+    public CompletableFuture<Object[]> scan(@NonNull String cursor, @NonNull ScanOptions options) {
+        String[] arguments = ArrayUtils.addFirst(options.toArgs(), cursor);
+        return commandManager.submitNewCommand(Scan, arguments, this::handleArrayResponse);
     }
 }

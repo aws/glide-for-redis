@@ -6,11 +6,13 @@ import static glide.api.commands.GenericCommands.DB_REDIS_API;
 import static glide.api.models.commands.SortBaseOptions.STORE_COMMAND_STRING;
 import static redis_request.RedisRequestOuterClass.RequestType.Copy;
 import static redis_request.RedisRequestOuterClass.RequestType.Move;
+import static redis_request.RedisRequestOuterClass.RequestType.Scan;
 import static redis_request.RedisRequestOuterClass.RequestType.Select;
 import static redis_request.RedisRequestOuterClass.RequestType.Sort;
 import static redis_request.RedisRequestOuterClass.RequestType.SortReadOnly;
 
 import glide.api.models.commands.SortOptions;
+import glide.api.models.commands.scan.ScanOptions;
 import lombok.AllArgsConstructor;
 import lombok.NonNull;
 import org.apache.commons.lang3.ArrayUtils;
@@ -167,6 +169,42 @@ public class Transaction extends BaseTransaction<Transaction> {
                                 .add(sortOptions.toArgs())
                                 .add(STORE_COMMAND_STRING)
                                 .add(destination)));
+        return this;
+    }
+
+    /**
+     * Iterates incrementally over a database for matching keys.
+     *
+     * @see <a href="https://valkey.io/commands/zscan">valkey.io</a> for details.
+     * @param cursor The cursor that points to the next iteration of results. A value of <code>"0"
+     *     </code> indicates the start of the search.
+     * @return Command Response - An <code>Array</code> of <code>Objects</code>. The first element is
+     *     always the <code>
+     *     cursor</code> for the next iteration of results. <code>"0"</code> will be the <code>cursor
+     *     </code> returned on the last iteration of the sorted set. <br>
+     *     The second element is always an <code>Array</code> of matched keys from the database.
+     */
+    public Transaction scan(@NonNull String cursor) {
+        protobufTransaction.addCommands(buildCommand(Scan, newArgsBuilder().add(cursor)));
+        return this;
+    }
+
+    /**
+     * Iterates incrementally over a database for matching keys.
+     *
+     * @see <a href="https://valkey.io/commands/zscan">valkey.io</a> for details.
+     * @param cursor The cursor that points to the next iteration of results. A value of <code>"0"
+     *     </code> indicates the start of the search.
+     * @param options The {@link ScanOptions}.
+     * @return Command Response - An <code>Array</code> of <code>Objects</code>. The first element is
+     *     always the <code>
+     *     cursor</code> for the next iteration of results. <code>"0"</code> will be the <code>cursor
+     *     </code> returned on the last iteration of the sorted set. <br>
+     *     The second element is always an <code>Array</code> of matched keys from the database.
+     */
+    public Transaction scan(@NonNull String cursor, @NonNull ScanOptions options) {
+        protobufTransaction.addCommands(
+                buildCommand(Scan, newArgsBuilder().add(cursor).add(options.toArgs())));
         return this;
     }
 }

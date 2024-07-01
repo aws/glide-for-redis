@@ -26,6 +26,9 @@ import static glide.api.models.commands.SortBaseOptions.OrderBy.DESC;
 import static glide.api.models.commands.function.FunctionRestorePolicy.APPEND;
 import static glide.api.models.commands.function.FunctionRestorePolicy.FLUSH;
 import static glide.api.models.commands.function.FunctionRestorePolicy.REPLACE;
+import static glide.api.models.commands.scan.ScanOptions.ObjectType.HASH;
+import static glide.api.models.commands.scan.ScanOptions.ObjectType.SET;
+import static glide.api.models.commands.scan.ScanOptions.ObjectType.STRING;
 import static glide.cluster.CommandTests.DEFAULT_INFO_SECTIONS;
 import static glide.cluster.CommandTests.EVERYTHING_INFO_SECTIONS;
 import static org.junit.jupiter.api.Assertions.assertAll;
@@ -33,6 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -42,9 +46,11 @@ import glide.api.RedisClient;
 import glide.api.models.GlideString;
 import glide.api.models.commands.InfoOptions;
 import glide.api.models.commands.SortOptions;
+import glide.api.models.commands.scan.ScanOptions;
 import glide.api.models.exceptions.RequestException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,6 +59,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import lombok.SneakyThrows;
+import org.apache.commons.lang3.ArrayUtils;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -1031,5 +1038,139 @@ public class CommandTests {
                                 SortOptions.builder().byPattern(agePattern).getPattern(namePattern).build())
                         .get());
         assertArrayEquals(namesSortedByAge, regularClient.lrange(storeKey, 0, -1).get());
+    }
+
+    @Test
+    @SneakyThrows
+    public void scan() {
+        String initialCursor = "0";
+
+        int numberKeys = 500;
+        Map<String, String> keys = new HashMap<>();
+        for (int i = 0; i < numberKeys; i++) {
+            keys.put("{key}-" + i + "-" + UUID.randomUUID(), "{value}-" + i + "-" + UUID.randomUUID());
+        }
+
+        int resultCursorIndex = 0;
+        int resultCollectionIndex = 1;
+
+        // empty the database
+        assertEquals(OK, regularClient.flushdb().get());
+
+        // Empty return
+        Object[] emptyResult = regularClient.scan(initialCursor).get();
+        assertEquals(initialCursor, emptyResult[resultCursorIndex]);
+        assertDeepEquals(new String[] {}, emptyResult[resultCollectionIndex]);
+
+        // Negative cursor
+        Object[] negativeResult = regularClient.scan("-1").get();
+        assertEquals(initialCursor, negativeResult[resultCursorIndex]);
+        assertDeepEquals(new String[] {}, negativeResult[resultCollectionIndex]);
+
+        // Add keys to the database using mset
+        regularClient.mset(keys).get();
+
+        Object[] result;
+        Object[] keysFound = new String[0];
+        String resultCursor = "0";
+        boolean isFirstLoop = true;
+        do {
+            result = regularClient.scan(resultCursor).get();
+            resultCursor = result[resultCursorIndex].toString();
+            Object[] resultKeys = (Object[]) result[resultCollectionIndex];
+            keysFound = ArrayUtils.addAll(keysFound, resultKeys);
+
+            if (isFirstLoop) {
+                assertNotEquals("0", resultCursor);
+                isFirstLoop = false;
+            } else if (resultCursor.equals("0")) {
+                break;
+            }
+        } while (!resultCursor.equals("0")); // 0 is returned for the cursor of the last iteration.
+
+        // check that each key added to the database is found through the cursor
+        Object[] finalKeysFound = keysFound;
+        keys.entrySet().forEach(e -> assertTrue(ArrayUtils.contains(finalKeysFound, e.getKey())));
+    }
+
+    @Test
+    @SneakyThrows
+    public void scan_with_options() {
+        String initialCursor = "0";
+        String matchPattern = UUID.randomUUID().toString();
+
+        int resultCursorIndex = 0;
+        int resultCollectionIndex = 1;
+
+        // Add string keys to the database using mset
+        Map<String, String> stringKeys = new HashMap<>();
+        for (int i = 0; i < 10; i++) {
+            stringKeys.put("{key}-" + i + "-" + matchPattern, "{value}-" + i + "-" + matchPattern);
+        }
+        regularClient.mset(stringKeys).get();
+
+        // Add set keys to the database using sadd
+        List<String> setKeys = new ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            String key = "{key}-set-" + i + "-" + matchPattern;
+            regularClient.sadd(
+                    gs(key),
+                    new GlideString[] {gs(UUID.randomUUID().toString()), gs(UUID.randomUUID().toString())});
+            setKeys.add(key);
+        }
+
+        // Empty return - match a random UUID
+        ScanOptions options = ScanOptions.builder().matchPattern("*" + UUID.randomUUID()).build();
+        Object[] emptyResult = regularClient.scan(initialCursor, options).get();
+        assertNotEquals(initialCursor, emptyResult[resultCursorIndex]);
+        assertDeepEquals(new String[] {}, emptyResult[resultCollectionIndex]);
+
+        // Negative cursor
+        Object[] negativeResult = regularClient.scan("-1", options).get();
+        assertEquals(initialCursor, negativeResult[resultCursorIndex]);
+        assertDeepEquals(new String[] {}, negativeResult[resultCollectionIndex]);
+
+        // scan for strings by match pattern:
+        options =
+                ScanOptions.builder().matchPattern("*" + matchPattern).count(100L).type(STRING).build();
+        Object[] result;
+        Object[] keysFound = new String[0];
+        String resultCursor = "0";
+        do {
+            result = regularClient.scan(resultCursor, options).get();
+            resultCursor = result[resultCursorIndex].toString();
+            Object[] resultKeys = (Object[]) result[resultCollectionIndex];
+            keysFound = ArrayUtils.addAll(keysFound, resultKeys);
+        } while (!resultCursor.equals("0")); // 0 is returned for the cursor of the last iteration.
+
+        // check that each key added to the database is found through the cursor
+        Object[] finalKeysFound = keysFound;
+        stringKeys.entrySet().forEach(e -> assertTrue(ArrayUtils.contains(finalKeysFound, e.getKey())));
+
+        // scan for sets by match pattern:
+        options = ScanOptions.builder().matchPattern("*" + matchPattern).count(100L).type(SET).build();
+        Object[] setResult;
+        Object[] setsFound = new String[0];
+        String setCursor = "0";
+        do {
+            setResult = regularClient.scan(setCursor, options).get();
+            setCursor = setResult[resultCursorIndex].toString();
+            Object[] resultKeys = (Object[]) setResult[resultCollectionIndex];
+            setsFound = ArrayUtils.addAll(setsFound, resultKeys);
+        } while (!setCursor.equals("0")); // 0 is returned for the cursor of the last iteration.
+
+        // check that each key added to the database is found through the cursor
+        Object[] finalSetsFound = setsFound;
+        setKeys.forEach(k -> assertTrue(ArrayUtils.contains(finalSetsFound, k)));
+
+        // scan for hashes by match pattern:
+        // except in this case, we should never find anything
+        options = ScanOptions.builder().matchPattern("*" + matchPattern).count(100L).type(HASH).build();
+        String hashCursor = "0";
+        do {
+            Object[] hashResult = regularClient.scan(hashCursor, options).get();
+            hashCursor = hashResult[resultCursorIndex].toString();
+            assertTrue(((Object[]) hashResult[resultCollectionIndex]).length == 0);
+        } while (!hashCursor.equals("0")); // 0 is returned for the cursor of the last iteration.
     }
 }

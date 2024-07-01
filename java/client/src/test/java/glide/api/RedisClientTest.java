@@ -42,6 +42,8 @@ import static glide.api.models.commands.geospatial.GeoSearchOrigin.FROMLONLAT_VA
 import static glide.api.models.commands.geospatial.GeoSearchOrigin.FROMMEMBER_VALKEY_API;
 import static glide.api.models.commands.scan.BaseScanOptions.COUNT_OPTION_STRING;
 import static glide.api.models.commands.scan.BaseScanOptions.MATCH_OPTION_STRING;
+import static glide.api.models.commands.scan.ScanOptions.ObjectType.STRING;
+import static glide.api.models.commands.scan.ScanOptions.TYPE_OPTION_STRING;
 import static glide.api.models.commands.stream.StreamAddOptions.NO_MAKE_STREAM_REDIS_API;
 import static glide.api.models.commands.stream.StreamClaimOptions.FORCE_REDIS_API;
 import static glide.api.models.commands.stream.StreamClaimOptions.IDLE_REDIS_API;
@@ -210,6 +212,7 @@ import static redis_request.RedisRequestOuterClass.RequestType.SRem;
 import static redis_request.RedisRequestOuterClass.RequestType.SScan;
 import static redis_request.RedisRequestOuterClass.RequestType.SUnion;
 import static redis_request.RedisRequestOuterClass.RequestType.SUnionStore;
+import static redis_request.RedisRequestOuterClass.RequestType.Scan;
 import static redis_request.RedisRequestOuterClass.RequestType.Select;
 import static redis_request.RedisRequestOuterClass.RequestType.SetBit;
 import static redis_request.RedisRequestOuterClass.RequestType.SetRange;
@@ -321,6 +324,7 @@ import glide.api.models.commands.geospatial.GeoUnit;
 import glide.api.models.commands.geospatial.GeospatialData;
 import glide.api.models.commands.scan.HScanOptions;
 import glide.api.models.commands.scan.SScanOptions;
+import glide.api.models.commands.scan.ScanOptions;
 import glide.api.models.commands.scan.ZScanOptions;
 import glide.api.models.commands.stream.StreamAddOptions;
 import glide.api.models.commands.stream.StreamClaimOptions;
@@ -9587,6 +9591,64 @@ public class RedisClientTest {
 
         // exercise
         CompletableFuture<Object[]> response = service.sscan(key, cursor);
+        Object[] payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(value, payload);
+    }
+
+    @SneakyThrows
+    @Test
+    public void scan_returns_success() {
+        // setup
+        String cursor = "0";
+        Object[] value = new Object[] {0L, new String[] {"hello", "world"}};
+
+        CompletableFuture<Object[]> testResponse = new CompletableFuture<>();
+        testResponse.complete(value);
+
+        // match on protobuf request
+        when(commandManager.<Object[]>submitNewCommand(eq(Scan), eq(new String[] {cursor}), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<Object[]> response = service.scan(cursor);
+        Object[] payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(value, payload);
+    }
+
+    @SneakyThrows
+    @Test
+    public void scan_with_options_returns_success() {
+        // setup
+        String cursor = "0";
+        ScanOptions options =
+                ScanOptions.builder().matchPattern("match").count(10L).type(STRING).build();
+        String[] args =
+                new String[] {
+                    cursor,
+                    MATCH_OPTION_STRING,
+                    "match",
+                    COUNT_OPTION_STRING,
+                    "10",
+                    TYPE_OPTION_STRING,
+                    STRING.toString()
+                };
+        Object[] value = new Object[] {0L, new String[] {"hello", "world"}};
+
+        CompletableFuture<Object[]> testResponse = new CompletableFuture<>();
+        testResponse.complete(value);
+
+        // match on protobuf request
+        when(commandManager.<Object[]>submitNewCommand(eq(Scan), eq(args), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<Object[]> response = service.scan(cursor, options);
         Object[] payload = response.get();
 
         // verify

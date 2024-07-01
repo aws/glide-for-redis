@@ -11,14 +11,20 @@ import static glide.api.models.commands.SortBaseOptions.OrderBy.DESC;
 import static glide.api.models.commands.SortBaseOptions.STORE_COMMAND_STRING;
 import static glide.api.models.commands.SortOptions.BY_COMMAND_STRING;
 import static glide.api.models.commands.SortOptions.GET_COMMAND_STRING;
+import static glide.api.models.commands.scan.BaseScanOptions.COUNT_OPTION_STRING;
+import static glide.api.models.commands.scan.BaseScanOptions.MATCH_OPTION_STRING;
+import static glide.api.models.commands.scan.ScanOptions.ObjectType.ZSET;
+import static glide.api.models.commands.scan.ScanOptions.TYPE_OPTION_STRING;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static redis_request.RedisRequestOuterClass.RequestType.Copy;
 import static redis_request.RedisRequestOuterClass.RequestType.Move;
+import static redis_request.RedisRequestOuterClass.RequestType.Scan;
 import static redis_request.RedisRequestOuterClass.RequestType.Select;
 import static redis_request.RedisRequestOuterClass.RequestType.Sort;
 import static redis_request.RedisRequestOuterClass.RequestType.SortReadOnly;
 
 import glide.api.models.commands.SortOptions;
+import glide.api.models.commands.scan.ScanOptions;
 import java.util.LinkedList;
 import java.util.List;
 import org.apache.commons.lang3.tuple.Pair;
@@ -171,6 +177,23 @@ public class StandaloneTransactionTests {
                                 "getPattern2",
                                 STORE_COMMAND_STRING,
                                 "key2")));
+
+        transaction.scan("cursor");
+        results.add(Pair.of(Scan, buildArgs("cursor")));
+
+        transaction.scan(
+                "cursor", ScanOptions.builder().matchPattern("pattern").count(99L).type(ZSET).build());
+        results.add(
+                Pair.of(
+                        Scan,
+                        buildArgs(
+                                "cursor",
+                                MATCH_OPTION_STRING,
+                                "pattern",
+                                COUNT_OPTION_STRING,
+                                "99",
+                                TYPE_OPTION_STRING,
+                                ZSET.toString())));
 
         var protobufTransaction = transaction.getProtobufTransaction().build();
 

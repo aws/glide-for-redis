@@ -4,6 +4,7 @@ package glide.api.commands;
 import glide.api.models.GlideString;
 import glide.api.models.Transaction;
 import glide.api.models.commands.SortOptions;
+import glide.api.models.commands.scan.ScanOptions;
 import glide.api.models.configuration.ReadFrom;
 import java.util.concurrent.CompletableFuture;
 
@@ -183,7 +184,7 @@ public interface GenericCommands {
     /**
      * Returns a random key from currently selected database.
      *
-     * @see <a href="https://redis.io/docs/latest/commands/randomkey/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/randomkey/">valkey.io</a> for details.
      * @return A random <code>key</code> from the database.
      * @example
      *     <pre>{@code
@@ -202,6 +203,7 @@ public interface GenericCommands {
      * apply transformations on sorted elements.<br>
      * To store the result into a new key, see {@link #sortStore(String, String, SortOptions)}.
      *
+     * @see <a href="https://valkey.io/commands/sort/">valkey.io</a> for details.
      * @param key The key of the list, set, or sorted set to be sorted.
      * @param sortOptions The {@link SortOptions}.
      * @return An <code>Array</code> of sorted elements.
@@ -224,6 +226,7 @@ public interface GenericCommands {
      * This command is routed depending on the client's {@link ReadFrom} strategy.
      *
      * @since Redis 7.0 and above.
+     * @see <a href="https://valkey.io/commands/sort/">valkey.io</a> for details.
      * @param key The key of the list, set, or sorted set to be sorted.
      * @param sortOptions The {@link SortOptions}.
      * @return An <code>Array</code> of sorted elements.
@@ -246,6 +249,7 @@ public interface GenericCommands {
      * key.<br>
      * To get the sort result without storing it into a key, see {@link #sort(String, SortOptions)}.
      *
+     * @see <a href="https://valkey.io/commands/sort/">valkey.io</a> for details.
      * @param key The key of the list, set, or sorted set to be sorted.
      * @param sortOptions The {@link SortOptions}.
      * @param destination The key where the sorted result will be stored.
@@ -265,4 +269,63 @@ public interface GenericCommands {
      * }</pre>
      */
     CompletableFuture<Long> sortStore(String key, String destination, SortOptions sortOptions);
+
+    /**
+     * Iterates incrementally over a database for matching keys.
+     *
+     * @see <a href="https://valkey.io/commands/zscan">valkey.io</a> for details.
+     * @param cursor The cursor that points to the next iteration of results. A value of <code>"0"
+     *     </code> indicates the start of the search.
+     * @return An <code>Array</code> of <code>Objects</code>. The first element is always the <code>
+     *     cursor</code> for the next iteration of results. <code>"0"</code> will be the <code>cursor
+     *     </code> returned on the last iteration of the sorted set. <br>
+     *     The second element is always an <code>Array</code> of matched keys from the database.
+     * @example
+     *     <pre>{@code
+     * // Assume database contains a set with 200 keys
+     * String cursor = "0";
+     * Object[] result;
+     * do {
+     *     result = client.scan(cursor, options).get();
+     *     cursor = result[0].toString();
+     *     Object[] stringResults = (Object[]) result[1];
+     *     String keyList = Arrays.stream(stringResults)
+     *         .map(obj -> (String)obj)
+     *         .collect(Collectors.joining(", "));
+     *     System.out.println("\nSCAN iteration: " + keyList);
+     * } while (!cursor.equals("0"));
+     * </pre>
+     */
+    CompletableFuture<Object[]> scan(String cursor);
+
+    /**
+     * Iterates incrementally over a database for matching keys.
+     *
+     * @see <a href="https://valkey.io/commands/zscan">valkey.io</a> for details.
+     * @param cursor The cursor that points to the next iteration of results. A value of <code>"0"
+     *     </code> indicates the start of the search.
+     * @param options The {@link ScanOptions}.
+     * @return An <code>Array</code> of <code>Objects</code>. The first element is always the <code>
+     *     cursor</code> for the next iteration of results. <code>"0"</code> will be the <code>cursor
+     *     </code> returned on the last iteration of the sorted set. <br>
+     *     The second element is always an <code>Array</code> of matched keys from the database.
+     * @example
+     *     <pre>{@code
+     * // Assume database contains a set with 200 keys
+     * String cursor = "0";
+     * Object[] result;
+     * // match keys on pattern *11*
+     * ScanOptions options = ScanOptions.builder().matchPattern("*11*").build();
+     * do {
+     *     result = client.scan(cursor, options).get();
+     *     cursor = result[0].toString();
+     *     Object[] stringResults = (Object[]) result[1];
+     *     String keyList = Arrays.stream(stringResults)
+     *         .map(obj -> (String)obj)
+     *         .collect(Collectors.joining(", "));
+     *     System.out.println("\nSCAN iteration: " + keyList);
+     * } while (!cursor.equals("0"));
+     * </pre>
+     */
+    CompletableFuture<Object[]> scan(String cursor, ScanOptions options);
 }

@@ -273,7 +273,7 @@ public interface GenericCommands {
     /**
      * Iterates incrementally over a database for matching keys.
      *
-     * @see <a href="https://valkey.io/commands/zscan">valkey.io</a> for details.
+     * @see <a href="https://valkey.io/commands/scan/">valkey.io</a> for details.
      * @param cursor The cursor that points to the next iteration of results. A value of <code>"0"
      *     </code> indicates the start of the search.
      * @return An <code>Array</code> of <code>Objects</code>. The first element is always the <code>
@@ -301,7 +301,7 @@ public interface GenericCommands {
     /**
      * Iterates incrementally over a database for matching keys.
      *
-     * @see <a href="https://valkey.io/commands/zscan">valkey.io</a> for details.
+     * @see <a href="https://valkey.io/commands/scan/">valkey.io</a> for details.
      * @param cursor The cursor that points to the next iteration of results. A value of <code>"0"
      *     </code> indicates the start of the search.
      * @param options The {@link ScanOptions}.

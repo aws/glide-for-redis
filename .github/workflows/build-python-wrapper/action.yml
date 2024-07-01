@@ -13,6 +13,10 @@ inputs:
         description: "Specified target for rust toolchain, ex. x86_64-apple-darwin"
         type: string
         required: true
+    engine-version:
+        description: "Engine version to install"
+        required: true
+        type: string
     publish:
         description: "Enable building the wrapper in release mode"
         required: false
@@ -34,6 +38,7 @@ runs:
               os: ${{ inputs.os }}
               target: ${{ inputs.target }}
               github-token: ${{ inputs.github-token }}
+              engine-version: ${{ inputs.engine-version }}
 
         - name: Install Python software dependencies
           shell: bash

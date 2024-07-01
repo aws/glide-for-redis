@@ -1,4 +1,4 @@
-/** Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0 */
+/** Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0 */
 package glide.api.models.commands.geospatial;
 
 import glide.api.commands.GeospatialIndicesBaseCommands;
@@ -21,5 +21,5 @@ public enum GeoUnit {
     /** Represents distance in feet. */
     FEET("ft");
 
-    private final String redisApi;
+    private final String valkeyAPI;
 }

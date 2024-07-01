@@ -1,7 +1,8 @@
-/** Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0 */
+/** Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0 */
 package glide.api.commands;
 
 import glide.api.models.GlideString;
+import glide.api.models.commands.scan.HScanOptions;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -35,6 +36,25 @@ public interface HashBaseCommands {
     CompletableFuture<String> hget(String key, String field);
 
     /**
+     * Retrieves the value associated with <code>field</code> in the hash stored at <code>key</code>.
+     *
+     * @see <a href="https://redis.io/commands/hget/">redis.io</a> for details.
+     * @param key The key of the hash.
+     * @param field The field in the hash stored at <code>key</code> to retrieve from the database.
+     * @return The value associated with <code>field</code>, or <code>null</code> when <code>field
+     *     </code> is not present in the hash or <code>key</code> does not exist.
+     * @example
+     *     <pre>{@code
+     * String payload = client.hget(gs("my_hash"), gs("field1")).get();
+     * assert payload.equals(gs("value"));
+     *
+     * String payload = client.hget(gs("my_hash"), gs("nonexistent_field")).get();
+     * assert payload.equals(null);
+     * }</pre>
+     */
+    CompletableFuture<GlideString> hget(GlideString key, GlideString field);
+
+    /**
      * Sets the specified fields to their respective values in the hash stored at <code>key</code>.
      *
      * @see <a href="https://redis.io/commands/hset/">redis.io</a> for details.
@@ -49,6 +69,22 @@ public interface HashBaseCommands {
      * }</pre>
      */
     CompletableFuture<Long> hset(String key, Map<String, String> fieldValueMap);
+
+    /**
+     * Sets the specified fields to their respective values in the hash stored at <code>key</code>.
+     *
+     * @see <a href="https://redis.io/commands/hset/">redis.io</a> for details.
+     * @param key The key of the hash.
+     * @param fieldValueMap A field-value map consisting of fields and their corresponding values to
+     *     be set in the hash stored at the specified key.
+     * @return The number of fields that were added.
+     * @example
+     *     <pre>{@code
+     * Long num = client.hset(gs("my_hash"), Map.of(gs("field"), gs("value"), gs("field2"), gs("value2"))).get();
+     * assert num == 2L;
+     * }</pre>
+     */
+    CompletableFuture<Long> hset(GlideString key, Map<GlideString, GlideString> fieldValueMap);
 
     /**
      * Sets <code>field</code> in the hash stored at <code>key</code> to <code>value</code>, only if
@@ -72,6 +108,29 @@ public interface HashBaseCommands {
      * }</pre>
      */
     CompletableFuture<Boolean> hsetnx(String key, String field, String value);
+
+    /**
+     * Sets <code>field</code> in the hash stored at <code>key</code> to <code>value</code>, only if
+     * <code>field</code> does not yet exist.<br>
+     * If <code>key</code> does not exist, a new key holding a hash is created.<br>
+     * If <code>field</code> already exists, this operation has no effect.
+     *
+     * @see <a href="https://redis.io/commands/hsetnx/">redis.io</a> for details.
+     * @param key The key of the hash.
+     * @param field The field to set the value for.
+     * @param value The value to set.
+     * @return <code>true</code> if the field was set, <code>false</code> if the field already existed
+     *     and was not set.
+     * @example
+     *     <pre>{@code
+     * Boolean payload1 = client.hsetnx(gs("myHash"), gs("field"), gs("value")).get();
+     * assert payload1; // Indicates that the field "field" was set successfully in the hash "myHash".
+     *
+     * Boolean payload2 = client.hsetnx(gs("myHash"), gs("field"), gs("newValue")).get();
+     * assert !payload2; // Indicates that the field "field" already existed in the hash "myHash" and was not set again.
+     * }</pre>
+     */
+    CompletableFuture<Boolean> hsetnx(GlideString key, GlideString field, GlideString value);
 
     /**
      * Removes the specified fields from the hash stored at <code>key</code>. Specified fields that do
@@ -108,6 +167,24 @@ public interface HashBaseCommands {
      * }</pre>
      */
     CompletableFuture<Long> hlen(String key);
+
+    /**
+     * Returns the number of fields contained in the hash stored at <code>key</code>.
+     *
+     * @see <a href="https://redis.io/commands/hlen/">redis.io</a> for details.
+     * @param key The key of the hash.
+     * @return The number of fields in the hash, or <code>0</code> when the key does not exist.<br>
+     *     If <code>key</code> holds a value that is not a hash, an error is returned.
+     * @example
+     *     <pre>{@code
+     * Long num1 = client.hlen(gs("myHash")).get();
+     * assert num1 == 3L;
+     *
+     * Long num2 = client.hlen(gs("nonExistingKey")).get();
+     * assert num2 == 0L;
+     * }</pre>
+     */
+    CompletableFuture<Long> hlen(GlideString key);
 
     /**
      * Returns all values in the hash stored at <code>key</code>.
@@ -161,6 +238,25 @@ public interface HashBaseCommands {
      * }</pre>
      */
     CompletableFuture<Boolean> hexists(String key, String field);
+
+    /**
+     * Returns if <code>field</code> is an existing field in the hash stored at <code>key</code>.
+     *
+     * @see <a href="https://redis.io/commands/hexists/">redis.io</a> for details.
+     * @param key The key of the hash.
+     * @param field The field to check in the hash stored at <code>key</code>.
+     * @return <code>True</code> if the hash contains the specified field. If the hash does not
+     *     contain the field, or if the key does not exist, it returns <code>False</code>.
+     * @example
+     *     <pre>{@code
+     * Boolean exists = client.hexists(gs("my_hash"), gs("field1")).get();
+     * assert exists;
+     *
+     * Boolean exists = client.hexists(gs("my_hash"), gs("non_existent_field")).get();
+     * assert !exists;
+     * }</pre>
+     */
+    CompletableFuture<Boolean> hexists(GlideString key, GlideString field);
 
     /**
      * Returns all fields and values of the hash stored at <code>key</code>.
@@ -390,4 +486,75 @@ public interface HashBaseCommands {
      * }</pre>
      */
     CompletableFuture<String[][]> hrandfieldWithCountWithValues(String key, long count);
+
+    /**
+     * Iterates fields of Hash types and their associated values.
+     *
+     * @see <a href="https://valkey.io/commands/hscan">valkey.io</a> for details.
+     * @param key The key of the hash.
+     * @param cursor The cursor that points to the next iteration of results. A value of <code>"0"
+     *     </code> indicates the start of the search.
+     * @return An <code>Array</code> of <code>Objects</code>. The first element is always the <code>
+     *     cursor</code> for the next iteration of results. <code>"0"</code> will be the <code>cursor
+     *     </code> returned on the last iteration of the result. The second element is always an
+     *     <code>Array</code> of the subset of the hash held in <code>key</code>. The array in the
+     *     second element is always a flattened series of <code>String</code> pairs, where the key is
+     *     at even indices and the value is at odd indices.
+     * @example
+     *     <pre>{@code
+     * // Assume key contains a set with 200 member-score pairs
+     * String cursor = "0";
+     * Object[] result;
+     * do {
+     *   result = client.hscan(key1, cursor).get();
+     *   cursor = result[0].toString();
+     *   Object[] stringResults = (Object[]) result[1];
+     *
+     *   System.out.println("\nHSCAN iteration:");
+     *   for (int i = 0; i < stringResults.length; i += 2) {
+     *     System.out.printf("{%s=%s}", stringResults[i], stringResults[i + 1]);
+     *     if (i + 2 < stringResults.length) {
+     *       System.out.print(", ");
+     *     }
+     *   }
+     * } while (!cursor.equals("0"));
+     * }</pre>
+     */
+    CompletableFuture<Object[]> hscan(String key, String cursor);
+
+    /**
+     * Iterates fields of Hash types and their associated values.
+     *
+     * @see <a href="https://valkey.io/commands/hscan">valkey.io</a> for details.
+     * @param key The key of the hash.
+     * @param cursor The cursor that points to the next iteration of results. A value of <code>"0"
+     *     </code> indicates the start of the search.
+     * @param hScanOptions The {@link HScanOptions}.
+     * @return An <code>Array</code> of <code>Objects</code>. The first element is always the <code>
+     *     cursor</code> for the next iteration of results. <code>"0"</code> will be the <code>cursor
+     *     </code> returned on the last iteration of the result. The second element is always an
+     *     <code>Array</code> of the subset of the hash held in <code>key</code>. The array in the
+     *     second element is always a flattened series of <code>String</code> pairs, where the key is
+     *     at even indices and the value is at odd indices.
+     * @example
+     *     <pre>{@code
+     * // Assume key contains a set with 200 member-score pairs
+     * String cursor = "0";
+     * Object[] result;
+     * do {
+     *   result = client.hscan(key1, cursor, HScanOptions.builder().matchPattern("*").count(20L).build()).get();
+     *   cursor = result[0].toString();
+     *   Object[] stringResults = (Object[]) result[1];
+     *
+     *   System.out.println("\nHSCAN iteration:");
+     *   for (int i = 0; i < stringResults.length; i += 2) {
+     *     System.out.printf("{%s=%s}", stringResults[i], stringResults[i + 1]);
+     *     if (i + 2 < stringResults.length) {
+     *       System.out.print(", ");
+     *     }
+     *   }
+     * } while (!cursor.equals("0"));
+     * }</pre>
+     */
+    CompletableFuture<Object[]> hscan(String key, String cursor, HScanOptions hScanOptions);
 }

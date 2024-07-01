@@ -1,4 +1,4 @@
-/** Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0 */
+/** Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0 */
 package glide.api.models.configuration;
 
 import lombok.Builder;
@@ -12,6 +12,15 @@ import lombok.NonNull;
  *
  * <p>Once the maximum value is reached, that will remain the time between retry attempts until a
  * reconnect attempt is successful. The client will attempt to reconnect indefinitely.
+ *
+ * @example
+ *     <pre>{@code
+ * BackoffStrategy reconnectionConfiguration = BackoffStrategy.builder()
+ *     .numOfRetries(5)
+ *     .exponentBase(2)
+ *     .factor(3)
+ *     .build()
+ * }</pre>
  */
 @Getter
 @Builder

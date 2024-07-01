@@ -1,8 +1,10 @@
-/** Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0 */
+/** Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0 */
 package glide.managers;
 
 import static glide.api.models.configuration.NodeAddress.DEFAULT_HOST;
 import static glide.api.models.configuration.NodeAddress.DEFAULT_PORT;
+import static glide.api.models.configuration.StandaloneSubscriptionConfiguration.PubSubChannelMode.EXACT;
+import static glide.api.models.configuration.StandaloneSubscriptionConfiguration.PubSubChannelMode.PATTERN;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -13,10 +15,13 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.protobuf.ByteString;
 import connection_request.ConnectionRequestOuterClass;
 import connection_request.ConnectionRequestOuterClass.AuthenticationInfo;
 import connection_request.ConnectionRequestOuterClass.ConnectionRequest;
 import connection_request.ConnectionRequestOuterClass.ConnectionRetryStrategy;
+import connection_request.ConnectionRequestOuterClass.PubSubChannelsOrPatterns;
+import connection_request.ConnectionRequestOuterClass.PubSubSubscriptions;
 import connection_request.ConnectionRequestOuterClass.TlsMode;
 import glide.api.models.configuration.BackoffStrategy;
 import glide.api.models.configuration.NodeAddress;
@@ -24,9 +29,11 @@ import glide.api.models.configuration.ReadFrom;
 import glide.api.models.configuration.RedisClientConfiguration;
 import glide.api.models.configuration.RedisClusterClientConfiguration;
 import glide.api.models.configuration.RedisCredentials;
+import glide.api.models.configuration.StandaloneSubscriptionConfiguration;
 import glide.api.models.exceptions.ClosingException;
 import glide.connectors.handlers.ChannelHandler;
 import io.netty.channel.ChannelFuture;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import lombok.SneakyThrows;
@@ -135,6 +142,12 @@ public class ConnectionManagerTest {
                                         .build())
                         .databaseId(DATABASE_ID)
                         .clientName(CLIENT_NAME)
+                        .subscriptionConfiguration(
+                                StandaloneSubscriptionConfiguration.builder()
+                                        .subscription(EXACT, "channel_1")
+                                        .subscription(EXACT, "channel_2")
+                                        .subscription(PATTERN, "*chatRoom*")
+                                        .build())
                         .build();
         ConnectionRequest expectedProtobufConnectionRequest =
                 ConnectionRequest.newBuilder()
@@ -162,6 +175,20 @@ public class ConnectionManagerTest {
                                         .build())
                         .setDatabaseId(DATABASE_ID)
                         .setClientName(CLIENT_NAME)
+                        .setPubsubSubscriptions(
+                                PubSubSubscriptions.newBuilder()
+                                        .putAllChannelsOrPatternsByType(
+                                                Map.of(
+                                                        EXACT.ordinal(),
+                                                                PubSubChannelsOrPatterns.newBuilder()
+                                                                        .addChannelsOrPatterns(ByteString.copyFromUtf8("channel_1"))
+                                                                        .addChannelsOrPatterns(ByteString.copyFromUtf8("channel_2"))
+                                                                        .build(),
+                                                        PATTERN.ordinal(),
+                                                                PubSubChannelsOrPatterns.newBuilder()
+                                                                        .addChannelsOrPatterns(ByteString.copyFromUtf8("*chatRoom*"))
+                                                                        .build()))
+                                        .build())
                         .build();
         CompletableFuture<Response> completedFuture = new CompletableFuture<>();
         Response response = Response.newBuilder().setConstantResponse(ConstantResponse.OK).build();

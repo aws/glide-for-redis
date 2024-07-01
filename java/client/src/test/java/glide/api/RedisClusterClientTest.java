@@ -1,4 +1,4 @@
-/** Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0 */
+/** Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0 */
 package glide.api;
 
 import static glide.api.BaseClient.OK;
@@ -6,7 +6,10 @@ import static glide.api.commands.ServerManagementCommands.VERSION_REDIS_API;
 import static glide.api.models.GlideString.gs;
 import static glide.api.models.commands.FlushMode.ASYNC;
 import static glide.api.models.commands.FlushMode.SYNC;
+import static glide.api.models.commands.SortBaseOptions.ALPHA_COMMAND_STRING;
+import static glide.api.models.commands.SortBaseOptions.LIMIT_COMMAND_STRING;
 import static glide.api.models.commands.SortBaseOptions.OrderBy.DESC;
+import static glide.api.models.commands.SortBaseOptions.STORE_COMMAND_STRING;
 import static glide.api.models.commands.SortOptions.ALPHA_COMMAND_STRING;
 import static glide.api.models.commands.SortOptions.LIMIT_COMMAND_STRING;
 import static glide.api.models.commands.SortOptions.STORE_COMMAND_STRING;
@@ -48,6 +51,7 @@ import static redis_request.RedisRequestOuterClass.RequestType.LastSave;
 import static redis_request.RedisRequestOuterClass.RequestType.Lolwut;
 import static redis_request.RedisRequestOuterClass.RequestType.Ping;
 import static redis_request.RedisRequestOuterClass.RequestType.RandomKey;
+import static redis_request.RedisRequestOuterClass.RequestType.SPublish;
 import static redis_request.RedisRequestOuterClass.RequestType.Sort;
 import static redis_request.RedisRequestOuterClass.RequestType.SortReadOnly;
 import static redis_request.RedisRequestOuterClass.RequestType.Time;
@@ -65,7 +69,6 @@ import glide.api.models.commands.function.FunctionRestorePolicy;
 import glide.api.models.configuration.RequestRoutingConfiguration.Route;
 import glide.api.models.configuration.RequestRoutingConfiguration.SingleNodeRoute;
 import glide.managers.CommandManager;
-import glide.managers.ConnectionManager;
 import glide.managers.RedisExceptionCheckedFunction;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -83,17 +86,15 @@ public class RedisClusterClientTest {
 
     RedisClusterClient service;
 
-    ConnectionManager connectionManager;
-
     CommandManager commandManager;
 
     private final String[] TEST_ARGS = new String[0];
 
     @BeforeEach
     public void setUp() {
-        connectionManager = mock(ConnectionManager.class);
         commandManager = mock(CommandManager.class);
-        service = new RedisClusterClient(connectionManager, commandManager);
+        service =
+                new RedisClusterClient(new BaseClient.ClientBuilder(null, commandManager, null, null));
     }
 
     @Test
@@ -162,7 +163,7 @@ public class RedisClusterClientTest {
         private final Object object;
 
         public TestClient(CommandManager commandManager, Object objectToReturn) {
-            super(null, commandManager);
+            super(new BaseClient.ClientBuilder(null, commandManager, null, null));
             object = objectToReturn;
         }
 
@@ -355,6 +356,28 @@ public class RedisClusterClientTest {
 
     @SneakyThrows
     @Test
+    public void echo_binary_returns_success() {
+        // setup
+        GlideString message = gs("GLIDE FOR REDIS");
+        GlideString[] arguments = new GlideString[] {message};
+        CompletableFuture<GlideString> testResponse = new CompletableFuture<>();
+        testResponse.complete(message);
+
+        // match on protobuf request
+        when(commandManager.<GlideString>submitNewCommand(eq(Echo), eq(arguments), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<GlideString> response = service.echo(message);
+        GlideString echo = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(message, echo);
+    }
+
+    @SneakyThrows
+    @Test
     public void echo_with_route_returns_success() {
         // setup
         String message = "GLIDE FOR REDIS";
@@ -370,6 +393,29 @@ public class RedisClusterClientTest {
         // exercise
         CompletableFuture<ClusterValue<String>> response = service.echo(message, RANDOM);
         String echo = response.get().getSingleValue();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(message, echo);
+    }
+
+    @SneakyThrows
+    @Test
+    public void echo_binary_with_route_returns_success() {
+        // setup
+        GlideString message = gs("GLIDE FOR REDIS");
+        GlideString[] arguments = new GlideString[] {message};
+        CompletableFuture<ClusterValue<GlideString>> testResponse = new CompletableFuture<>();
+        testResponse.complete(ClusterValue.ofSingleValue(message));
+
+        // match on protobuf request
+        when(commandManager.<ClusterValue<GlideString>>submitNewCommand(
+                        eq(Echo), eq(arguments), eq(RANDOM), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<ClusterValue<GlideString>> response = service.echo(message, RANDOM);
+        GlideString echo = response.get().getSingleValue();
 
         // verify
         assertEquals(testResponse, response);
@@ -2042,6 +2088,30 @@ public class RedisClusterClientTest {
 
         // verify
         assertEquals(testResponse, response);
+    }
+
+    @SneakyThrows
+    @Test
+    public void spublish_returns_success() {
+        // setup
+        String channel = "channel";
+        String message = "message";
+        String[] arguments = new String[] {channel, message};
+
+        CompletableFuture<String> testResponse = new CompletableFuture<>();
+        testResponse.complete(OK);
+
+        // match on protobuf request
+        when(commandManager.<String>submitNewCommand(eq(SPublish), eq(arguments), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<String> response = service.spublish(channel, message);
+        String payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(OK, payload);
     }
 
     @SneakyThrows

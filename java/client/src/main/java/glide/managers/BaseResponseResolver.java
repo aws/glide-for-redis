@@ -1,4 +1,4 @@
-/** Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0 */
+/** Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0 */
 package glide.managers;
 
 import static glide.api.BaseClient.OK;
@@ -11,8 +11,7 @@ import response.ResponseOuterClass.Response;
  * Response resolver responsible for evaluating the Redis response object with a success or failure.
  */
 @AllArgsConstructor
-public class BaseCommandResponseResolver
-        implements RedisExceptionCheckedFunction<Response, Object> {
+public class BaseResponseResolver implements RedisExceptionCheckedFunction<Response, Object> {
 
     private RedisExceptionCheckedFunction<Long, Object> respPointerResolver;
 

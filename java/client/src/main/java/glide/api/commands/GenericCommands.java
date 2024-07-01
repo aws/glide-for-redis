@@ -1,6 +1,7 @@
-/** Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0 */
+/** Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0 */
 package glide.api.commands;
 
+import glide.api.models.GlideString;
 import glide.api.models.Transaction;
 import glide.api.models.commands.SortOptions;
 import glide.api.models.configuration.ReadFrom;
@@ -78,6 +79,24 @@ public interface GenericCommands {
     CompletableFuture<Boolean> move(String key, long dbIndex);
 
     /**
+     * Move <code>key</code> from the currently selected database to the database specified by <code>
+     * dbIndex</code>.
+     *
+     * @see <a href="https://redis.io/commands/move/">redis.io</a> for more details.
+     * @param key The key to move.
+     * @param dbIndex The index of the database to move <code>key</code> to.
+     * @return <code>true</code> if <code>key</code> was moved, or <code>false</code> if the <code>key
+     *     </code> already exists in the destination database or does not exist in the source
+     *     database.
+     * @example
+     *     <pre>{@code
+     * Boolean moved = client.move(gs("some_key"), 1L).get();
+     * assert moved;
+     * }</pre>
+     */
+    CompletableFuture<Boolean> move(GlideString key, long dbIndex);
+
+    /**
      * Copies the value stored at the <code>source</code> to the <code>destination</code> key on
      * <code>destinationDB</code>. When <code>replace</code> is true, removes the <code>destination
      * </code> key first if it already exists, otherwise performs no action.
@@ -109,6 +128,28 @@ public interface GenericCommands {
      * @param source The key to the source value.
      * @param destination The key where the value should be copied to.
      * @param destinationDB The alternative logical database index for the destination key.
+     * @param replace If the destination key should be removed before copying the value to it.
+     * @return <code>true</code> if <code>source</code> was copied, <code>false</code> if <code>source
+     * </code> was not copied.
+     * @example
+     *     <pre>{@code
+     * client.set(gs("test1"), gs("one")).get();
+     * assert client.copy(gs("test1"), gs("test2"), 1, false).get();
+     * }</pre>
+     */
+    CompletableFuture<Boolean> copy(
+            GlideString source, GlideString destination, long destinationDB, boolean replace);
+
+    /**
+     * Copies the value stored at the <code>source</code> to the <code>destination</code> key on
+     * <code>destinationDB</code>. When <code>replace</code> is true, removes the <code>destination
+     * </code> key first if it already exists, otherwise performs no action.
+     *
+     * @since Redis 6.2.0 and above.
+     * @see <a href="https://redis.io/commands/copy/">redis.io</a> for details.
+     * @param source The key to the source value.
+     * @param destination The key where the value should be copied to.
+     * @param destinationDB The alternative logical database index for the destination key.
      * @return <code>true</code> if <code>source</code> was copied, <code>false</code> if <code>source
      * </code> was not copied.
      * @example
@@ -118,6 +159,26 @@ public interface GenericCommands {
      * }</pre>
      */
     CompletableFuture<Boolean> copy(String source, String destination, long destinationDB);
+
+    /**
+     * Copies the value stored at the <code>source</code> to the <code>destination</code> key on
+     * <code>destinationDB</code>. When <code>replace</code> is true, removes the <code>destination
+     * </code> key first if it already exists, otherwise performs no action.
+     *
+     * @since Redis 6.2.0 and above.
+     * @see <a href="https://redis.io/commands/copy/">redis.io</a> for details.
+     * @param source The key to the source value.
+     * @param destination The key where the value should be copied to.
+     * @param destinationDB The alternative logical database index for the destination key.
+     * @return <code>true</code> if <code>source</code> was copied, <code>false</code> if <code>source
+     * </code> was not copied.
+     * @example
+     *     <pre>{@code
+     * client.set(gs("test1"), gs("one")).get();
+     * assert client.copy(gs("test1"), gs("test2"), 1).get();
+     * }</pre>
+     */
+    CompletableFuture<Boolean> copy(GlideString source, GlideString destination, long destinationDB);
 
     /**
      * Returns a random key from currently selected database.

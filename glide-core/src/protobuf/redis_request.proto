@@ -236,6 +236,14 @@ enum RequestType {
     SortReadOnly = 195;
     FunctionDump = 196;
     FunctionRestore = 197;
+    XPending = 198;
+    XGroupSetId = 199;
+    SScan = 200;
+    ZScan = 201;
+    HScan = 202;
+    XAutoClaim = 203;
+    Wait = 208;
+    XClaim = 209;
 }
 
 message Command {

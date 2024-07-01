@@ -1,4 +1,4 @@
-/** Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0 */
+/** Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0 */
 package glide.connection;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -39,7 +39,9 @@ public class ConnectionWithGlideMockTests extends RustCoreLibMockTestBase {
     public void createTestClient() {
         channelHandler =
                 new ChannelHandler(
-                        new CallbackDispatcher(), socketPath, Platform.getThreadPoolResourceSupplier().get());
+                        new CallbackDispatcher(null),
+                        socketPath,
+                        Platform.getThreadPoolResourceSupplier().get());
     }
 
     @AfterEach
@@ -185,7 +187,12 @@ public class ConnectionWithGlideMockTests extends RustCoreLibMockTestBase {
     private static class TestClient extends RedisClient {
 
         public TestClient(ChannelHandler channelHandler) {
-            super(new ConnectionManager(channelHandler), new CommandManager(channelHandler));
+            super(
+                    new ClientBuilder(
+                            new ConnectionManager(channelHandler),
+                            new CommandManager(channelHandler),
+                            null,
+                            null));
         }
     }
 }

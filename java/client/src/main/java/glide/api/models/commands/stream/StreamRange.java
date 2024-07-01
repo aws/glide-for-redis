@@ -1,4 +1,4 @@
-/** Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0 */
+/** Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0 */
 package glide.api.models.commands.stream;
 
 import glide.utils.ArrayTransformUtils;
@@ -10,16 +10,24 @@ import lombok.RequiredArgsConstructor;
  * glide.api.commands.StreamBaseCommands#xrevrange} to specify the starting and ending range for the
  * stream search by stream ID.
  *
- * @see <a href="https://redis.io/commands/xrange/">redis.io</a>
- * @see <a href="https://redis.io/commands/xrevrange/">redis.io</a>
+ * @see <a href="https://valkey.io/commands/xrange/">valkey.io</a>
+ * @see <a href="https://valkey.io/commands/xrevrange/">valkey.io</a>
  */
 public interface StreamRange {
 
     String getRedisApi();
 
+    /** Redis API string for MINIMUM entry ID range bounds */
     String MINIMUM_RANGE_REDIS_API = "-";
+
+    /** Redis API string for MAXIMUM entry ID range bounds */
     String MAXIMUM_RANGE_REDIS_API = "+";
+
+    /** Redis API string to designate COUNT */
     String RANGE_COUNT_REDIS_API = "COUNT";
+
+    /** Redis API character to designate exclusive range bounds */
+    String EXCLUSIVE_RANGE_REDIS_API = "(";
 
     /**
      * Enumeration representing minimum or maximum stream entry bounds for the range search, to get
@@ -80,7 +88,7 @@ public interface StreamRange {
          * @param timestamp The stream timestamp as ID.
          */
         public static IdBound ofExclusive(long timestamp) {
-            return new IdBound("(" + timestamp);
+            return new IdBound(EXCLUSIVE_RANGE_REDIS_API + timestamp);
         }
 
         /**
@@ -89,7 +97,7 @@ public interface StreamRange {
          * @param id The stream id.
          */
         public static IdBound ofExclusive(String id) {
-            return new IdBound("(" + id);
+            return new IdBound(EXCLUSIVE_RANGE_REDIS_API + id);
         }
     }
 

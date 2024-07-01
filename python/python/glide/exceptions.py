@@ -1,4 +1,4 @@
-# Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0
+# Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0
 
 from typing import Optional
 
@@ -56,7 +56,7 @@ class ConnectionError(RequestError):
     pass
 
 
-class WrongConfiguration(RequestError):
+class ConfigurationError(RequestError):
     """
-    Errors that are thrown when a request cannot be completed in current configuration settings
+    Errors that are thrown when a request cannot be completed in current configuration settings.
     """

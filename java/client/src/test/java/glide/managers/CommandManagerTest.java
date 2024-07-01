@@ -1,4 +1,4 @@
-/** Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0 */
+/** Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0 */
 package glide.managers;
 
 import static glide.api.models.configuration.RequestRoutingConfiguration.SimpleMultiNodeRoute.ALL_NODES;
@@ -76,7 +76,7 @@ public class CommandManagerTest {
                 service.submitNewCommand(
                         CustomCommand,
                         new String[0],
-                        new BaseCommandResponseResolver((ptr) -> ptr == pointer ? respObject : null));
+                        new BaseResponseResolver((ptr) -> ptr == pointer ? respObject : null));
         Object respPointer = result.get();
 
         // verify
@@ -98,7 +98,9 @@ public class CommandManagerTest {
                 service.submitNewCommand(
                         CustomCommand,
                         new String[0],
-                        new BaseCommandResponseResolver((p) -> new RuntimeException("")));
+                        new BaseResponseResolver(
+                                (p) ->
+                                        new RuntimeException("Testing: something went wrong if you see this error")));
         Object respPointer = result.get();
 
         // verify
@@ -125,7 +127,7 @@ public class CommandManagerTest {
                 service.submitNewCommand(
                         CustomCommand,
                         new String[0],
-                        new BaseCommandResponseResolver((p) -> p == pointer ? testString : null));
+                        new BaseResponseResolver((p) -> p == pointer ? testString : null));
         Object respPointer = result.get();
 
         // verify

@@ -17,6 +17,7 @@ logger_core = {path = "../logger_core"}
 tracing-subscriber = "0.3.16"
 jni = "0.21.1"
 log = "0.4.20"
+bytes = { version = "1.6.0" }
 
 [profile.release]
 lto = true

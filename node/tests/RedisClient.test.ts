@@ -1,5 +1,5 @@
 /**
- * Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0
+ * Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0
  */
 
 import {
@@ -12,33 +12,33 @@ import {
 } from "@jest/globals";
 import { BufferReader, BufferWriter } from "protobufjs";
 import { v4 as uuidv4 } from "uuid";
-import { ProtocolVersion, RedisClient, Transaction } from "..";
+import { GlideClient, ProtocolVersion, Transaction } from "..";
 import { RedisCluster } from "../../utils/TestUtils.js";
 import { redis_request } from "../src/ProtobufMessage";
 import { runBaseTests } from "./SharedTests";
 import {
+    checkSimple,
     convertStringArrayToBuffer,
     flushAndCloseClient,
     getClientConfigurationOption,
+    intoString,
     parseCommandLineArgs,
     parseEndpoints,
     transactionTest,
-    intoString,
-    checkSimple,
 } from "./TestUtilities";
 
 /* eslint-disable @typescript-eslint/no-var-requires */
 
 type Context = {
-    client: RedisClient;
+    client: GlideClient;
 };
 
 const TIMEOUT = 50000;
 
-describe("RedisClient", () => {
+describe("GlideClient", () => {
     let testsFailed = 0;
     let cluster: RedisCluster;
-    let client: RedisClient;
+    let client: GlideClient;
     beforeAll(async () => {
         const standaloneAddresses =
             parseCommandLineArgs()["standalone-endpoints"];
@@ -106,7 +106,7 @@ describe("RedisClient", () => {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         "info without parameters",
         async (protocol) => {
-            client = await RedisClient.createClient(
+            client = await GlideClient.createClient(
                 getClientConfigurationOption(cluster.getAddresses(), protocol),
             );
             const result = await client.info();
@@ -125,7 +125,7 @@ describe("RedisClient", () => {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         "simple select test",
         async (protocol) => {
-            client = await RedisClient.createClient(
+            client = await GlideClient.createClient(
                 getClientConfigurationOption(cluster.getAddresses(), protocol),
             );
             let selectResult = await client.select(0);
@@ -149,7 +149,7 @@ describe("RedisClient", () => {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `can send transactions_%p`,
         async (protocol) => {
-            client = await RedisClient.createClient(
+            client = await GlideClient.createClient(
                 getClientConfigurationOption(cluster.getAddresses(), protocol),
             );
             const transaction = new Transaction();
@@ -164,10 +164,10 @@ describe("RedisClient", () => {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         "can return null on WATCH transaction failures",
         async (protocol) => {
-            const client1 = await RedisClient.createClient(
+            const client1 = await GlideClient.createClient(
                 getClientConfigurationOption(cluster.getAddresses(), protocol),
             );
-            const client2 = await RedisClient.createClient(
+            const client2 = await GlideClient.createClient(
                 getClientConfigurationOption(cluster.getAddresses(), protocol),
             );
             const transaction = new Transaction();
@@ -189,7 +189,7 @@ describe("RedisClient", () => {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         "object freq transaction test_%p",
         async (protocol) => {
-            const client = await RedisClient.createClient(
+            const client = await GlideClient.createClient(
                 getClientConfigurationOption(cluster.getAddresses(), protocol),
             );
 
@@ -230,7 +230,7 @@ describe("RedisClient", () => {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         "object idletime transaction test_%p",
         async (protocol) => {
-            const client = await RedisClient.createClient(
+            const client = await GlideClient.createClient(
                 getClientConfigurationOption(cluster.getAddresses(), protocol),
             );
 
@@ -275,7 +275,7 @@ describe("RedisClient", () => {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         "object refcount transaction test_%p",
         async (protocol) => {
-            const client = await RedisClient.createClient(
+            const client = await GlideClient.createClient(
                 getClientConfigurationOption(cluster.getAddresses(), protocol),
             );
 
@@ -306,7 +306,7 @@ describe("RedisClient", () => {
             options.protocol = protocol;
             options.clientName = clientName;
             testsFailed += 1;
-            client = await RedisClient.createClient(options);
+            client = await GlideClient.createClient(options);
             return { client, context: { client } };
         },
         close: (context: Context, testSucceeded: boolean) => {

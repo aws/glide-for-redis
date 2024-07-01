@@ -11,6 +11,9 @@ on:
             - .github/workflows/node.yml
             - .github/workflows/build-node-wrapper/action.yml
             - .github/workflows/install-shared-dependencies/action.yml
+            - .github/workflows/test-benchmark/action.yml
+            - .github/workflows/lint-rust/action.yml
+            - .github/workflows/install-valkey/action.yml
     pull_request:
         paths:
             - glide-core/src/**
@@ -20,6 +23,9 @@ on:
             - .github/workflows/node.yml
             - .github/workflows/build-node-wrapper/action.yml
             - .github/workflows/install-shared-dependencies/action.yml
+            - .github/workflows/test-benchmark/action.yml
+            - .github/workflows/lint-rust/action.yml
+            - .github/workflows/install-valkey/action.yml
 
 concurrency:
     group: node-${{ github.head_ref || github.ref }}
@@ -29,25 +35,32 @@ env:
     CARGO_TERM_COLOR: always
 
 jobs:
+    load-engine-matrix:
+      runs-on: ubuntu-latest
+      outputs:
+        matrix: ${{ steps.load-engine-matrix.outputs.matrix }}
+      steps:
+          - name: Checkout
+            uses: actions/checkout@v4
+
+          - name: Load the engine matrix
+            id: load-engine-matrix
+            shell: bash
+            run: echo "matrix=$(jq -c . < .github/json_matrices/engine-matrix.json)" >> $GITHUB_OUTPUT
+
     test-ubuntu-latest:
         runs-on: ubuntu-latest
+        needs: load-engine-matrix
         timeout-minutes: 15
         strategy:
             fail-fast: false
             matrix:
-                redis:
-                    - 6.2.14
-                    - 7.2.3
-
+                engine: ${{ fromJson(needs.load-engine-matrix.outputs.matrix) }}
+                  
         steps:
             - uses: actions/checkout@v4
               with:
                   submodules: recursive
-
-            - name: Install redis
-              uses: ./.github/workflows/install-redis
-              with:
-                  redis-version: ${{ matrix.redis }}
 
             - name: Use Node.js 16.x
               uses: actions/setup-node@v3
@@ -60,6 +73,7 @@ jobs:
                   os: "ubuntu"
                   target: "x86_64-unknown-linux-gnu"
                   github-token: ${{ secrets.GITHUB_TOKEN }}
+                  engine-version: ${{ matrix.engine.version }}
 
             - name: test
               run: npm test
@@ -124,6 +138,7 @@ jobs:
                   arch: "arm64"
                   target: "aarch64-apple-darwin"
                   github-token: ${{ secrets.GITHUB_TOKEN }}
+                  engine-version: "7.2.5"
 
             - name: Test compatibility
               run: npm test -- -t "set and get flow works"
@@ -159,12 +174,7 @@ jobs:
                   os: "amazon-linux"
                   target: "x86_64-unknown-linux-gnu"
                   github-token: ${{ secrets.GITHUB_TOKEN }}
-
-            - name: Create a symbolic Link for redis6 binaries
-              working-directory: ./node
-              run: |
-                  ln -s /usr/bin/redis6-server /usr/bin/redis-server
-                  ln -s /usr/bin/redis6-cli /usr/bin/redis-cli
+                  engine-version: "7.2.5"
 
             - name: Test compatibility
               run: npm test -- -t "set and get flow works"
@@ -202,6 +212,7 @@ jobs:
                 arch: x64
                 target: x86_64-unknown-linux-musl
                 github-token: ${{ secrets.GITHUB_TOKEN }}
+                engine-version: "7.2.5"
           
           - name: Test compatibility
             shell: bash

@@ -1,4 +1,4 @@
-/** Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0 */
+/** Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0 */
 package glide.api.models.commands.stream;
 
 import glide.api.commands.StreamBaseCommands;
@@ -15,11 +15,11 @@ import lombok.Builder;
 @Builder
 public final class StreamGroupOptions {
 
-    // Redis API String argument for makeStream
-    public static final String MAKE_STREAM_REDIS_API = "MKSTREAM";
+    // Valkey API String argument for makeStream
+    public static final String MAKE_STREAM_VALKEY_API = "MKSTREAM";
 
-    // Redis API String argument for entriesRead
-    public static final String ENTRIES_READ_REDIS_API = "ENTRIESREAD";
+    // Valkey API String argument for entriesRead
+    public static final String ENTRIES_READ_VALKEY_API = "ENTRIESREAD";
 
     /**
      * If <code>true</code> and the stream doesn't exist, creates a new stream with a length of <code>
@@ -54,11 +54,11 @@ public final class StreamGroupOptions {
         List<String> optionArgs = new ArrayList<>();
 
         if (this.mkStream) {
-            optionArgs.add(MAKE_STREAM_REDIS_API);
+            optionArgs.add(MAKE_STREAM_VALKEY_API);
         }
 
         if (this.entriesRead != null) {
-            optionArgs.add(ENTRIES_READ_REDIS_API);
+            optionArgs.add(ENTRIES_READ_VALKEY_API);
             optionArgs.add(this.entriesRead);
         }
 

@@ -1,9 +1,9 @@
 /**
- * Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0
+ * Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0
  */
 
 import { writeFileSync } from "fs";
-import { Logger, RedisClient, RedisClusterClient } from "glide-for-redis";
+import { GlideClient, GlideClusterClient, Logger } from "glide-for-redis";
 import { Cluster, Redis } from "ioredis";
 import { parse } from "path";
 import percentile from "percentile";
@@ -216,8 +216,8 @@ async function main(
 
     if (clientsToRun == "all" || clientsToRun == "glide") {
         const clientClass = clusterModeEnabled
-            ? RedisClusterClient
-            : RedisClient;
+            ? GlideClusterClient
+            : GlideClient;
         const clients = await createClients(clientCount, () =>
             clientClass.createClient({
                 addresses: [{ host, port }],
@@ -232,7 +232,7 @@ async function main(
             dataSize,
             data,
             (client) => {
-                (client as RedisClient).close();
+                (client as GlideClient).close();
             },
             clusterModeEnabled,
         );
@@ -240,11 +240,11 @@ async function main(
     }
 
     if (clientsToRun == "all") {
-        const nodeRedisClients = await createClients(clientCount, async () => {
+        const nodeGlideClients = await createClients(clientCount, async () => {
             const node = {
                 url: getAddress(host, useTLS, port),
             };
-            const nodeRedisClient = clusterModeEnabled
+            const nodeGlideClient = clusterModeEnabled
                 ? createCluster({
                       rootNodes: [{ socket: { host, port, tls: useTLS } }],
                       defaults: {
@@ -255,11 +255,11 @@ async function main(
                       useReplicas: true,
                   })
                 : createClient(node);
-            await nodeRedisClient.connect();
-            return nodeRedisClient;
+            await nodeGlideClient.connect();
+            return nodeGlideClient;
         });
         await runClients(
-            nodeRedisClients,
+            nodeGlideClients,
             "node_redis",
             totalCommands,
             numOfConcurrentTasks,

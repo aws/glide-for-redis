@@ -1,4 +1,4 @@
-# Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0
+# Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0
 
 import json as OuterJson
 
@@ -9,7 +9,7 @@ from glide.async_commands.redis_modules.json import JsonGetOptions
 from glide.config import ProtocolVersion
 from glide.constants import OK
 from glide.exceptions import RequestError
-from glide.redis_client import TRedisClient
+from glide.glide_client import TGlideClient
 from tests.test_async_client import get_random_string, parse_info_response
 
 
@@ -17,13 +17,13 @@ from tests.test_async_client import get_random_string, parse_info_response
 class TestJson:
     @pytest.mark.parametrize("cluster_mode", [True, False])
     @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
-    async def test_json_module_is_loaded(self, redis_client: TRedisClient):
+    async def test_json_module_is_loaded(self, redis_client: TGlideClient):
         res = parse_info_response(await redis_client.info([InfoSection.MODULES]))
         assert "ReJSON" in res["module"]
 
     @pytest.mark.parametrize("cluster_mode", [True, False])
     @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
-    async def test_json_set_get(self, redis_client: TRedisClient):
+    async def test_json_set_get(self, redis_client: TGlideClient):
         key = get_random_string(5)
 
         json_value = {"a": 1.0, "b": 2}
@@ -42,7 +42,7 @@ class TestJson:
 
     @pytest.mark.parametrize("cluster_mode", [True, False])
     @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
-    async def test_json_set_get_multiple_values(self, redis_client: TRedisClient):
+    async def test_json_set_get_multiple_values(self, redis_client: TGlideClient):
         key = get_random_string(5)
 
         assert (
@@ -70,7 +70,7 @@ class TestJson:
 
     @pytest.mark.parametrize("cluster_mode", [True, False])
     @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
-    async def test_json_set_conditional_set(self, redis_client: TRedisClient):
+    async def test_json_set_conditional_set(self, redis_client: TGlideClient):
         key = get_random_string(5)
         value = OuterJson.dumps({"a": 1.0, "b": 2})
         assert (
@@ -122,7 +122,7 @@ class TestJson:
 
     @pytest.mark.parametrize("cluster_mode", [True, False])
     @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
-    async def test_json_get_formatting(self, redis_client: TRedisClient):
+    async def test_json_get_formatting(self, redis_client: TGlideClient):
         key = get_random_string(5)
         assert (
             await json.set(
@@ -152,7 +152,7 @@ class TestJson:
 
     @pytest.mark.parametrize("cluster_mode", [True, False])
     @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
-    async def test_del(self, redis_client: TRedisClient):
+    async def test_del(self, redis_client: TGlideClient):
         key = get_random_string(5)
 
         json_value = {"a": 1.0, "b": {"a": 1, "b": 2.5, "c": True}}
@@ -171,7 +171,7 @@ class TestJson:
 
     @pytest.mark.parametrize("cluster_mode", [True, False])
     @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
-    async def test_forget(self, redis_client: TRedisClient):
+    async def test_forget(self, redis_client: TGlideClient):
         key = get_random_string(5)
 
         json_value = {"a": 1.0, "b": {"a": 1, "b": 2.5, "c": True}}
@@ -190,7 +190,7 @@ class TestJson:
 
     @pytest.mark.parametrize("cluster_mode", [True, False])
     @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
-    async def test_json_toggle(self, redis_client: TRedisClient):
+    async def test_json_toggle(self, redis_client: TGlideClient):
         key = get_random_string(10)
         json_value = {"bool": True, "nested": {"bool": False, "nested": {"bool": 10}}}
         assert await json.set(redis_client, key, "$", OuterJson.dumps(json_value)) == OK

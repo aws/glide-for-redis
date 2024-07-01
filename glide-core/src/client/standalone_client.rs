@@ -1,5 +1,5 @@
 /**
- * Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0
+ * Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0
  */
 use super::get_redis_connection_info;
 use super::reconnecting_connection::ReconnectingConnection;
@@ -285,7 +285,7 @@ impl StandaloneClient {
             Some(ResponsePolicy::OneSucceeded) => future::select_ok(requests.map(Box::pin))
                 .await
                 .map(|(result, _)| result),
-            Some(ResponsePolicy::OneSucceededNonEmpty) => {
+            Some(ResponsePolicy::FirstSucceededNonEmptyOrAllEmpty) => {
                 future::select_ok(requests.map(|request| {
                     Box::pin(async move {
                         let result = request.await?;

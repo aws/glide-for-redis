@@ -1,4 +1,4 @@
-# Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0
+# Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0
 
 import random
 from typing import AsyncGenerator, List, Optional, Union
@@ -6,14 +6,14 @@ from typing import AsyncGenerator, List, Optional, Union
 import pytest
 from glide.config import (
     ClusterClientConfiguration,
+    GlideClientConfiguration,
     NodeAddress,
     ProtocolVersion,
-    RedisClientConfiguration,
     RedisCredentials,
 )
+from glide.glide_client import GlideClient, GlideClusterClient, TGlideClient
 from glide.logger import Level as logLevel
 from glide.logger import Logger
-from glide.redis_client import RedisClient, RedisClusterClient, TRedisClient
 from tests.utils.cluster import RedisCluster
 
 DEFAULT_HOST = "localhost"
@@ -206,7 +206,7 @@ def pytest_collection_modifyitems(config, items):
 @pytest.fixture()
 async def redis_client(
     request, cluster_mode: bool, protocol: ProtocolVersion
-) -> AsyncGenerator[TRedisClient, None]:
+) -> AsyncGenerator[TGlideClient, None]:
     "Get async socket client for tests"
     client = await create_client(request, cluster_mode, protocol=protocol)
     yield client
@@ -227,9 +227,9 @@ async def create_client(
         ClusterClientConfiguration.PubSubSubscriptions
     ] = None,
     standalone_mode_pubsub: Optional[
-        RedisClientConfiguration.PubSubSubscriptions
+        GlideClientConfiguration.PubSubSubscriptions
     ] = None,
-) -> Union[RedisClient, RedisClusterClient]:
+) -> Union[GlideClient, GlideClusterClient]:
     # Create async socket client
     use_tls = request.config.getoption("--tls")
     if cluster_mode:
@@ -246,10 +246,10 @@ async def create_client(
             request_timeout=timeout,
             pubsub_subscriptions=cluster_mode_pubsub,
         )
-        return await RedisClusterClient.create(cluster_config)
+        return await GlideClusterClient.create(cluster_config)
     else:
         assert type(pytest.standalone_cluster) is RedisCluster
-        config = RedisClientConfiguration(
+        config = GlideClientConfiguration(
             addresses=(
                 pytest.standalone_cluster.nodes_addr if addresses is None else addresses
             ),
@@ -261,7 +261,7 @@ async def create_client(
             request_timeout=timeout,
             pubsub_subscriptions=standalone_mode_pubsub,
         )
-        return await RedisClient.create(config)
+        return await GlideClient.create(config)
 
 
 async def test_teardown(request, cluster_mode: bool, protocol: ProtocolVersion):

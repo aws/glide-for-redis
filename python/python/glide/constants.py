@@ -1,4 +1,4 @@
-# Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0
+# Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0
 
 from typing import Dict, List, Literal, Mapping, Optional, Set, TypeVar, Union
 
@@ -22,11 +22,14 @@ TResult = Union[
     float,
     Set[T],
     List[T],
+    bytes,
+    Dict[bytes, "TResult"],
+    Mapping[bytes, "TResult"],
 ]
 TRequest = Union[RedisRequest, ConnectionRequest]
 # When routing to a single node, response will be T
 # Otherwise, response will be : {Address : response , ... } with type of Dict[str, T].
-TClusterResponse = Union[T, Dict[str, T]]
+TClusterResponse = Union[T, Dict[bytes, T]]
 TSingleNodeRoute = Union[RandomNode, SlotKeyRoute, SlotIdRoute, ByAddressRoute]
 # When specifying legacy path (path doesn't start with `$`), response will be T
 # Otherwise, (when specifying JSONPath), response will be List[Optional[T]].

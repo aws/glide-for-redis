@@ -1,11 +1,11 @@
 import json
 import random
 import string
-from typing import Any, Dict, List, Mapping, Optional, TypeVar, Union
+from typing import Any, Dict, List, Mapping, Optional, Set, TypeVar, Union, cast
 
 from glide.async_commands.core import InfoSection
 from glide.constants import TResult
-from glide.redis_client import TRedisClient
+from glide.glide_client import TGlideClient
 from packaging import version
 
 T = TypeVar("T")
@@ -36,8 +36,8 @@ def is_single_response(response: T, single_res: T) -> bool:
 
 
 def get_first_result(
-    res: Union[str, List[str], List[List[str]], Dict[str, str]]
-) -> str:
+    res: TResult,
+) -> bytes:
     while isinstance(res, list):
         res = (
             res[1]
@@ -47,14 +47,14 @@ def get_first_result(
 
     if isinstance(res, dict):
         res = list(res.values())[0]
+    return cast(bytes, res)
 
-    return res
 
-
-def parse_info_response(res: Union[str, Dict[str, str]]) -> Dict[str, str]:
-    res = get_first_result(res)
+def parse_info_response(res: Union[bytes, Dict[bytes, bytes]]) -> Dict[str, str]:
+    res_first = get_first_result(res)
+    res_decoded = res_first.decode() if isinstance(res_first, bytes) else res_first
     info_lines = [
-        line for line in res.splitlines() if line and not line.startswith("#")
+        line for line in res_decoded.splitlines() if line and not line.startswith("#")
     ]
     info_dict = {}
     for line in info_lines:
@@ -70,7 +70,7 @@ def get_random_string(length):
     return result_str
 
 
-async def check_if_server_version_lt(client: TRedisClient, min_version: str) -> bool:
+async def check_if_server_version_lt(client: TGlideClient, min_version: str) -> bool:
     # TODO: change it to pytest fixture after we'll implement a sync client
     info_str = await client.info([InfoSection.SERVER])
     redis_version = parse_info_response(info_str).get("redis_version")
@@ -79,15 +79,29 @@ async def check_if_server_version_lt(client: TRedisClient, min_version: str) -> 
 
 
 def compare_maps(
-    map1: Optional[Union[Mapping[str, TResult], Dict[str, TResult]]],
-    map2: Optional[Union[Mapping[str, TResult], Dict[str, TResult]]],
+    map1: Optional[
+        Union[
+            Mapping[str, TResult],
+            Dict[str, TResult],
+            Mapping[bytes, TResult],
+            Dict[bytes, TResult],
+        ]
+    ],
+    map2: Optional[
+        Union[
+            Mapping[str, TResult],
+            Dict[str, TResult],
+            Mapping[bytes, TResult],
+            Dict[bytes, TResult],
+        ]
+    ],
 ) -> bool:
     """
     Compare two maps by converting them to JSON strings and checking for equality, including property order.
 
     Args:
-        map1 (Optional[Union[Mapping[str, TResult], Dict[str, TResult]]]): The first map to compare.
-        map2 (Optional[Union[Mapping[str, TResult], Dict[str, TResult]]]): The second map to compare.
+        map1 (Optional[Union[Mapping[Union[str, bytes], TResult], Dict[Union[str, bytes], TResult]]]): The first map to compare.
+        map2 (Optional[Union[Mapping[Union[str, bytes], TResult], Dict[Union[str, bytes], TResult]]]): The second map to compare.
 
     Returns:
         bool: True if the maps are equal, False otherwise.
@@ -112,4 +126,103 @@ def compare_maps(
         return True
     if map1 is None or map2 is None:
         return False
-    return json.dumps(map1) == json.dumps(map2)
+    return json.dumps(convert_bytes_to_string_object(map1)) == json.dumps(
+        convert_bytes_to_string_object(map2)
+    )
+
+
+def convert_bytes_to_string_object(
+    # TODO: remove the str options
+    byte_string_dict: Optional[
+        Union[
+            List[Any],
+            Set[bytes],
+            Mapping[bytes, Any],
+            Dict[bytes, Any],
+            Mapping[str, Any],
+            Dict[str, Any],
+        ]
+    ]
+) -> Optional[
+    Union[
+        List[Any],
+        Set[str],
+        Mapping[str, Any],
+        Dict[str, Any],
+    ]
+]:
+    """
+    Recursively convert data structure from byte strings to regular strings,
+    handling nested data structures of any depth.
+    """
+    if byte_string_dict is None:
+        return None
+
+    def convert(item: Any) -> Any:
+        if isinstance(item, dict):
+            return {convert(key): convert(value) for key, value in item.items()}
+        elif isinstance(item, list):
+            return [convert(elem) for elem in item]
+        elif isinstance(item, set):
+            return {convert(elem) for elem in item}
+        elif isinstance(item, bytes):
+            return item.decode("utf-8")
+        else:
+            return item
+
+    return convert(byte_string_dict)
+
+
+def convert_string_to_bytes_object(
+    # TODO: remove the bytes options
+    string_structure: Optional[
+        Union[
+            List[Any],
+            Set[str],
+            Mapping[str, Any],
+            Dict[str, Any],
+        ]
+    ]
+) -> Optional[
+    Union[
+        List[Any],
+        Set[bytes],
+        Mapping[bytes, Any],
+        Dict[bytes, Any],
+    ]
+]:
+    """
+    Recursively convert the data structure from strings to bytes,
+    handling nested data structures of any depth.
+    """
+    if string_structure is None:
+        return None
+
+    def convert(item: Any) -> Any:
+        if isinstance(item, dict):
+            return {convert(key): convert(value) for key, value in item.items()}
+        elif isinstance(item, list):
+            return [convert(elem) for elem in item]
+        elif isinstance(item, set):
+            return {convert(elem) for elem in item}
+        elif isinstance(item, str):
+            return item.encode("utf-8")
+        else:
+            return item
+
+    return convert(string_structure)
+
+
+def generate_lua_lib_code(
+    lib_name: str, functions: Mapping[str, str], readonly: bool
+) -> str:
+    code = f"#!lua name={lib_name}\n"
+    for function_name, function_body in functions.items():
+        code += (
+            f"redis.register_function{{ function_name = '{function_name}', callback = function(keys, args) "
+            f"{function_body} end"
+        )
+        if readonly:
+            code += ", flags = { 'no-writes' }"
+        code += " }\n"
+    return code

@@ -1,8 +1,8 @@
-# Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0
+# Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0
 
 from __future__ import annotations
 
-from typing import Dict, List, Mapping, Optional, cast
+from typing import Dict, List, Mapping, Optional, Union, cast
 
 from glide.async_commands.command_args import Limit, OrderBy
 from glide.async_commands.core import (
@@ -46,7 +46,7 @@ class ClusterCommands(CoreCommands):
         self,
         sections: Optional[List[InfoSection]] = None,
         route: Optional[Route] = None,
-    ) -> TClusterResponse[str]:
+    ) -> TClusterResponse[bytes]:
         """
         Get information and statistics about the Redis server.
         See https://redis.io/commands/info/ for details.
@@ -65,7 +65,7 @@ class ClusterCommands(CoreCommands):
         args = [section.value for section in sections] if sections else []
 
         return cast(
-            TClusterResponse[str],
+            TClusterResponse[bytes],
             await self._execute_command(RequestType.Info, args, route),
         )
 
@@ -319,6 +319,137 @@ class ClusterCommands(CoreCommands):
             await self._execute_command(RequestType.Echo, [message], route),
         )
 
+    async def function_load(
+        self, library_code: str, replace: bool = False, route: Optional[Route] = None
+    ) -> str:
+        """
+        Loads a library to Redis.
+
+        See https://valkey.io/docs/latest/commands/function-load/ for more details.
+
+        Args:
+            library_code (str): The source code that implements the library.
+            replace (bool): Whether the given library should overwrite a library with the same name if
+                it already exists.
+            route (Optional[Route]): The command will be routed to all primaries, unless `route` is provided,
+                in which case the client will route the command to the nodes defined by `route`.
+
+        Returns:
+            str: The library name that was loaded.
+
+        Examples:
+            >>> code = "#!lua name=mylib \n redis.register_function('myfunc', function(keys, args) return args[1] end)"
+            >>> await client.function_load(code, True, RandomNode())
+                "mylib"
+
+        Since: Redis 7.0.0.
+        """
+        return cast(
+            str,
+            await self._execute_command(
+                RequestType.FunctionLoad,
+                ["REPLACE", library_code] if replace else [library_code],
+                route,
+            ),
+        )
+
+    async def function_flush(
+        self, mode: Optional[FlushMode] = None, route: Optional[Route] = None
+    ) -> TOK:
+        """
+        Deletes all function libraries.
+
+        See https://valkey.io/docs/latest/commands/function-flush/ for more details.
+
+        Args:
+            mode (Optional[FlushMode]): The flushing mode, could be either `SYNC` or `ASYNC`.
+            route (Optional[Route]): The command will be routed to all primaries, unless `route` is provided,
+                in which case the client will route the command to the nodes defined by `route`.
+
+        Returns:
+            TOK: A simple `OK`.
+
+        Examples:
+            >>> await client.function_flush(FlushMode.SYNC)
+                "OK"
+
+        Since: Redis 7.0.0.
+        """
+        return cast(
+            TOK,
+            await self._execute_command(
+                RequestType.FunctionFlush,
+                [mode.value] if mode else [],
+                route,
+            ),
+        )
+
+    async def function_delete(
+        self, library_name: str, route: Optional[Route] = None
+    ) -> TOK:
+        """
+        Deletes a library and all its functions.
+
+        See https://valkey.io/docs/latest/commands/function-delete/ for more details.
+
+        Args:
+            library_code (str): The libary name to delete
+            route (Optional[Route]): The command will be routed to all primaries, unless `route` is provided,
+                in which case the client will route the command to the nodes defined by `route`.
+
+        Returns:
+            TOK: A simple `OK`.
+
+        Examples:
+            >>> await client.function_delete("my_lib")
+                "OK"
+
+        Since: Redis 7.0.0.
+        """
+        return cast(
+            TOK,
+            await self._execute_command(
+                RequestType.FunctionDelete,
+                [library_name],
+                route,
+            ),
+        )
+
+    async def fcall_ro_route(
+        self,
+        function: str,
+        arguments: Optional[List[str]] = None,
+        route: Optional[Route] = None,
+    ) -> TClusterResponse[TResult]:
+        """
+        Invokes a previously loaded read-only function.
+
+        See https://valkey.io/commands/fcall_ro for more details.
+
+        Args:
+            function (str): The function name.
+            arguments (List[str]): An `array` of `function` arguments. `arguments` should not
+                represent names of keys.
+            route (Optional[Route]): Specifies the routing configuration of the command. The client
+                will route the command to the nodes defined by `route`.
+
+        Returns:
+            TClusterResponse[TResult]: The return value depends on the function that was executed.
+
+        Examples:
+            >>> await client.fcall_ro_route("Deep_Thought", ALL_NODES)
+                42 # The return value on the function that was executed
+
+        Since: Redis version 7.0.0.
+        """
+        args = [function, "0"]
+        if arguments is not None:
+            args.extend(arguments)
+        return cast(
+            TClusterResponse[TResult],
+            await self._execute_command(RequestType.FCallReadOnly, args, route),
+        )
+
     async def time(self, route: Optional[Route] = None) -> TClusterResponse[List[str]]:
         """
         Returns the server time.
@@ -460,7 +591,7 @@ class ClusterCommands(CoreCommands):
 
     async def publish(self, message: str, channel: str, sharded: bool = False) -> int:
         """
-        Publish message on pubsub channel.
+        Publish a message on pubsub channel.
         This command aggregates PUBLISH and SPUBLISH commands functionalities.
         The mode is selected using the 'sharded' parameter
         See https://valkey.io/commands/publish and https://valkey.io/commands/spublish for more details.
@@ -515,6 +646,39 @@ class ClusterCommands(CoreCommands):
             await self._execute_command(RequestType.FlushAll, args, route),
         )
 
+    async def flushdb(
+        self, flush_mode: Optional[FlushMode] = None, route: Optional[Route] = None
+    ) -> TClusterResponse[TOK]:
+        """
+        Deletes all the keys of the currently selected database. This command never fails.
+
+        See https://valkey.io/commands/flushdb for more details.
+
+        Args:
+            flush_mode (Optional[FlushMode]): The flushing mode, could be either `SYNC` or `ASYNC`.
+            route (Optional[Route]): The command will be routed to all primary nodes, unless `route` is provided,
+                in which case the client will route the command to the nodes defined by `route`.
+
+        Returns:
+            TOK: OK.
+
+        Examples:
+             >>> await client.flushdb()
+                 OK  # The keys of the currently selected database were deleted.
+             >>> await client.flushdb(FlushMode.ASYNC)
+                 OK  # The keys of the currently selected database were deleted asynchronously.
+             >>> await client.flushdb(FlushMode.ASYNC, AllNodes())
+                 OK  # The keys of the currently selected database were deleted asynchronously on all nodes.
+        """
+        args = []
+        if flush_mode is not None:
+            args.append(flush_mode.value)
+
+        return cast(
+            TClusterResponse[TOK],
+            await self._execute_command(RequestType.FlushDB, args, route),
+        )
+
     async def copy(
         self,
         source: str,
@@ -553,4 +717,118 @@ class ClusterCommands(CoreCommands):
         return cast(
             bool,
             await self._execute_command(RequestType.Copy, args),
+        )
+
+    async def lolwut(
+        self,
+        version: Optional[int] = None,
+        parameters: Optional[List[int]] = None,
+        route: Optional[Route] = None,
+    ) -> TClusterResponse[str]:
+        """
+        Displays a piece of generative computer art and the Redis version.
+
+        See https://valkey.io/commands/lolwut for more details.
+
+        Args:
+            version (Optional[int]): Version of computer art to generate.
+            parameters (Optional[List[int]]): Additional set of arguments in order to change the output:
+                For version `5`, those are length of the line, number of squares per row, and number of squares per column.
+                For version `6`, those are number of columns and number of lines.
+            route (Optional[Route]): The command will be routed to a random node, unless `route` is provided,
+                in which case the client will route the command to the nodes defined by `route`.
+
+        Returns:
+            TClusterResponse[str]: A piece of generative computer art along with the current Redis version.
+
+        Examples:
+            >>> await client.lolwut(6, [40, 20], ALL_NODES);
+            "Redis ver. 7.2.3" # Indicates the current Redis version
+        """
+        args = []
+        if version is not None:
+            args.extend(["VERSION", str(version)])
+        if parameters:
+            for var in parameters:
+                args.extend(str(var))
+        return cast(
+            TClusterResponse[str],
+            await self._execute_command(RequestType.Lolwut, args, route),
+        )
+
+    async def random_key(self, route: Optional[Route] = None) -> Optional[str]:
+        """
+        Returns a random existing key name.
+
+        See https://valkey.io/commands/randomkey for more details.
+
+        Args:
+            route (Optional[Route]): The command will be routed to all primary nodes, unless `route` is provided,
+                in which case the client will route the command to the nodes defined by `route`.
+
+        Returns:
+            Optional[str]: A random existing key name.
+
+        Examples:
+            >>> await client.random_key()
+            "random_key_name"  # "random_key_name" is a random existing key name.
+        """
+        return cast(
+            Optional[str],
+            await self._execute_command(RequestType.RandomKey, [], route),
+        )
+
+    async def wait(
+        self,
+        numreplicas: int,
+        timeout: int,
+        route: Optional[Route] = None,
+    ) -> int:
+        """
+        Blocks the current client until all the previous write commands are successfully transferred
+        and acknowledged by at least `numreplicas` of replicas. If `timeout` is
+        reached, the command returns even if the specified number of replicas were not yet reached.
+
+        See https://valkey.io/commands/wait for more details.
+
+        Args:
+            numreplicas (int): The number of replicas to reach.
+            timeout (int): The timeout value specified in milliseconds. A value of 0 will block indefinitely.
+            route (Optional[Route]): The command will be routed to all primary nodes, unless `route` is provided,
+            in which case the client will route the command to the nodes defined by `route`.
+        Returns:
+            int: The number of replicas reached by all the writes performed in the context of the current connection.
+
+        Examples:
+            >>> await client.set("key", "value");
+            >>> await client.wait(1, 1000);
+            // return 1 when a replica is reached or 0 if 1000ms is reached.
+        """
+        args = [str(numreplicas), str(timeout)]
+        return cast(
+            int,
+            await self._execute_command(RequestType.Wait, args, route),
+        )
+
+    async def unwatch(self, route: Optional[Route] = None) -> TOK:
+        """
+        Flushes all the previously watched keys for a transaction. Executing a transaction will
+        automatically flush all previously watched keys.
+
+        See https://valkey.io/commands/unwatch for more details.
+
+        Args:
+            route (Optional[Route]): The command will be routed to all primary nodes, unless `route` is provided,
+                in which case the client will route the command to the nodes defined by `route`.
+
+        Returns:
+            TOK: A simple "OK" response.
+
+        Examples:
+            >>> await client.unwatch()
+                'OK'
+        """
+        return cast(
+            TOK,
+            await self._execute_command(RequestType.UnWatch, [], route),
         )

@@ -3,6 +3,7 @@ import java.nio.file.Paths
 plugins {
     id 'java-library'
     id 'maven-publish'
+    id 'signing'
 }
 
 repositories {
@@ -156,7 +157,7 @@ tasks.register('copyNativeLib', Copy) {
 
 jar.dependsOn('copyNativeLib')
 copyNativeLib.dependsOn('buildRustRelease')
-compileTestJava.dependsOn('publishToMavenLocal')
+compileTestJava.dependsOn('copyNativeLib')
 test.dependsOn('buildRust')
 testFfi.dependsOn('buildRust')
 
@@ -180,7 +181,8 @@ publishing {
         mavenJava(MavenPublication) {
             from components.java
             groupId = 'software.amazon.glide'
-            artifactId = 'glide'
+            artifactId = 'glide-for-redis'
+            // version is replaced during released workflow java-cd.yml
             version = "255.255.255"
             pom {
                 name = 'glide-for-valkey'
@@ -213,14 +215,22 @@ publishing {
     }
 }
 
+signing {
+    sign publishing.publications
+}
+
 tasks.withType(Test) {
     testLogging {
         exceptionFormat "full"
         events "started", "skipped", "passed", "failed"
         showStandardStreams true
     }
+    // This is needed for the FFI tests
+    jvmArgs "-Djava.library.path=${projectDir}/../target/debug"
 }
 
 jar {
-    archiveBaseName = "glide"
+    archiveBaseName = "glide-for-redis"
+    // placeholder will be renamed by platform+arch on the release workflow java-cd.yml
+    archiveClassifier = "placeholder"
 }

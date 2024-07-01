@@ -1,8 +1,7 @@
-# Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0
+# Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from enum import Enum
 from typing import List, Optional, Union
 
 
@@ -136,8 +135,8 @@ class StreamAddOptions:
 
 class StreamRangeBound(ABC):
     """
-    Abstract Base Class used in the `XRANGE` and `XREVRANGE` commands to specify the starting and ending range bound for
-    the stream search by stream ID.
+    Abstract Base Class used in the `XPENDING`, `XRANGE`, and `XREVRANGE` commands to specify the starting and ending
+    range bound for the stream search by stream entry ID.
     """
 
     @abstractmethod
@@ -207,6 +206,8 @@ class ExclusiveIdBound(StreamRangeBound):
     Exclusive (open) stream ID boundary used to specify a range of IDs to search. Stream ID bounds can be complete with
     a timestamp and sequence number separated by a dash ("-"), for example "1526985054069-0". Stream ID bounds can also
     be incomplete, with just a timestamp.
+
+    Since: Redis version 6.2.0.
     """
 
     EXCLUSIVE_BOUND_REDIS_API = "("
@@ -265,3 +266,113 @@ class StreamReadOptions:
             args.extend([self.READ_COUNT_REDIS_API, str(self.count)])
 
         return args
+
+
+class StreamGroupOptions:
+    MAKE_STREAM_REDIS_API = "MKSTREAM"
+    ENTRIES_READ_REDIS_API = "ENTRIESREAD"
+
+    def __init__(
+        self, make_stream: bool = False, entries_read_id: Optional[str] = None
+    ):
+        """
+        Options for creating stream consumer groups. Can be used as an optional argument to `XGROUP CREATE`.
+
+        Args:
+            make_stream (bool): If set to True and the stream doesn't exist, this creates a new stream with a
+                length of 0.
+            entries_read_id: (Optional[str]): An arbitrary ID (that isn't the first ID, last ID, or the zero ID ("0-0"))
+                used to find out how many entries are between the arbitrary ID (excluding it) and the stream's last
+                entry. This option can only be specified if you are using Redis version 7.0.0 or above.
+        """
+        self.make_stream = make_stream
+        self.entries_read_id = entries_read_id
+
+    def to_args(self) -> List[str]:
+        """
+        Returns the options as a list of string arguments to be used in the `XGROUP CREATE` command.
+
+        Returns:
+            List[str]: The options as a list of arguments for the `XGROUP CREATE` command.
+        """
+        args = []
+        if self.make_stream is True:
+            args.append(self.MAKE_STREAM_REDIS_API)
+
+        if self.entries_read_id is not None:
+            args.extend([self.ENTRIES_READ_REDIS_API, self.entries_read_id])
+
+        return args
+
+
+class StreamReadGroupOptions(StreamReadOptions):
+    READ_NOACK_REDIS_API = "NOACK"
+
+    def __init__(
+        self, no_ack=False, block_ms: Optional[int] = None, count: Optional[int] = None
+    ):
+        """
+        Options for reading entries from streams using a consumer group. Can be used as an optional argument to
+        `XREADGROUP`.
+
+        Args:
+            no_ack (bool): If set, messages are not added to the Pending Entries List (PEL). This is equivalent to
+                acknowledging the message when it is read. Equivalent to `NOACK` in the Redis API.
+            block_ms (Optional[int]): If provided, the request will be blocked for the set amount of milliseconds or
+                until the server has the required number of entries. Equivalent to `BLOCK` in the Redis API.
+            count (Optional[int]): The maximum number of elements requested. Equivalent to `COUNT` in the Redis API.
+        """
+        super().__init__(block_ms=block_ms, count=count)
+        self.no_ack = no_ack
+
+    def to_args(self) -> List[str]:
+        """
+        Returns the options as a list of string arguments to be used in the `XREADGROUP` command.
+
+        Returns:
+            List[str]: The options as a list of arguments for the `XREADGROUP` command.
+        """
+        args = super().to_args()
+        if self.no_ack:
+            args.append(self.READ_NOACK_REDIS_API)
+
+        return args
+
+
+class StreamPendingOptions:
+    IDLE_TIME_REDIS_API = "IDLE"
+
+    def __init__(
+        self,
+        min_idle_time_ms: Optional[int] = None,
+        consumer_name: Optional[str] = None,
+    ):
+        """
+        Options for `XPENDING` that can be used to filter returned items by minimum idle time and consumer name.
+
+        Args:
+            min_idle_time_ms (Optional[int]): Filters pending entries by their minimum idle time in milliseconds. This
+                option can only be specified if you are using Redis version 6.2.0 or above.
+            consumer_name (Optional[str]): Filters pending entries by consumer name.
+        """
+        self.min_idle_time = min_idle_time_ms
+        self.consumer_name = consumer_name
+
+
+def _create_xpending_range_args(
+    key: str,
+    group_name: str,
+    start: StreamRangeBound,
+    end: StreamRangeBound,
+    count: int,
+    options: Optional[StreamPendingOptions],
+) -> List[str]:
+    args = [key, group_name]
+    if options is not None and options.min_idle_time is not None:
+        args.extend([options.IDLE_TIME_REDIS_API, str(options.min_idle_time)])
+
+    args.extend([start.to_arg(), end.to_arg(), str(count)])
+    if options is not None and options.consumer_name is not None:
+        args.append(options.consumer_name)
+
+    return args

@@ -1,6 +1,7 @@
 plugins {
     // Apply the application plugin to add support for building a CLI application in Java.
     id 'application'
+    id "com.google.osdetector" version "1.7.3"
 }
 
 repositories {
@@ -10,14 +11,12 @@ repositories {
 }
 
 dependencies {
-    implementation 'software.amazon.glide:glide:255.255.255'
+    implementation group: 'software.amazon.glide', name: 'glide-for-redis', version: '0.4.3', classifier: osdetector.classifier
 
     implementation 'redis.clients:jedis:4.4.3'
     implementation 'io.lettuce:lettuce-core:6.2.6.RELEASE'
     implementation 'commons-cli:commons-cli:1.5.0'
 }
-
-run.dependsOn ':client:publishToMavenLocal'
 
 application {
     // Define the main class for the application.

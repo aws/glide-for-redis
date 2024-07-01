@@ -1,7 +1,8 @@
-/** Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0 */
+/** Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0 */
 package glide.api.models.commands;
 
 import glide.api.commands.GenericBaseCommands;
+import glide.api.models.GlideString;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -41,5 +42,14 @@ public enum ExpireOptions {
      */
     public String[] toArgs() {
         return new String[] {this.redisApi};
+    }
+
+    /**
+     * Converts SetOptions into a GlideString[] to add to a {@link Command} arguments.
+     *
+     * @return GlideString[]
+     */
+    public GlideString[] toGlideStringArgs() {
+        return new GlideString[] {GlideString.gs(redisApi)};
     }
 }

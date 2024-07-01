@@ -1,4 +1,4 @@
-/** Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0 */
+/** Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0 */
 package glide.cluster;
 
 import static glide.TestConfiguration.REDIS_VERSION;
@@ -12,6 +12,7 @@ import static glide.TestUtilities.getFirstEntryFromMultiValue;
 import static glide.TestUtilities.getValueFromInfo;
 import static glide.TestUtilities.parseInfoResponseToMap;
 import static glide.api.BaseClient.OK;
+import static glide.api.models.GlideString.gs;
 import static glide.api.models.commands.FlushMode.ASYNC;
 import static glide.api.models.commands.FlushMode.SYNC;
 import static glide.api.models.commands.InfoOptions.Section.CLIENTS;
@@ -47,6 +48,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import glide.api.RedisClusterClient;
 import glide.api.models.ClusterTransaction;
 import glide.api.models.ClusterValue;
+import glide.api.models.GlideString;
 import glide.api.models.commands.InfoOptions;
 import glide.api.models.commands.ListDirection;
 import glide.api.models.commands.RangeOptions.RangeByIndex;
@@ -54,6 +56,12 @@ import glide.api.models.commands.SortBaseOptions;
 import glide.api.models.commands.SortClusterOptions;
 import glide.api.models.commands.WeightAggregateOptions.KeyArray;
 import glide.api.models.commands.bitmap.BitwiseOperation;
+import glide.api.models.commands.geospatial.GeoSearchOrigin;
+import glide.api.models.commands.geospatial.GeoSearchResultOptions;
+import glide.api.models.commands.geospatial.GeoSearchShape;
+import glide.api.models.commands.geospatial.GeoSearchStoreOptions;
+import glide.api.models.commands.geospatial.GeoUnit;
+import glide.api.models.configuration.RequestRoutingConfiguration.ByAddressRoute;
 import glide.api.models.configuration.RequestRoutingConfiguration.Route;
 import glide.api.models.configuration.RequestRoutingConfiguration.SingleNodeRoute;
 import glide.api.models.configuration.RequestRoutingConfiguration.SlotKeyRoute;
@@ -560,6 +568,26 @@ public class CommandTests {
         multiPayload.forEach((key, value) -> assertEquals(message, value));
     }
 
+    @SneakyThrows
+    @Test
+    public void echo_gs() {
+        byte[] message = {(byte) 0x01, (byte) 0x00, (byte) 0x01, (byte) 0x00, (byte) 0x02};
+        GlideString response = clusterClient.echo(gs(message)).get();
+        assertEquals(gs(message), response);
+    }
+
+    @SneakyThrows
+    @Test
+    public void echo_gs_with_route() {
+        byte[] message = {(byte) 0x01, (byte) 0x00, (byte) 0x01, (byte) 0x00, (byte) 0x02};
+        GlideString singlePayload = clusterClient.echo(gs(message), RANDOM).get().getSingleValue();
+        assertEquals(gs(message), singlePayload);
+
+        Map<String, GlideString> multiPayload =
+                clusterClient.echo(gs(message), ALL_NODES).get().getMultiValue();
+        multiPayload.forEach((key, value) -> assertEquals(gs(message), value));
+    }
+
     @Test
     @SneakyThrows
     public void time() {
@@ -722,10 +750,26 @@ public class CommandTests {
                 Arguments.of("renamenx", null, clusterClient.renamenx("abc", "zxy")),
                 Arguments.of(
                         "sinterstore", null, clusterClient.sinterstore("abc", new String[] {"zxy", "lkn"})),
+                Arguments.of(
+                        "sinterstore_gs",
+                        null,
+                        clusterClient.sinterstore(gs("abc"), new GlideString[] {gs("zxy"), gs("lkn")})),
                 Arguments.of("sdiff", null, clusterClient.sdiff(new String[] {"abc", "zxy", "lkn"})),
                 Arguments.of(
+                        "sdiff_gs",
+                        null,
+                        clusterClient.sdiff(new GlideString[] {gs("abc"), gs("zxy"), gs("lkn")})),
+                Arguments.of(
                         "sdiffstore", null, clusterClient.sdiffstore("abc", new String[] {"zxy", "lkn"})),
+                Arguments.of(
+                        "sdiffstore_gs",
+                        null,
+                        clusterClient.sdiffstore(gs("abc"), new GlideString[] {gs("zxy"), gs("lkn")})),
                 Arguments.of("sinter", null, clusterClient.sinter(new String[] {"abc", "zxy", "lkn"})),
+                Arguments.of(
+                        "sinter_gs",
+                        null,
+                        clusterClient.sinter(new GlideString[] {gs("abc"), gs("zxy"), gs("lkn")})),
                 Arguments.of(
                         "sunionstore", null, clusterClient.sunionstore("abc", new String[] {"zxy", "lkn"})),
                 Arguments.of("zdiff", null, clusterClient.zdiff(new String[] {"abc", "zxy", "lkn"})),
@@ -783,7 +827,15 @@ public class CommandTests {
                         clusterClient.blmove("abc", "def", ListDirection.LEFT, ListDirection.LEFT, 1)),
                 Arguments.of("sintercard", "7.0.0", clusterClient.sintercard(new String[] {"abc", "def"})),
                 Arguments.of(
+                        "sintercard_gs",
+                        "7.0.0",
+                        clusterClient.sintercard(new GlideString[] {gs("abc"), gs("def")})),
+                Arguments.of(
                         "sintercard", "7.0.0", clusterClient.sintercard(new String[] {"abc", "def"}, 1)),
+                Arguments.of(
+                        "sintercard_gs",
+                        "7.0.0",
+                        clusterClient.sintercard(new GlideString[] {gs("abc"), gs("def")}, 1)),
                 Arguments.of(
                         "fcall",
                         "7.0.0",
@@ -798,12 +850,27 @@ public class CommandTests {
                 Arguments.of("msetnx", null, clusterClient.msetnx(Map.of("abc", "def", "ghi", "jkl"))),
                 Arguments.of("lcs", "7.0.0", clusterClient.lcs("abc", "def")),
                 Arguments.of("lcsLEN", "7.0.0", clusterClient.lcsLen("abc", "def")),
+                Arguments.of("lcsIdx", "7.0.0", clusterClient.lcsIdx("abc", "def")),
+                Arguments.of("lcsIdx", "7.0.0", clusterClient.lcsIdx("abc", "def", 10)),
+                Arguments.of("lcsIdxWithMatchLen", "7.0.0", clusterClient.lcsIdxWithMatchLen("abc", "def")),
+                Arguments.of(
+                        "lcsIdxWithMatchLen", "7.0.0", clusterClient.lcsIdxWithMatchLen("abc", "def", 10)),
                 Arguments.of("sunion", "1.0.0", clusterClient.sunion(new String[] {"abc", "def", "ghi"})),
                 Arguments.of("sortStore", "1.0.0", clusterClient.sortStore("abc", "def")),
                 Arguments.of(
                         "sortStore",
                         "1.0.0",
-                        clusterClient.sortStore("abc", "def", SortClusterOptions.builder().alpha().build())));
+                        clusterClient.sortStore("abc", "def", SortClusterOptions.builder().alpha().build())),
+                Arguments.of(
+                        "geosearchstore",
+                        "6.2.0",
+                        clusterClient.geosearchstore(
+                                "dest",
+                                "source",
+                                new GeoSearchOrigin.MemberOrigin("abc"),
+                                new GeoSearchShape(1, GeoUnit.METERS),
+                                GeoSearchStoreOptions.builder().build(),
+                                new GeoSearchResultOptions(1, true))));
     }
 
     @SneakyThrows
@@ -1253,6 +1320,7 @@ public class CommandTests {
                 }
 
                 assertEquals(OK, clusterClient.functionKill().get());
+                Thread.sleep(404); // sometimes kill doesn't happen immediately
 
                 exception =
                         assertThrows(ExecutionException.class, () -> clusterClient.functionKill().get());
@@ -1339,7 +1407,7 @@ public class CommandTests {
 
                 // redis kills a function with 5 sec delay
                 assertEquals(OK, clusterClient.functionKill(route).get());
-                Thread.sleep(404);
+                Thread.sleep(404); // sometimes kill doesn't happen immediately
 
                 exception =
                         assertThrows(ExecutionException.class, () -> clusterClient.functionKill(route).get());
@@ -1410,6 +1478,7 @@ public class CommandTests {
 
                 // redis kills a function with 5 sec delay
                 assertEquals(OK, clusterClient.functionKill(route).get());
+                Thread.sleep(404); // sometimes kill doesn't happen immediately
 
                 exception =
                         assertThrows(ExecutionException.class, () -> clusterClient.functionKill(route).get());
@@ -1696,9 +1765,8 @@ public class CommandTests {
         // no keys in database
         assertEquals(OK, clusterClient.flushall(SYNC).get());
 
-        // TODO: returns a ResponseError but expecting null
-        // uncomment when this is completed: https://github.com/amazon-contributing/redis-rs/pull/153
-        // assertNull(clusterClient.randomKey().get());
+        // no keys in database returns null
+        assertNull(clusterClient.randomKey().get());
     }
 
     @Test

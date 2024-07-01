@@ -1,5 +1,5 @@
 /**
- * Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0
+ * Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0
  */
 
 import * as net from "net";
@@ -22,7 +22,7 @@ import {
 import { connection_request } from "./ProtobufMessage";
 import { Transaction } from "./Transaction";
 
-export type RedisClientConfiguration = BaseClientConfiguration & {
+export type GlideClientConfiguration = BaseClientConfiguration & {
     /**
      * index of the logical database to connect to.
      */
@@ -59,12 +59,12 @@ export type RedisClientConfiguration = BaseClientConfiguration & {
  * For full documentation, see
  * https://github.com/aws/babushka/wiki/NodeJS-wrapper#redis-standalone
  */
-export class RedisClient extends BaseClient {
+export class GlideClient extends BaseClient {
     /**
      * @internal
      */
     protected createClientRequest(
-        options: RedisClientConfiguration,
+        options: GlideClientConfiguration,
     ): connection_request.IConnectionRequest {
         const configuration = super.createClientRequest(options);
         configuration.databaseId = options.databaseId;
@@ -73,22 +73,22 @@ export class RedisClient extends BaseClient {
     }
 
     public static createClient(
-        options: RedisClientConfiguration,
-    ): Promise<RedisClient> {
-        return super.createClientInternal<RedisClient>(
+        options: GlideClientConfiguration,
+    ): Promise<GlideClient> {
+        return super.createClientInternal<GlideClient>(
             options,
-            (socket: net.Socket) => new RedisClient(socket),
+            (socket: net.Socket) => new GlideClient(socket),
         );
     }
 
     static async __createClient(
         options: BaseClientConfiguration,
         connectedSocket: net.Socket,
-    ): Promise<RedisClient> {
+    ): Promise<GlideClient> {
         return this.__createClientInternal(
             options,
             connectedSocket,
-            (socket, options) => new RedisClient(socket, options),
+            (socket, options) => new GlideClient(socket, options),
         );
     }
 

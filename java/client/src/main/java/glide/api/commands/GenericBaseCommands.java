@@ -1,4 +1,4 @@
-/** Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0 */
+/** Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0 */
 package glide.api.commands;
 
 import glide.api.models.GlideString;
@@ -54,6 +54,23 @@ public interface GenericBaseCommands {
     CompletableFuture<Long> exists(String[] keys);
 
     /**
+     * Returns the number of keys in <code>keys</code> that exist in the database.
+     *
+     * @apiNote When in cluster mode, the command may route to multiple nodes when <code>keys</code>
+     *     map to different hash slots.
+     * @see <a href="https://redis.io/commands/exists/">redis.io</a> for details.
+     * @param keys The keys list to check.
+     * @return The number of keys that exist. If the same existing key is mentioned in <code>keys
+     *     </code> multiple times, it will be counted multiple times.
+     * @example
+     *     <pre>{@code
+     * Long result = client.exists(new GlideString[] {gs("my_key"), gs("invalid_key")}).get();
+     * assert result == 1L;
+     * }</pre>
+     */
+    CompletableFuture<Long> exists(GlideString[] keys);
+
+    /**
      * Unlink (delete) multiple <code>keys</code> from the database. A key is ignored if it does not
      * exist. This command, similar to <a href="https://redis.io/commands/del/">DEL</a>, removes
      * specified keys and ignores non-existent ones. However, this command does not block the server,
@@ -66,11 +83,30 @@ public interface GenericBaseCommands {
      * @return The number of <code>keys</code> that were unlinked.
      * @example
      *     <pre>{@code
-     * Long result = client.unlink("my_key").get();
+     * Long result = client.unlink(new String[] {"my_key"}).get();
      * assert result == 1L;
      * }</pre>
      */
     CompletableFuture<Long> unlink(String[] keys);
+
+    /**
+     * Unlink (delete) multiple <code>keys</code> from the database. A key is ignored if it does not
+     * exist. This command, similar to <a href="https://redis.io/commands/del/">DEL</a>, removes
+     * specified keys and ignores non-existent ones. However, this command does not block the server,
+     * while <a href="https://redis.io/commands/del/">DEL</a> does.
+     *
+     * @apiNote When in cluster mode, the command may route to multiple nodes when <code>keys</code>
+     *     map to different hash slots.
+     * @see <a href="https://redis.io/commands/unlink/">redis.io</a> for details.
+     * @param keys The list of keys to unlink.
+     * @return The number of <code>keys</code> that were unlinked.
+     * @example
+     *     <pre>{@code
+     * Long result = client.unlink(new GlideString[] {gs("my_key")}).get();
+     * assert result == 1L;
+     * }</pre>
+     */
+    CompletableFuture<Long> unlink(GlideString[] keys);
 
     /**
      * Sets a timeout on <code>key</code> in seconds. After the timeout has expired, the <code>key
@@ -108,6 +144,29 @@ public interface GenericBaseCommands {
      * @see <a href="https://redis.io/commands/expire/">redis.io</a> for details.
      * @param key The key to set timeout on it.
      * @param seconds The timeout in seconds.
+     * @return <code>true</code> if the timeout was set. <code>false</code> if the timeout was not
+     *     set. e.g. <code>key</code> doesn't exist.
+     * @example
+     *     <pre>{@code
+     * Boolean isSet = client.expire(gs("my_key"), 60).get();
+     * assert isSet; //Indicates that a timeout of 60 seconds has been set for gs("my_key").
+     * }</pre>
+     */
+    CompletableFuture<Boolean> expire(GlideString key, long seconds);
+
+    /**
+     * Sets a timeout on <code>key</code> in seconds. After the timeout has expired, the <code>key
+     * </code> will automatically be deleted.<br>
+     * If <code>key</code> already has an existing <code>expire
+     * </code> set, the time to live is updated to the new value.<br>
+     * If <code>seconds</code> is a non-positive number, the <code>key</code> will be deleted rather
+     * than expired.<br>
+     * The timeout will only be cleared by commands that delete or overwrite the contents of <code>key
+     * </code>.
+     *
+     * @see <a href="https://redis.io/commands/expire/">redis.io</a> for details.
+     * @param key The key to set timeout on it.
+     * @param seconds The timeout in seconds.
      * @param expireOptions The expire options.
      * @return <code>true</code> if the timeout was set. <code>false</code> if the timeout was not
      *     set. e.g. <code>key</code> doesn't exist, or operation skipped due to the provided
@@ -115,10 +174,35 @@ public interface GenericBaseCommands {
      * @example
      *     <pre>{@code
      * Boolean isSet = client.expire("my_key", 60, ExpireOptions.HAS_NO_EXPIRY).get();
-     * assert isSet; //Indicates that a timeout of 60 seconds has been set for "my_key."
+     * assert isSet; //Indicates that a timeout of 60 seconds has been set for "my_key".
      * }</pre>
      */
     CompletableFuture<Boolean> expire(String key, long seconds, ExpireOptions expireOptions);
+
+    /**
+     * Sets a timeout on <code>key</code> in seconds. After the timeout has expired, the <code>key
+     * </code> will automatically be deleted.<br>
+     * If <code>key</code> already has an existing <code>expire
+     * </code> set, the time to live is updated to the new value.<br>
+     * If <code>seconds</code> is a non-positive number, the <code>key</code> will be deleted rather
+     * than expired.<br>
+     * The timeout will only be cleared by commands that delete or overwrite the contents of <code>key
+     * </code>.
+     *
+     * @see <a href="https://redis.io/commands/expire/">redis.io</a> for details.
+     * @param key The key to set timeout on it.
+     * @param seconds The timeout in seconds.
+     * @param expireOptions The expire options.
+     * @return <code>true</code> if the timeout was set. <code>false</code> if the timeout was not
+     *     set. e.g. <code>key</code> doesn't exist, or operation skipped due to the provided
+     *     arguments.
+     * @example
+     *     <pre>{@code
+     * Boolean isSet = client.expire(gs("my_key"), 60, ExpireOptions.HAS_NO_EXPIRY).get();
+     * assert isSet; //Indicates that a timeout of 60 seconds has been set for gs("my_key").
+     * }</pre>
+     */
+    CompletableFuture<Boolean> expire(GlideString key, long seconds, ExpireOptions expireOptions);
 
     /**
      * Sets a timeout on <code>key</code>. It takes an absolute Unix timestamp (seconds since January
@@ -156,6 +240,29 @@ public interface GenericBaseCommands {
      * @see <a href="https://redis.io/commands/expireat/">redis.io</a> for details.
      * @param key The key to set timeout on it.
      * @param unixSeconds The timeout in an absolute Unix timestamp.
+     * @return <code>true</code> if the timeout was set. <code>false</code> if the timeout was not
+     *     set. e.g. <code>key</code> doesn't exist.
+     * @example
+     *     <pre>{@code
+     * Boolean isSet = client.expireAt(gs("my_key"), Instant.now().getEpochSecond() + 10).get();
+     * assert isSet;
+     * }</pre>
+     */
+    CompletableFuture<Boolean> expireAt(GlideString key, long unixSeconds);
+
+    /**
+     * Sets a timeout on <code>key</code>. It takes an absolute Unix timestamp (seconds since January
+     * 1, 1970) instead of specifying the number of seconds.<br>
+     * A timestamp in the past will delete the <code>key</code> immediately. After the timeout has
+     * expired, the <code>key</code> will automatically be deleted.<br>
+     * If <code>key</code> already has an existing <code>expire</code> set, the time to live is
+     * updated to the new value.<br>
+     * The timeout will only be cleared by commands that delete or overwrite the contents of <code>key
+     * </code>.
+     *
+     * @see <a href="https://redis.io/commands/expireat/">redis.io</a> for details.
+     * @param key The key to set timeout on it.
+     * @param unixSeconds The timeout in an absolute Unix timestamp.
      * @param expireOptions The expire options.
      * @return <code>true</code> if the timeout was set. <code>false</code> if the timeout was not
      *     set. e.g. <code>key</code> doesn't exist, or operation skipped due to the provided
@@ -167,6 +274,32 @@ public interface GenericBaseCommands {
      * }</pre>
      */
     CompletableFuture<Boolean> expireAt(String key, long unixSeconds, ExpireOptions expireOptions);
+
+    /**
+     * Sets a timeout on <code>key</code>. It takes an absolute Unix timestamp (seconds since January
+     * 1, 1970) instead of specifying the number of seconds.<br>
+     * A timestamp in the past will delete the <code>key</code> immediately. After the timeout has
+     * expired, the <code>key</code> will automatically be deleted.<br>
+     * If <code>key</code> already has an existing <code>expire</code> set, the time to live is
+     * updated to the new value.<br>
+     * The timeout will only be cleared by commands that delete or overwrite the contents of <code>key
+     * </code>.
+     *
+     * @see <a href="https://redis.io/commands/expireat/">redis.io</a> for details.
+     * @param key The key to set timeout on it.
+     * @param unixSeconds The timeout in an absolute Unix timestamp.
+     * @param expireOptions The expire options.
+     * @return <code>true</code> if the timeout was set. <code>false</code> if the timeout was not
+     *     set. e.g. <code>key</code> doesn't exist, or operation skipped due to the provided
+     *     arguments.
+     * @example
+     *     <pre>{@code
+     * Boolean isSet = client.expireAt(gs("my_key"), Instant.now().getEpochSecond() + 10, ExpireOptions.HasNoExpiry).get();
+     * assert isSet;
+     * }</pre>
+     */
+    CompletableFuture<Boolean> expireAt(
+            GlideString key, long unixSeconds, ExpireOptions expireOptions);
 
     /**
      * Sets a timeout on <code>key</code> in milliseconds. After the timeout has expired, the <code>
@@ -194,6 +327,29 @@ public interface GenericBaseCommands {
     /**
      * Sets a timeout on <code>key</code> in milliseconds. After the timeout has expired, the <code>
      * key</code> will automatically be deleted.<br>
+     * If <code>key</code> already has an existing <code>
+     * expire</code> set, the time to live is updated to the new value.<br>
+     * If <code>milliseconds</code> is a non-positive number, the <code>key</code> will be deleted
+     * rather than expired.<br>
+     * The timeout will only be cleared by commands that delete or overwrite the contents of <code>key
+     * </code>.
+     *
+     * @see <a href="https://redis.io/commands/pexpire/">redis.io</a> for details.
+     * @param key The key to set timeout on it.
+     * @param milliseconds The timeout in milliseconds.
+     * @return <code>true</code> if the timeout was set. <code>false</code> if the timeout was not
+     *     set. e.g. <code>key</code> doesn't exist.
+     * @example
+     *     <pre>{@code
+     * Boolean isSet = client.pexpire(gs("my_key"), 60000).get();
+     * assert isSet;
+     * }</pre>
+     */
+    CompletableFuture<Boolean> pexpire(GlideString key, long milliseconds);
+
+    /**
+     * Sets a timeout on <code>key</code> in milliseconds. After the timeout has expired, the <code>
+     * key</code> will automatically be deleted.<br>
      * If <code>key</code> already has an existing expire set, the time to live is updated to the new
      * value.<br>
      * If <code>milliseconds</code> is a non-positive number, the <code>key</code> will be deleted
@@ -215,6 +371,32 @@ public interface GenericBaseCommands {
      * }</pre>
      */
     CompletableFuture<Boolean> pexpire(String key, long milliseconds, ExpireOptions expireOptions);
+
+    /**
+     * Sets a timeout on <code>key</code> in milliseconds. After the timeout has expired, the <code>
+     * key</code> will automatically be deleted.<br>
+     * If <code>key</code> already has an existing expire set, the time to live is updated to the new
+     * value.<br>
+     * If <code>milliseconds</code> is a non-positive number, the <code>key</code> will be deleted
+     * rather than expired.<br>
+     * The timeout will only be cleared by commands that delete or overwrite the contents of <code>key
+     * </code>.
+     *
+     * @see <a href="https://redis.io/commands/pexpire/">redis.io</a> for details.
+     * @param key The key to set timeout on it.
+     * @param milliseconds The timeout in milliseconds.
+     * @param expireOptions The expire options.
+     * @return <code>true</code> if the timeout was set. <code>false</code> if the timeout was not
+     *     set. e.g. <code>key</code> doesn't exist, or operation skipped due to the provided
+     *     arguments.
+     * @example
+     *     <pre>{@code
+     * Boolean isSet = client.pexpire(gs("my_key"), 60000, ExpireOptions.HasNoExpiry).get();
+     * assert isSet;
+     * }</pre>
+     */
+    CompletableFuture<Boolean> pexpire(
+            GlideString key, long milliseconds, ExpireOptions expireOptions);
 
     /**
      * Sets a timeout on <code>key</code>. It takes an absolute Unix timestamp (milliseconds since
@@ -252,6 +434,29 @@ public interface GenericBaseCommands {
      * @see <a href="https://redis.io/commands/pexpireat/">redis.io</a> for details.
      * @param key The <code>key</code> to set timeout on it.
      * @param unixMilliseconds The timeout in an absolute Unix timestamp.
+     * @return <code>true</code> if the timeout was set. <code>false</code> if the timeout was not
+     *     set. e.g. <code>key</code> doesn't exist.
+     * @example
+     *     <pre>{@code
+     * Boolean isSet = client.pexpireAt(gs("my_key"), Instant.now().toEpochMilli() + 10).get();
+     * assert isSet;
+     * }</pre>
+     */
+    CompletableFuture<Boolean> pexpireAt(GlideString key, long unixMilliseconds);
+
+    /**
+     * Sets a timeout on <code>key</code>. It takes an absolute Unix timestamp (milliseconds since
+     * January 1, 1970) instead of specifying the number of milliseconds.<br>
+     * A timestamp in the past will delete the <code>key</code> immediately. After the timeout has
+     * expired, the <code>key</code> will automatically be deleted.<br>
+     * If <code>key</code> already has an existing <code>expire</code> set, the time to live is
+     * updated to the new value.<br>
+     * The timeout will only be cleared by commands that delete or overwrite the contents of <code>key
+     * </code>.
+     *
+     * @see <a href="https://redis.io/commands/pexpireat/">redis.io</a> for details.
+     * @param key The <code>key</code> to set timeout on it.
+     * @param unixMilliseconds The timeout in an absolute Unix timestamp.
      * @param expireOptions The expire option.
      * @return <code>true</code> if the timeout was set. <code>false</code> if the timeout was not
      *     set. e.g. <code>key</code> doesn't exist, or operation skipped due to the provided
@@ -264,6 +469,32 @@ public interface GenericBaseCommands {
      */
     CompletableFuture<Boolean> pexpireAt(
             String key, long unixMilliseconds, ExpireOptions expireOptions);
+
+    /**
+     * Sets a timeout on <code>key</code>. It takes an absolute Unix timestamp (milliseconds since
+     * January 1, 1970) instead of specifying the number of milliseconds.<br>
+     * A timestamp in the past will delete the <code>key</code> immediately. After the timeout has
+     * expired, the <code>key</code> will automatically be deleted.<br>
+     * If <code>key</code> already has an existing <code>expire</code> set, the time to live is
+     * updated to the new value.<br>
+     * The timeout will only be cleared by commands that delete or overwrite the contents of <code>key
+     * </code>.
+     *
+     * @see <a href="https://redis.io/commands/pexpireat/">redis.io</a> for details.
+     * @param key The <code>key</code> to set timeout on it.
+     * @param unixMilliseconds The timeout in an absolute Unix timestamp.
+     * @param expireOptions The expire option.
+     * @return <code>true</code> if the timeout was set. <code>false</code> if the timeout was not
+     *     set. e.g. <code>key</code> doesn't exist, or operation skipped due to the provided
+     *     arguments.
+     * @example
+     *     <pre>{@code
+     * Boolean isSet = client.pexpireAt(gs("my_key"), Instant.now().toEpochMilli() + 10, ExpireOptions.HasNoExpiry).get();
+     * assert isSet;
+     * }</pre>
+     */
+    CompletableFuture<Boolean> pexpireAt(
+            GlideString key, long unixMilliseconds, ExpireOptions expireOptions);
 
     /**
      * Returns the remaining time to live of <code>key</code> that has a timeout, in seconds.
@@ -282,6 +513,24 @@ public interface GenericBaseCommands {
      * }</pre>
      */
     CompletableFuture<Long> ttl(String key);
+
+    /**
+     * Returns the remaining time to live of <code>key</code> that has a timeout, in seconds.
+     *
+     * @see <a href="https://redis.io/commands/ttl/">redis.io</a> for details.
+     * @param key The <code>key</code> to return its timeout.
+     * @return TTL in seconds, <code>-2</code> if <code>key</code> does not exist, or <code>-1</code>
+     *     if <code>key</code> exists but has no associated expiration.
+     * @example
+     *     <pre>{@code
+     * Long timeRemaining = client.ttl(gs("my_key")).get();
+     * assert timeRemaining == 3600L; //Indicates that gs("my_key") has a remaining time to live of 3600 seconds.
+     *
+     * Long timeRemaining = client.ttl(gs("nonexistent_key")).get();
+     * assert timeRemaining == -2L; //Returns -2 for a non-existing key.
+     * }</pre>
+     */
+    CompletableFuture<Long> ttl(GlideString key);
 
     /**
      * Returns the absolute Unix timestamp (since January 1, 1970) at which the given <code>key</code>
@@ -303,6 +552,24 @@ public interface GenericBaseCommands {
 
     /**
      * Returns the absolute Unix timestamp (since January 1, 1970) at which the given <code>key</code>
+     * will expire, in seconds.<br>
+     * To get the expiration with millisecond precision, use {@link #pexpiretime(String)}.
+     *
+     * @since Redis 7.0 and above.
+     * @see <a href="https://redis.io/commands/expiretime/">redis.io</a> for details.
+     * @param key The <code>key</code> to determine the expiration value of.
+     * @return The expiration Unix timestamp in seconds. <code>-2</code> if <code>key</code> does not
+     *     exist, or <code>-1</code> if <code>key</code> exists but has no associated expiration.
+     * @example
+     *     <pre>{@code
+     * Long expiration = client.expiretime(gs("my_key")).get();
+     * System.out.printf("The key expires at %d epoch time", expiration);
+     * }</pre>
+     */
+    CompletableFuture<Long> expiretime(GlideString key);
+
+    /**
+     * Returns the absolute Unix timestamp (since January 1, 1970) at which the given <code>key</code>
      * will expire, in milliseconds.
      *
      * @since Redis 7.0 and above.
@@ -317,6 +584,23 @@ public interface GenericBaseCommands {
      * }</pre>
      */
     CompletableFuture<Long> pexpiretime(String key);
+
+    /**
+     * Returns the absolute Unix timestamp (since January 1, 1970) at which the given <code>key</code>
+     * will expire, in milliseconds.
+     *
+     * @since Redis 7.0 and above.
+     * @see <a href="https://redis.io/commands/pexpiretime/">redis.io</a> for details.
+     * @param key The <code>key</code> to determine the expiration value of.
+     * @return The expiration Unix timestamp in milliseconds. <code>-2</code> if <code>key</code> does
+     *     not exist, or <code>-1</code> if <code>key</code> exists but has no associated expiration.
+     * @example
+     *     <pre>{@code
+     * Long expiration = client.pexpiretime(gs("my_key")).get();
+     * System.out.printf("The key expires at %d epoch time (ms)", expiration);
+     * }</pre>
+     */
+    CompletableFuture<Long> pexpiretime(GlideString key);
 
     // TODO move invokeScript to ScriptingAndFunctionsBaseCommands
     // TODO add note to invokeScript about routing on cluster client
@@ -386,6 +670,24 @@ public interface GenericBaseCommands {
     CompletableFuture<Long> pttl(String key);
 
     /**
+     * Returns the remaining time to live of <code>key</code> that has a timeout, in milliseconds.
+     *
+     * @see <a href="https://redis.io/commands/pttl/">redis.io</a> for details.
+     * @param key The key to return its timeout.
+     * @return TTL in milliseconds. <code>-2</code> if <code>key</code> does not exist, <code>-1
+     *     </code> if <code>key</code> exists but has no associated expire.
+     * @example
+     *     <pre>{@code
+     * Long timeRemainingMS = client.pttl(gs("my_key")).get()
+     * assert timeRemainingMS == 5000L // Indicates that gs("my_key") has a remaining time to live of 5000 milliseconds.
+     *
+     * Long timeRemainingMS = client.pttl(gs("nonexistent_key")).get();
+     * assert timeRemainingMS == -2L; // Returns -2 for a non-existing key.
+     * }</pre>
+     */
+    CompletableFuture<Long> pttl(GlideString key);
+
+    /**
      * Removes the existing timeout on <code>key</code>, turning the <code>key</code> from volatile (a
      * <code>key</code> with an expire set) to persistent (a <code>key</code> that will never expire
      * as no timeout is associated).
@@ -438,6 +740,24 @@ public interface GenericBaseCommands {
     CompletableFuture<String> type(String key);
 
     /**
+     * Returns the string representation of the type of the value stored at <code>key</code>.
+     *
+     * @see <a href="https://redis.io/commands/type/">redis.io</a> for details.
+     * @param key The <code>key</code> to check its data type.
+     * @return If the <code>key</code> exists, the type of the stored value is returned. Otherwise, a
+     *     "none" string is returned.
+     * @example
+     *     <pre>{@code
+     * String type = client.type(gs("StringKey")).get();
+     * assert type.equals("string");
+     *
+     * type = client.type(gs("ListKey")).get();
+     * assert type.equals("list");
+     * }</pre>
+     */
+    CompletableFuture<String> type(GlideString key);
+
+    /**
      * Returns the internal encoding for the Redis object stored at <code>key</code>.
      *
      * @see <a href="https://redis.io/commands/object-encoding/">redis.io</a> for details.
@@ -454,6 +774,24 @@ public interface GenericBaseCommands {
      * }</pre>
      */
     CompletableFuture<String> objectEncoding(String key);
+
+    /**
+     * Returns the internal encoding for the Redis object stored at <code>key</code>.
+     *
+     * @see <a href="https://redis.io/commands/object-encoding/">redis.io</a> for details.
+     * @param key The <code>key</code> of the object to get the internal encoding of.
+     * @return If <code>key</code> exists, returns the internal encoding of the object stored at
+     *     <code>key</code> as a <code>String</code>. Otherwise, returns <code>null</code>.
+     * @example
+     *     <pre>{@code
+     * String encoding = client.objectEncoding(gs("my_hash")).get();
+     * assert encoding.equals("listpack");
+     *
+     * encoding = client.objectEncoding(gs("non_existing_key")).get();
+     * assert encoding == null;
+     * }</pre>
+     */
+    CompletableFuture<String> objectEncoding(GlideString key);
 
     /**
      * Returns the logarithmic access frequency counter of a Redis object stored at <code>key</code>.
@@ -476,6 +814,26 @@ public interface GenericBaseCommands {
     CompletableFuture<Long> objectFreq(String key);
 
     /**
+     * Returns the logarithmic access frequency counter of a Redis object stored at <code>key</code>.
+     *
+     * @see <a href="https://redis.io/commands/object-freq/">redis.io</a> for details.
+     * @param key The <code>key</code> of the object to get the logarithmic access frequency counter
+     *     of.
+     * @return If <code>key</code> exists, returns the logarithmic access frequency counter of the
+     *     object stored at <code>key</code> as a <code>Long</code>. Otherwise, returns <code>null
+     *     </code>.
+     * @example
+     *     <pre>{@code
+     * Long frequency = client.objectFreq(gs("my_hash")).get();
+     * assert frequency == 2L;
+     *
+     * frequency = client.objectFreq(gs("non_existing_key")).get();
+     * assert frequency == null;
+     * }</pre>
+     */
+    CompletableFuture<Long> objectFreq(GlideString key);
+
+    /**
      * Returns the time in seconds since the last access to the value stored at <code>key</code>.
      *
      * @see <a href="https://redis.io/commands/object-idletime/">redis.io</a> for details.
@@ -494,6 +852,24 @@ public interface GenericBaseCommands {
     CompletableFuture<Long> objectIdletime(String key);
 
     /**
+     * Returns the time in seconds since the last access to the value stored at <code>key</code>.
+     *
+     * @see <a href="https://redis.io/commands/object-idletime/">redis.io</a> for details.
+     * @param key The <code>key</code> of the object to get the idle time of.
+     * @return If <code>key</code> exists, returns the idle time in seconds. Otherwise, returns <code>
+     *     null</code>.
+     * @example
+     *     <pre>{@code
+     * Long idletime = client.objectIdletime(gs("my_hash")).get();
+     * assert idletime == 2L;
+     *
+     * idletime = client.objectIdletime(gs("non_existing_key")).get();
+     * assert idletime == null;
+     * }</pre>
+     */
+    CompletableFuture<Long> objectIdletime(GlideString key);
+
+    /**
      * Returns the reference count of the object stored at <code>key</code>.
      *
      * @see <a href="https://redis.io/commands/object-refcount/">redis.io</a> for details.
@@ -510,6 +886,24 @@ public interface GenericBaseCommands {
      * }</pre>
      */
     CompletableFuture<Long> objectRefcount(String key);
+
+    /**
+     * Returns the reference count of the object stored at <code>key</code>.
+     *
+     * @see <a href="https://redis.io/commands/object-refcount/">redis.io</a> for details.
+     * @param key The <code>key</code> of the object to get the reference count of.
+     * @return If <code>key</code> exists, returns the reference count of the object stored at <code>
+     *     key</code> as a <code>Long</code>. Otherwise, returns <code>null</code>.
+     * @example
+     *     <pre>{@code
+     * Long refcount = client.objectRefcount(gs("my_hash")).get();
+     * assert refcount == 2L;
+     *
+     * refcount = client.objectRefcount(gs("non_existing_key")).get();
+     * assert refcount == null;
+     * }</pre>
+     */
+    CompletableFuture<Long> objectRefcount(GlideString key);
 
     /**
      * Renames <code>key</code> to <code>newKey</code>.<br>
@@ -626,6 +1020,28 @@ public interface GenericBaseCommands {
     CompletableFuture<Boolean> copy(String source, String destination);
 
     /**
+     * Copies the value stored at the <code>source</code> to the <code>destination</code> key if the
+     * <code>destination</code> key does not yet exist.
+     *
+     * @apiNote When in cluster mode, both <code>source</code> and <code>destination</code> must map
+     *     to the same hash slot.
+     * @since Redis 6.2.0 and above.
+     * @see <a href="https://redis.io/commands/copy/">redis.io</a> for details.
+     * @param source The key to the source value.
+     * @param destination The key where the value should be copied to.
+     * @return <code>true</code> if <code>source</code> was copied, <code>false</code> if <code>source
+     * </code> was not copied.
+     * @example
+     *     <pre>{@code
+     * client.set(gs("test1"), gs("one")).get();
+     * client.set(gs("test2"), gs("two")).get();
+     * assert !client.copy(gs("test1", gs("test2")).get();
+     * assert client.copy(gs("test1"), gs("test2")).get();
+     * }</pre>
+     */
+    CompletableFuture<Boolean> copy(GlideString source, GlideString destination);
+
+    /**
      * Copies the value stored at the <code>source</code> to the <code>destination</code> key. When
      * <code>replace</code> is true, removes the <code>destination</code> key first if it already
      * exists, otherwise performs no action.
@@ -648,6 +1064,30 @@ public interface GenericBaseCommands {
      * }</pre>
      */
     CompletableFuture<Boolean> copy(String source, String destination, boolean replace);
+
+    /**
+     * Copies the value stored at the <code>source</code> to the <code>destination</code> key. When
+     * <code>replace</code> is true, removes the <code>destination</code> key first if it already
+     * exists, otherwise performs no action.
+     *
+     * @apiNote When in cluster mode, both <code>source</code> and <code>destination</code> must map
+     *     to the same hash slot.
+     * @since Redis 6.2.0 and above.
+     * @see <a href="https://redis.io/commands/copy/">redis.io</a> for details.
+     * @param source The key to the source value.
+     * @param destination The key where the value should be copied to.
+     * @param replace If the destination key should be removed before copying the value to it.
+     * @return <code>true</code> if <code>source</code> was copied, <code>false</code> if <code>source
+     * </code> was not copied.
+     * @example
+     *     <pre>{@code
+     * client.set(gs("test1"), gs("one")).get();
+     * client.set(gs("test2"), gs("two")).get();
+     * assert !client.copy(gs("test1", gs("test2"), false).get();
+     * assert client.copy(gs("test1", gs("test2"), true).get();
+     * }</pre>
+     */
+    CompletableFuture<Boolean> copy(GlideString source, GlideString destination, boolean replace);
 
     /**
      * Serialize the value stored at <code>key</code> in a Valkey-specific format and return it to the
@@ -767,4 +1207,22 @@ public interface GenericBaseCommands {
      * }</pre>
      */
     CompletableFuture<Long> sortStore(String key, String destination);
+
+    /**
+     * Blocks the current client until all the previous write commands are successfully transferred
+     * and acknowledged by at least <code>numreplicas</code> of replicas. If <code>timeout</code> is
+     * reached, the command returns even if the specified number of replicas were not yet reached.
+     *
+     * @param numreplicas The number of replicas to reach.
+     * @param timeout The timeout value specified in milliseconds. A value of <code>0</code> will
+     *     block indefinitely.
+     * @return The number of replicas reached by all the writes performed in the context of the
+     *     current connection.
+     * @example
+     *     <pre>{@code
+     * client.set("key", "value).get();
+     * assert client.wait(1L, 1000L).get() == 1L;
+     * }</pre>
+     */
+    CompletableFuture<Long> wait(long numreplicas, long timeout);
 }

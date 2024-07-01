@@ -1,4 +1,4 @@
-﻿// Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0
+﻿// Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0
 
 using System.Diagnostics;
 
@@ -133,7 +133,10 @@ public class IntegrationTestBase : IDisposable
         proc?.WaitForExit();
         string output = proc?.StandardOutput.ReadToEnd() ?? "";
 
+        // Redis response:
         // Redis server v=7.2.3 sha=00000000:0 malloc=jemalloc-5.3.0 bits=64 build=7504b1fedf883f2
-        return new Version(output.Split(" ")[2].Split("=")[1]);
+        // Valkey response: 
+        // Server v=7.2.5 sha=26388270:0 malloc=jemalloc-5.3.0 bits=64 build=ea40bb1576e402d6
+        return new Version(output.Split("v=")[1].Split(" ")[0]);
     }
 }

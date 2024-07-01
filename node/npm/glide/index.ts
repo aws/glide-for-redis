@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0
+ * Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0
  */
 
 import { GLIBC, MUSL, familySync } from "detect-libc";
@@ -74,9 +74,9 @@ function loadNativeBinding() {
 function initialize() {
     const nativeBinding = loadNativeBinding();
     const {
-        RedisClient,
-        RedisClusterClient,
-        RedisClientConfiguration,
+        GlideClient,
+        GlideClusterClient,
+        GlideClientConfiguration,
         SlotIdTypes,
         SlotKeyTypes,
         RouteByAddress,
@@ -117,9 +117,9 @@ function initialize() {
     } = nativeBinding;
 
     module.exports = {
-        RedisClient,
-        RedisClusterClient,
-        RedisClientConfiguration,
+        GlideClient,
+        GlideClusterClient,
+        GlideClientConfiguration,
         SlotIdTypes,
         SlotKeyTypes,
         RouteByAddress,

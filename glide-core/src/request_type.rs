@@ -1,5 +1,5 @@
 /**
- * Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0
+ * Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0
  */
 use redis::{cmd, Cmd};
 
@@ -206,6 +206,14 @@ pub enum RequestType {
     SortReadOnly = 195,
     FunctionDump = 196,
     FunctionRestore = 197,
+    XPending = 198,
+    XGroupSetId = 199,
+    SScan = 200,
+    ZScan = 201,
+    HScan = 202,
+    XAutoClaim = 203,
+    Wait = 208,
+    XClaim = 209,
 }
 
 fn get_two_word_command(first: &str, second: &str) -> Cmd {
@@ -415,6 +423,14 @@ impl From<::protobuf::EnumOrUnknown<ProtobufRequestType>> for RequestType {
             ProtobufRequestType::SortReadOnly => RequestType::SortReadOnly,
             ProtobufRequestType::FunctionDump => RequestType::FunctionDump,
             ProtobufRequestType::FunctionRestore => RequestType::FunctionRestore,
+            ProtobufRequestType::XPending => RequestType::XPending,
+            ProtobufRequestType::XGroupSetId => RequestType::XGroupSetId,
+            ProtobufRequestType::SScan => RequestType::SScan,
+            ProtobufRequestType::ZScan => RequestType::ZScan,
+            ProtobufRequestType::HScan => RequestType::HScan,
+            ProtobufRequestType::XAutoClaim => RequestType::XAutoClaim,
+            ProtobufRequestType::Wait => RequestType::Wait,
+            ProtobufRequestType::XClaim => RequestType::XClaim,
         }
     }
 }
@@ -622,6 +638,14 @@ impl RequestType {
             RequestType::SortReadOnly => Some(cmd("SORT_RO")),
             RequestType::FunctionDump => Some(get_two_word_command("FUNCTION", "DUMP")),
             RequestType::FunctionRestore => Some(get_two_word_command("FUNCTION", "RESTORE")),
+            RequestType::XPending => Some(cmd("XPENDING")),
+            RequestType::XGroupSetId => Some(get_two_word_command("XGROUP", "SETID")),
+            RequestType::SScan => Some(cmd("SSCAN")),
+            RequestType::ZScan => Some(cmd("ZSCAN")),
+            RequestType::HScan => Some(cmd("HSCAN")),
+            RequestType::XAutoClaim => Some(cmd("XAUTOCLAIM")),
+            RequestType::Wait => Some(cmd("WAIT")),
+            RequestType::XClaim => Some(cmd("XCLAIM")),
         }
     }
 }

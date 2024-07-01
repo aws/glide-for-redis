@@ -1,5 +1,5 @@
 /**
- * Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0
+ * Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0
  */
 
 import { beforeAll, expect } from "@jest/globals";
@@ -10,11 +10,11 @@ import {
     BaseClient,
     BaseClientConfiguration,
     ClusterTransaction,
+    GlideClient,
+    GlideClusterClient,
     InsertPosition,
     Logger,
     ProtocolVersion,
-    RedisClient,
-    RedisClusterClient,
     ReturnType,
     Transaction,
 } from "..";
@@ -218,8 +218,8 @@ export async function testTeardown(
     option: BaseClientConfiguration,
 ) {
     const client = cluster_mode
-        ? await RedisClusterClient.createClient(option)
-        : await RedisClient.createClient(option);
+        ? await GlideClusterClient.createClient(option)
+        : await GlideClient.createClient(option);
 
     await client.customCommand(["FLUSHALL"]);
     client.close();

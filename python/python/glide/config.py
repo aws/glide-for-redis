@@ -1,4 +1,4 @@
-# Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0
+# Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ from enum import Enum, IntEnum
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
 from glide.async_commands.core import CoreCommands
+from glide.exceptions import ConfigurationError
 from glide.protobuf.connection_request_pb2 import ConnectionRequest
 from glide.protobuf.connection_request_pb2 import ProtocolVersion as SentProtocolVersion
 from glide.protobuf.connection_request_pb2 import ReadFrom as ProtobufReadFrom
@@ -135,7 +136,7 @@ class BaseClientConfiguration:
         protocol: ProtocolVersion = ProtocolVersion.RESP3,
     ):
         """
-        Represents the configuration settings for a Redis client.
+        Represents the configuration settings for a Glide client.
 
         Args:
             addresses (List[NodeAddress]): DNS Addresses and ports of known nodes in the cluster.
@@ -207,9 +208,9 @@ class BaseClientConfiguration:
         return None, None
 
 
-class RedisClientConfiguration(BaseClientConfiguration):
+class GlideClientConfiguration(BaseClientConfiguration):
     """
-    Represents the configuration settings for a Standalone Redis client.
+    Represents the configuration settings for a Standalone Glide client.
 
     Args:
         addresses (List[NodeAddress]): DNS Addresses and ports of known nodes in the cluster.
@@ -233,7 +234,7 @@ class RedisClientConfiguration(BaseClientConfiguration):
         database_id (Optional[int]): index of the logical database to connect to.
         client_name (Optional[str]): Client name to be used for the client. Will be used with CLIENT SETNAME command during connection establishment.
         protocol (ProtocolVersion): The version of the Redis RESP protocol to communicate with the server.
-        pubsub_subscriptions (Optional[RedisClientConfiguration.PubSubSubscriptions]): Pubsub subscriptions to be used for the client.
+        pubsub_subscriptions (Optional[GlideClientConfiguration.PubSubSubscriptions]): Pubsub subscriptions to be used for the client.
                 Will be applied via SUBSCRIBE/PSUBSCRIBE commands during connection establishment.
     """
 
@@ -253,7 +254,7 @@ class RedisClientConfiguration(BaseClientConfiguration):
         """Describes pubsub configuration for standalone mode client.
 
         Attributes:
-            channels_and_patterns (Dict[RedisClientConfiguration.PubSubChannelModes, Set[str]]):
+            channels_and_patterns (Dict[GlideClientConfiguration.PubSubChannelModes, Set[str]]):
                 Channels and patterns by modes.
             callback (Optional[Callable[[CoreCommands.PubSubMsg, Any], None]]):
                 Optional callback to accept the incomming messages.
@@ -262,7 +263,7 @@ class RedisClientConfiguration(BaseClientConfiguration):
         """
 
         channels_and_patterns: Dict[
-            RedisClientConfiguration.PubSubChannelModes, Set[str]
+            GlideClientConfiguration.PubSubChannelModes, Set[str]
         ]
         callback: Optional[Callable[[CoreCommands.PubSubMsg, Any], None]]
         context: Any
@@ -310,6 +311,17 @@ class RedisClientConfiguration(BaseClientConfiguration):
             request.database_id = self.database_id
 
         if self.pubsub_subscriptions:
+            if self.protocol == ProtocolVersion.RESP2:
+                raise ConfigurationError(
+                    "PubSub subscriptions require RESP3 protocol, but RESP2 was configured."
+                )
+            if (
+                self.pubsub_subscriptions.context is not None
+                and not self.pubsub_subscriptions.callback
+            ):
+                raise ConfigurationError(
+                    "PubSub subscriptions with a context require a callback function to be configured."
+                )
             for (
                 channel_type,
                 channels_patterns,
@@ -335,7 +347,7 @@ class RedisClientConfiguration(BaseClientConfiguration):
 
 class ClusterClientConfiguration(BaseClientConfiguration):
     """
-    Represents the configuration settings for a Cluster Redis client.
+    Represents the configuration settings for a Cluster Glide client.
 
     Args:
         addresses (List[NodeAddress]): DNS Addresses and ports of known nodes in the cluster.
@@ -386,7 +398,7 @@ class ClusterClientConfiguration(BaseClientConfiguration):
             channels_and_patterns (Dict[ClusterClientConfiguration.PubSubChannelModes, Set[str]]):
                 Channels and patterns by modes.
             callback (Optional[Callable[[CoreCommands.PubSubMsg, Any], None]]):
-                Optional callback to accept the incomming messages.
+                Optional callback to accept the incoming messages.
             context (Any):
                 Arbitrary context to pass to the callback.
         """
@@ -436,6 +448,17 @@ class ClusterClientConfiguration(BaseClientConfiguration):
             request.periodic_checks_disabled.SetInParent()
 
         if self.pubsub_subscriptions:
+            if self.protocol == ProtocolVersion.RESP2:
+                raise ConfigurationError(
+                    "PubSub subscriptions require RESP3 protocol, but RESP2 was configured."
+                )
+            if (
+                self.pubsub_subscriptions.context is not None
+                and not self.pubsub_subscriptions.callback
+            ):
+                raise ConfigurationError(
+                    "PubSub subscriptions with a context require a callback function to be configured."
+                )
             for (
                 channel_type,
                 channels_patterns,

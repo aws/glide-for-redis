@@ -1,10 +1,11 @@
-/** Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0 */
+/** Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0 */
 package glide.ffi;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import glide.ffi.resolvers.RedisValueResolver;
@@ -41,6 +42,18 @@ public class FfiTest {
     public static native long createLeakedVerbatimString(String value);
 
     public static native long createLeakedLongSet(long[] value);
+
+    // This tests that panics do not cross the FFI boundary and an exception is thrown if a panic is
+    // caught
+    public static native long handlePanics(
+            boolean shouldPanic, boolean errorPresent, long value, long defaultValue);
+
+    // This tests that Rust errors are properly converted into Java exceptions and thrown
+    public static native long handleErrors(boolean isSuccess, long value, long defaultValue);
+
+    // This tests that a Java exception is properly thrown across the FFI boundary
+    public static native void throwException(
+            boolean throwTwice, boolean isRuntimeException, String message);
 
     @Test
     public void redisValueToJavaValue_Nil() {
@@ -140,5 +153,53 @@ public class FfiTest {
                 () -> assertTrue(result.contains(1L)),
                 () -> assertTrue(result.contains(2L)),
                 () -> assertEquals(result.size(), 2));
+    }
+
+    @Test
+    public void handlePanics_panic() {
+        long expectedValue = 0L;
+        long value = FfiTest.handlePanics(true, false, 1L, expectedValue);
+        assertEquals(expectedValue, value);
+    }
+
+    @Test
+    public void handlePanics_returnError() {
+        long expectedValue = 0L;
+        long value = FfiTest.handlePanics(false, true, 1L, expectedValue);
+        assertEquals(expectedValue, value);
+    }
+
+    @Test
+    public void handlePanics_returnValue() {
+        long expectedValue = 2L;
+        long value = FfiTest.handlePanics(false, false, expectedValue, 0L);
+        assertEquals(expectedValue, value);
+    }
+
+    @Test
+    public void handleErrors_success() {
+        long expectedValue = 0L;
+        long value = FfiTest.handleErrors(true, expectedValue, 1L);
+        assertEquals(expectedValue, value);
+    }
+
+    @Test
+    public void handleErrors_error() {
+        assertThrows(Exception.class, () -> FfiTest.handleErrors(false, 0L, 1L));
+    }
+
+    @Test
+    public void throwException() {
+        assertThrows(Exception.class, () -> FfiTest.throwException(false, false, "My message"));
+    }
+
+    @Test
+    public void throwException_throwTwice() {
+        assertThrows(Exception.class, () -> FfiTest.throwException(true, false, "My message"));
+    }
+
+    @Test
+    public void throwException_throwRuntimeException() {
+        assertThrows(RuntimeException.class, () -> FfiTest.throwException(false, true, "My message"));
     }
 }

@@ -1,0 +1,78 @@
+name: Install Valkey
+
+inputs:
+    engine-version:
+        description: "Engine version to install"
+        required: true
+        type: string
+    target:
+        description: "Specified target toolchain, ex. x86_64-unknown-linux-gnu"
+        type: string
+        required: true
+        options:
+            - x86_64-unknown-linux-gnu
+            - aarch64-unknown-linux-gnu
+            - x86_64-apple-darwin
+            - aarch64-apple-darwin
+            - aarch64-unknown-linux-musl
+            - x86_64-unknown-linux-musl
+
+env:
+    CARGO_TERM_COLOR: always
+    VALKEY_MIN_VERSION: "7.2.5"
+
+runs:
+    using: "composite"
+
+    steps:
+        - name: Cache Valkey
+           # TODO: remove the musl ARM64 limitation when https://github.com/actions/runner/issues/801 is resolved
+          if: ${{ inputs.target != 'aarch64-unknown-linux-musl' }}
+          uses: actions/cache@v4
+          id: cache-valkey
+          with:
+            path: |
+                ~/valkey
+            key: valkey-${{ inputs.engine-version }}-${{ inputs.target }}
+
+        - name: Build Valkey
+          if: ${{ steps.cache-valkey.outputs.cache-hit != 'true' }}
+          shell: bash
+          run: | 
+            echo "Building valkey ${{ inputs.engine-version }}"
+            cd ~
+            rm -rf valkey
+            git clone https://github.com/valkey-io/valkey.git
+            cd valkey
+            git checkout ${{ inputs.engine-version }}
+            make BUILD_TLS=yes
+
+        - name: Install Valkey
+          shell: bash
+          run: |
+            cd ~/valkey
+            if command -v sudo &> /dev/null
+            then
+                echo "sudo command exists"
+                sudo make install
+            else
+                echo "sudo command does not exist"
+                make install
+            fi
+            echo 'export PATH=/usr/local/bin:$PATH' >>~/.bash_profile
+
+        - name: Verify Valkey installation and symlinks
+          shell: bash
+          run: | 
+            # In Valkey releases, the engine is built with symlinks from valkey-server and valkey-cli
+            # to redis-server and redis-cli. This step ensures that the engine is properly installed
+            # with the expected version and that Valkey symlinks are correctly created.
+            EXPECTED_VERSION=`echo ${{ inputs.engine-version }} | sed -e "s/^redis-//"`
+            INSTALLED_VER=$(redis-server -v)
+            if [[ $INSTALLED_VER != *"${EXPECTED_VERSION}"* ]]; then
+                echo "Wrong version has been installed. Expected: $EXPECTED_VERSION, Installed: $INSTALLED_VER"
+                exit 1
+            else
+                echo "Successfully installed the server: $INSTALLED_VER"
+            fi
+ 

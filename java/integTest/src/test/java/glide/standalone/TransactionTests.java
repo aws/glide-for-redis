@@ -1,21 +1,24 @@
-/** Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0 */
+/** Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0 */
 package glide.standalone;
 
 import static glide.TestConfiguration.REDIS_VERSION;
 import static glide.TestUtilities.assertDeepEquals;
 import static glide.TestUtilities.commonClientConfig;
 import static glide.api.BaseClient.OK;
+import static glide.api.models.GlideString.gs;
 import static glide.api.models.commands.SortBaseOptions.OrderBy.DESC;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import glide.TransactionTestUtilities.TransactionBuilder;
 import glide.api.RedisClient;
+import glide.api.models.GlideString;
 import glide.api.models.Transaction;
 import glide.api.models.commands.InfoOptions;
 import glide.api.models.commands.SortOptions;
@@ -115,6 +118,27 @@ public class TransactionTests {
 
         Object[] results = client.exec(transaction).get();
         assertDeepEquals(expectedResult, results);
+    }
+
+    @SneakyThrows
+    @Test
+    public void test_transaction_large_values() {
+        int length = 1 << 25; // 33mb
+        String key = "0".repeat(length);
+        String value = "0".repeat(length);
+
+        Transaction transaction = new Transaction();
+        transaction.set(key, value);
+        transaction.get(key);
+
+        Object[] expectedResult =
+                new Object[] {
+                    OK, // transaction.set(key, value);
+                    value, // transaction.get(key);
+                };
+
+        Object[] result = client.exec(transaction).get();
+        assertArrayEquals(expectedResult, result);
     }
 
     @SneakyThrows
@@ -271,10 +295,10 @@ public class TransactionTests {
         assertEquals(OK, client.watch(keys).get());
         assertEquals(OK, client.set(key2, helloString).get());
         setFoobarTransaction.set(key1, foobarString).set(key2, foobarString).set(key3, foobarString);
-        assertEquals(null, client.exec(setFoobarTransaction).get());
-        assertEquals(null, client.get(key1).get()); // Sanity check
+        assertNull(client.exec(setFoobarTransaction).get());
+        assertNull(client.get(key1).get()); // Sanity check
         assertEquals(helloString, client.get(key2).get());
-        assertEquals(null, client.get(key3).get());
+        assertNull(client.get(key3).get());
 
         // Transaction executes command successfully with a read command on the watch key before
         // transaction is executed.
@@ -304,6 +328,67 @@ public class TransactionTests {
         // WATCH can not have an empty String array parameter
         ExecutionException executionException =
                 assertThrows(ExecutionException.class, () -> client.watch(new String[] {}).get());
+        assertInstanceOf(RequestException.class, executionException.getCause());
+    }
+
+    @Test
+    @SneakyThrows
+    public void watch_binary() {
+        GlideString key1 = gs("{key}-1" + UUID.randomUUID());
+        GlideString key2 = gs("{key}-2" + UUID.randomUUID());
+        GlideString key3 = gs("{key}-3" + UUID.randomUUID());
+        GlideString key4 = gs("{key}-4" + UUID.randomUUID());
+        String foobarString = "foobar";
+        String helloString = "hello";
+        GlideString[] keys = new GlideString[] {key1, key2, key3};
+        Transaction setFoobarTransaction = new Transaction();
+        Transaction setHelloTransaction = new Transaction();
+        String[] expectedExecResponse = new String[] {OK, OK, OK};
+
+        // Returns null when a watched key is modified before it is executed in a transaction command.
+        // Transaction commands are not performed.
+        assertEquals(OK, client.watch(keys).get());
+        assertEquals(OK, client.set(key2, gs(helloString)).get());
+        setFoobarTransaction
+                .set(key1.toString(), foobarString)
+                .set(key2.toString(), foobarString)
+                .set(key3.toString(), foobarString);
+        assertNull(client.exec(setFoobarTransaction).get());
+        assertNull(client.get(key1).get()); // Sanity check
+        assertEquals(gs(helloString), client.get(key2).get());
+        assertNull(client.get(key3).get());
+
+        // Transaction executes command successfully with a read command on the watch key before
+        // transaction is executed.
+        assertEquals(OK, client.watch(keys).get());
+        assertEquals(gs(helloString), client.get(key2).get());
+        assertArrayEquals(expectedExecResponse, client.exec(setFoobarTransaction).get());
+        assertEquals(gs(foobarString), client.get(key1).get()); // Sanity check
+        assertEquals(gs(foobarString), client.get(key2).get());
+        assertEquals(gs(foobarString), client.get(key3).get());
+
+        // Transaction executes command successfully with unmodified watched keys
+        assertEquals(OK, client.watch(keys).get());
+        assertArrayEquals(expectedExecResponse, client.exec(setFoobarTransaction).get());
+        assertEquals(gs(foobarString), client.get(key1).get()); // Sanity check
+        assertEquals(gs(foobarString), client.get(key2).get());
+        assertEquals(gs(foobarString), client.get(key3).get());
+
+        // Transaction executes command successfully with a modified watched key but is not in the
+        // transaction.
+        assertEquals(OK, client.watch(new GlideString[] {key4}).get());
+        setHelloTransaction
+                .set(key1.toString(), helloString)
+                .set(key2.toString(), helloString)
+                .set(key3.toString(), helloString);
+        assertArrayEquals(expectedExecResponse, client.exec(setHelloTransaction).get());
+        assertEquals(gs(helloString), client.get(key1).get()); // Sanity check
+        assertEquals(gs(helloString), client.get(key2).get());
+        assertEquals(gs(helloString), client.get(key3).get());
+
+        // WATCH can not have an empty String array parameter
+        ExecutionException executionException =
+                assertThrows(ExecutionException.class, () -> client.watch(new GlideString[] {}).get());
         assertInstanceOf(RequestException.class, executionException.getCause());
     }
 
@@ -406,5 +491,27 @@ public class TransactionTests {
 
             assertArrayEquals(expectedResults, client.exec(transaction2).get());
         }
+    }
+
+    @SneakyThrows
+    @Test
+    public void waitTest() {
+        // setup
+        String key = UUID.randomUUID().toString();
+        long numreplicas = 1L;
+        long timeout = 1000L;
+        Transaction transaction = new Transaction();
+
+        transaction.set(key, "value");
+        transaction.wait(numreplicas, timeout);
+
+        Object[] results = client.exec(transaction).get();
+        Object[] expectedResult =
+                new Object[] {
+                    OK, // set(key,  "value")
+                    0L, // wait(numreplicas, timeout)
+                };
+        assertEquals(expectedResult[0], results[0]);
+        assertTrue((long) expectedResult[1] <= (long) results[1]);
     }
 }

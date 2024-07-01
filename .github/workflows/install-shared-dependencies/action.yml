@@ -21,6 +21,11 @@ inputs:
             - aarch64-apple-darwin
             - aarch64-unknown-linux-musl
             - x86_64-unknown-linux-musl
+    engine-version:
+      description: "Engine version to install"
+      required: true
+      type: string
+
     github-token:
         description: "GITHUB_TOKEN, GitHub App installation access token"
         required: true
@@ -36,7 +41,7 @@ runs:
           run: |
               brew update
               brew upgrade || true
-              brew install git gcc pkgconfig openssl redis coreutils
+              brew install git gcc pkgconfig openssl coreutils
 
         - name: Install software dependencies for Ubuntu GNU
           shell: bash
@@ -52,13 +57,13 @@ runs:
               apk update
               wget -O - https://sh.rustup.rs | sh -s -- -y
               source "$HOME/.cargo/env"
-              apk add protobuf-dev musl-dev make gcc redis envsubst
+              apk add protobuf-dev musl-dev make gcc envsubst openssl libressl-dev
 
         - name: Install software dependencies for Amazon-Linux
           shell: bash
           if: "${{ inputs.os == 'amazon-linux' }}"
           run: |
-              yum install -y gcc pkgconfig openssl openssl-devel which curl redis6 gettext --allowerasing
+              yum install -y gcc pkgconfig openssl openssl-devel which curl gettext --allowerasing
 
         - name: Install Rust toolchain and protoc
           if: "${{ !contains(inputs.target, 'musl') }}"
@@ -66,3 +71,9 @@ runs:
           with:
             target: ${{ inputs.target }}
             github-token: ${{ inputs.github-token }}
+
+        - name: Install Valkey
+          uses: ./.github/workflows/install-valkey
+          with:
+              engine-version: ${{ inputs.engine-version }}
+              target: ${{ inputs.target }}

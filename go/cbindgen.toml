@@ -1,7 +1,7 @@
-# Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0
+# Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0
 language = "C"
 
-header = "/* Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0 */"
+header = "/* Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0 */"
 
 [parse]
 parse_deps = true

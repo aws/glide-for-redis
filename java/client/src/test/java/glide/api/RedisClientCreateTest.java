@@ -1,7 +1,8 @@
-/** Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0 */
+/** Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0 */
 package glide.api;
 
 import static glide.api.BaseClient.buildChannelHandler;
+import static glide.api.BaseClient.buildMessageHandler;
 import static glide.api.RedisClient.CreateClient;
 import static glide.api.RedisClient.buildCommandManager;
 import static glide.api.RedisClient.buildConnectionManager;
@@ -16,6 +17,7 @@ import static org.mockito.Mockito.when;
 import glide.api.models.configuration.RedisClientConfiguration;
 import glide.api.models.exceptions.ClosingException;
 import glide.connectors.handlers.ChannelHandler;
+import glide.connectors.handlers.MessageHandler;
 import glide.connectors.resources.ThreadPoolResource;
 import glide.connectors.resources.ThreadPoolResourceAllocator;
 import glide.managers.CommandManager;
@@ -34,6 +36,7 @@ public class RedisClientCreateTest {
     private ChannelHandler channelHandler;
     private ConnectionManager connectionManager;
     private CommandManager commandManager;
+    private MessageHandler messageHandler;
     private ThreadPoolResource threadPoolResource;
 
     @BeforeEach
@@ -43,11 +46,13 @@ public class RedisClientCreateTest {
         channelHandler = mock(ChannelHandler.class);
         commandManager = mock(CommandManager.class);
         connectionManager = mock(ConnectionManager.class);
+        messageHandler = mock(MessageHandler.class);
         threadPoolResource = mock(ThreadPoolResource.class);
 
-        mockedClient.when(() -> buildChannelHandler(any())).thenReturn(channelHandler);
+        mockedClient.when(() -> buildChannelHandler(any(), any())).thenReturn(channelHandler);
         mockedClient.when(() -> buildConnectionManager(channelHandler)).thenReturn(connectionManager);
         mockedClient.when(() -> buildCommandManager(channelHandler)).thenReturn(commandManager);
+        mockedClient.when(() -> buildMessageHandler(any())).thenReturn(messageHandler);
         mockedClient.when(() -> CreateClient(any(), any())).thenCallRealMethod();
 
         var threadPoolResource = ThreadPoolResourceAllocator.getOrCreate(() -> null);
@@ -121,4 +126,6 @@ public class RedisClientCreateTest {
         // verify
         assertEquals(exception, executionException.getCause());
     }
+
+    // TODO check message queue and subscriptionConfiguration
 }

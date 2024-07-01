@@ -1,4 +1,4 @@
-/** Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0 */
+/** Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0 */
 package glide.api.models.commands.geospatial;
 
 import lombok.Getter;
@@ -22,4 +22,13 @@ public final class GeospatialData {
 
     /** The latitude coordinate. */
     private final double latitude;
+
+    /**
+     * Converts GeospatialData into a String[].
+     *
+     * @return String[] An array containing the longtitue and the latitue of the position.
+     */
+    public String[] toArgs() {
+        return new String[] {Double.toString(longitude), Double.toString(latitude)};
+    }
 }

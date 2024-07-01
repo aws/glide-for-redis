@@ -1,0 +1,152 @@
+name: Java Prepare Deployment
+
+on:
+    pull_request:
+        paths:
+            - .github/workflows/java-cd.yml
+            - .github/workflows/install-shared-dependencies/action.yml
+            - .github/workflows/start-self-hosted-runner/action.yml
+    push:
+        tags:
+            - "v*.*"
+
+concurrency:
+    group: java-cd-${{ github.head_ref || github.ref }}
+    cancel-in-progress: true
+
+permissions:
+      id-token: write
+
+jobs:
+    start-self-hosted-runner:
+        if: github.repository_owner == 'aws'
+        runs-on: ubuntu-latest
+        environment: AWS_ACTIONS
+        steps:
+          - name: Checkout
+            uses: actions/checkout@v4
+            with:
+                fetch-depth: 0
+
+          - name: Start self hosted EC2 runner
+            uses: ./.github/workflows/start-self-hosted-runner
+            with:
+                role-to-assume: ${{ secrets.ROLE_TO_ASSUME }}
+                aws-region: ${{ secrets.AWS_REGION }}
+                ec2-instance-id: ${{ secrets.AWS_EC2_INSTANCE_ID }}
+
+    create-binaries-to-publish:
+        needs: start-self-hosted-runner
+        if: github.repository_owner == 'aws'
+        timeout-minutes: 35
+        strategy:
+            # Run all jobs
+            fail-fast: false
+            matrix:
+                java:
+                    - 11
+                    - 17
+                redis:
+                    - 6.2.14
+                    - 7.2.3
+                host:
+                  - {
+                    OS: ubuntu,
+                    RUNNER: ubuntu-latest,
+                    TARGET: x86_64-unknown-linux-gnu,
+                    CLASSIFIER: linux-x86_64
+                  }
+                  - {
+                    OS: ubuntu,
+                    RUNNER: ["self-hosted", "Linux", "ARM64"],
+                    TARGET: aarch64-unknown-linux-gnu,
+                    CLASSIFIER: linux-aarch_64,
+                    CONTAINER: "2_28"
+                  }
+                  - {
+                    OS: macos,
+                    RUNNER: macos-12,
+                    TARGET: x86_64-apple-darwin,
+                    CLASSIFIER: osx-x86_64
+                  }
+                  - {
+                    OS: macos,
+                    RUNNER: macos-13-xlarge,
+                    TARGET: aarch64-apple-darwin,
+                    CLASSIFIER: osx-aarch_64
+                  }
+
+        runs-on: ${{ matrix.host.RUNNER }}
+
+        steps:
+            - name: Setup self-hosted runner access
+              if: ${{ contains(matrix.build.RUNNER, 'self-hosted') && matrix.build.TARGET != 'aarch64-unknown-linux-musl' }}
+              run: sudo chown -R $USER:$USER /home/ubuntu/actions-runner/_work/glide-for-redis
+
+            - uses: actions/checkout@v4
+              with:
+                  submodules: recursive
+
+            - name: Set the release version
+              shell: bash
+              run: |
+                  export version=`if ${{ github.event_name == 'pull_request' }}; then echo '255.255.255'; else echo ${GITHUB_REF:11}; fi`
+                  echo "RELEASE_VERSION=${version}" >> $GITHUB_ENV
+
+            - name: Set up JDK ${{ matrix.java }}
+              uses: actions/setup-java@v4
+              with:
+                  distribution: "temurin"
+                  java-version: ${{ matrix.java }}
+
+            - name: Install shared software dependencies
+              uses: ./.github/workflows/install-shared-dependencies
+              with:
+                  os: ${{ matrix.host.OS }}
+                  target: ${{ matrix.host.TARGET }}
+                  github-token: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Install protoc (protobuf)
+              uses: arduino/setup-protoc@v3
+              with:
+                  version: "26.1"
+                  repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Create secret key ring file
+              working-directory: java/client
+              run: |
+                  echo "$SECRING_GPG" | base64 --decode > ./secring.gpg
+                  ls -ltr
+              env:
+                  SECRING_GPG: ${{ secrets.SECRING_GPG }}
+
+            - name: Replace placeholders and version in build.gradle
+              shell: bash
+              working-directory: ./java/client
+              run: |
+                  SED_FOR_MACOS=`if [[ "${{ matrix.host.os }}" =~ .*"macos".*  ]]; then echo "''"; fi`
+                  sed -i $SED_FOR_MACOS 's/placeholder/${{ matrix.host.CLASSIFIER }}/g' build.gradle
+                  sed -i $SED_FOR_MACOS "s/255.255.255/${{ env.RELEASE_VERSION }}/g" build.gradle
+
+            - name: Build java client
+              working-directory: java
+              run: |
+                  ./gradlew :client:publishToMavenLocal -Psigning.secretKeyRingFile=secring.gpg -Psigning.password="${{ secrets.GPG_PASSWORD }}" -Psigning.keyId=${{ secrets.GPG_KEY_ID }}
+
+            - name: Bundle JAR
+              working-directory: java
+              run: |
+                  src_folder=~/.m2/repository/software/amazon/glide/glide-for-redis/${{ env.RELEASE_VERSION }}
+                  cd $src_folder
+                  jar -cvf bundle.jar *
+                  ls -ltr
+                  cd -
+                  cp $src_folder/bundle.jar .
+
+            - name: Upload artifacts to publish
+              continue-on-error: true
+              uses: actions/upload-artifact@v4
+              with:
+                  name: java-bundle-${{ matrix.java }}-redis-${{ matrix.redis }}-${{ matrix.host.TARGET }}
+                  path: |
+                      java/bundle.jar

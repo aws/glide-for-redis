@@ -45,7 +45,7 @@ To install GLIDE for Redis using `npm`, follow these steps:
 #### Cluster Redis:
 
 ```node
-import { RedisClusterClient } from "@aws/glide-for-redis";
+import { GlideClusterClient } from "@aws/glide-for-redis";
 
 const addresses = [
     {
@@ -53,7 +53,7 @@ const addresses = [
         port: 6379,
     },
 ];
-const client = await RedisClusterClient.createClient({
+const client = await GlideClusterClient.createClient({
     addresses: addresses,
 });
 await client.set("foo", "bar");
@@ -64,7 +64,7 @@ client.close();
 #### Standalone Redis:
 
 ```node
-import { RedisClient } from "@aws/glide-for-redis";
+import { GlideClient } from "@aws/glide-for-redis";
 
 const addresses = [
     {
@@ -76,7 +76,7 @@ const addresses = [
         port: 6379,
     },
 ];
-const client = await RedisClient.createClient({
+const client = await GlideClient.createClient({
     addresses: addresses,
 });
 await client.set("foo", "bar");

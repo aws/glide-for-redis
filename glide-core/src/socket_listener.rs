@@ -1,5 +1,5 @@
 /**
- * Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0
+ * Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0
  */
 use super::rotating_buffer::RotatingBuffer;
 use crate::client::Client;
@@ -527,7 +527,7 @@ async fn push_manager_loop(mut push_rx: mpsc::UnboundedReceiver<PushInfo>, write
         let result = push_rx.recv().await;
         match result {
             None => {
-                log_trace("push manager loop", "got None as from push manager");
+                log_error("push manager loop", "got None from push manager");
                 return;
             }
             Some(push_msg) => {

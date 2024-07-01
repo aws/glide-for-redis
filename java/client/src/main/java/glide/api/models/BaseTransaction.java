@@ -1,4 +1,4 @@
-/** Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0 */
+/** Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0 */
 package glide.api.models;
 
 import static glide.api.commands.GenericBaseCommands.REPLACE_REDIS_API;
@@ -10,16 +10,21 @@ import static glide.api.commands.SortedSetBaseCommands.COUNT_REDIS_API;
 import static glide.api.commands.SortedSetBaseCommands.LIMIT_REDIS_API;
 import static glide.api.commands.SortedSetBaseCommands.WITH_SCORES_REDIS_API;
 import static glide.api.commands.SortedSetBaseCommands.WITH_SCORE_REDIS_API;
+import static glide.api.commands.StringBaseCommands.IDX_COMMAND_STRING;
 import static glide.api.commands.StringBaseCommands.LEN_REDIS_API;
+import static glide.api.commands.StringBaseCommands.MINMATCHLEN_COMMAND_STRING;
+import static glide.api.commands.StringBaseCommands.WITHMATCHLEN_COMMAND_STRING;
 import static glide.api.models.commands.RangeOptions.createZRangeArgs;
 import static glide.api.models.commands.SortBaseOptions.STORE_COMMAND_STRING;
 import static glide.api.models.commands.bitmap.BitFieldOptions.createBitFieldArgs;
 import static glide.api.models.commands.function.FunctionListOptions.LIBRARY_NAME_REDIS_API;
 import static glide.api.models.commands.function.FunctionListOptions.WITH_CODE_REDIS_API;
 import static glide.api.models.commands.function.FunctionLoadOptions.REPLACE;
+import static glide.api.models.commands.stream.StreamClaimOptions.JUST_ID_REDIS_API;
 import static glide.utils.ArrayTransformUtils.concatenateArrays;
 import static glide.utils.ArrayTransformUtils.convertMapToKeyValueStringArray;
 import static glide.utils.ArrayTransformUtils.convertMapToValueKeyStringArray;
+import static glide.utils.ArrayTransformUtils.flattenMapToGlideStringArray;
 import static glide.utils.ArrayTransformUtils.mapGeoDataToArray;
 import static redis_request.RedisRequestOuterClass.RequestType.Append;
 import static redis_request.RedisRequestOuterClass.RequestType.BLMPop;
@@ -64,6 +69,8 @@ import static redis_request.RedisRequestOuterClass.RequestType.GeoAdd;
 import static redis_request.RedisRequestOuterClass.RequestType.GeoDist;
 import static redis_request.RedisRequestOuterClass.RequestType.GeoHash;
 import static redis_request.RedisRequestOuterClass.RequestType.GeoPos;
+import static redis_request.RedisRequestOuterClass.RequestType.GeoSearch;
+import static redis_request.RedisRequestOuterClass.RequestType.GeoSearchStore;
 import static redis_request.RedisRequestOuterClass.RequestType.Get;
 import static redis_request.RedisRequestOuterClass.RequestType.GetBit;
 import static redis_request.RedisRequestOuterClass.RequestType.GetDel;
@@ -79,6 +86,7 @@ import static redis_request.RedisRequestOuterClass.RequestType.HKeys;
 import static redis_request.RedisRequestOuterClass.RequestType.HLen;
 import static redis_request.RedisRequestOuterClass.RequestType.HMGet;
 import static redis_request.RedisRequestOuterClass.RequestType.HRandField;
+import static redis_request.RedisRequestOuterClass.RequestType.HScan;
 import static redis_request.RedisRequestOuterClass.RequestType.HSet;
 import static redis_request.RedisRequestOuterClass.RequestType.HSetNX;
 import static redis_request.RedisRequestOuterClass.RequestType.HStrlen;
@@ -119,6 +127,7 @@ import static redis_request.RedisRequestOuterClass.RequestType.PfAdd;
 import static redis_request.RedisRequestOuterClass.RequestType.PfCount;
 import static redis_request.RedisRequestOuterClass.RequestType.PfMerge;
 import static redis_request.RedisRequestOuterClass.RequestType.Ping;
+import static redis_request.RedisRequestOuterClass.RequestType.Publish;
 import static redis_request.RedisRequestOuterClass.RequestType.RPop;
 import static redis_request.RedisRequestOuterClass.RequestType.RPush;
 import static redis_request.RedisRequestOuterClass.RequestType.RPushX;
@@ -139,6 +148,7 @@ import static redis_request.RedisRequestOuterClass.RequestType.SMove;
 import static redis_request.RedisRequestOuterClass.RequestType.SPop;
 import static redis_request.RedisRequestOuterClass.RequestType.SRandMember;
 import static redis_request.RedisRequestOuterClass.RequestType.SRem;
+import static redis_request.RedisRequestOuterClass.RequestType.SScan;
 import static redis_request.RedisRequestOuterClass.RequestType.SUnion;
 import static redis_request.RedisRequestOuterClass.RequestType.SUnionStore;
 import static redis_request.RedisRequestOuterClass.RequestType.Set;
@@ -152,14 +162,18 @@ import static redis_request.RedisRequestOuterClass.RequestType.Time;
 import static redis_request.RedisRequestOuterClass.RequestType.Touch;
 import static redis_request.RedisRequestOuterClass.RequestType.Type;
 import static redis_request.RedisRequestOuterClass.RequestType.Unlink;
+import static redis_request.RedisRequestOuterClass.RequestType.Wait;
 import static redis_request.RedisRequestOuterClass.RequestType.XAck;
 import static redis_request.RedisRequestOuterClass.RequestType.XAdd;
+import static redis_request.RedisRequestOuterClass.RequestType.XClaim;
 import static redis_request.RedisRequestOuterClass.RequestType.XDel;
 import static redis_request.RedisRequestOuterClass.RequestType.XGroupCreate;
 import static redis_request.RedisRequestOuterClass.RequestType.XGroupCreateConsumer;
 import static redis_request.RedisRequestOuterClass.RequestType.XGroupDelConsumer;
 import static redis_request.RedisRequestOuterClass.RequestType.XGroupDestroy;
+import static redis_request.RedisRequestOuterClass.RequestType.XGroupSetId;
 import static redis_request.RedisRequestOuterClass.RequestType.XLen;
+import static redis_request.RedisRequestOuterClass.RequestType.XPending;
 import static redis_request.RedisRequestOuterClass.RequestType.XRange;
 import static redis_request.RedisRequestOuterClass.RequestType.XRead;
 import static redis_request.RedisRequestOuterClass.RequestType.XReadGroup;
@@ -188,6 +202,7 @@ import static redis_request.RedisRequestOuterClass.RequestType.ZRemRangeByLex;
 import static redis_request.RedisRequestOuterClass.RequestType.ZRemRangeByRank;
 import static redis_request.RedisRequestOuterClass.RequestType.ZRemRangeByScore;
 import static redis_request.RedisRequestOuterClass.RequestType.ZRevRank;
+import static redis_request.RedisRequestOuterClass.RequestType.ZScan;
 import static redis_request.RedisRequestOuterClass.RequestType.ZScore;
 import static redis_request.RedisRequestOuterClass.RequestType.ZUnion;
 import static redis_request.RedisRequestOuterClass.RequestType.ZUnionStore;
@@ -234,16 +249,29 @@ import glide.api.models.commands.bitmap.BitFieldOptions.OffsetMultiplier;
 import glide.api.models.commands.bitmap.BitmapIndexType;
 import glide.api.models.commands.bitmap.BitwiseOperation;
 import glide.api.models.commands.geospatial.GeoAddOptions;
+import glide.api.models.commands.geospatial.GeoSearchOptions;
+import glide.api.models.commands.geospatial.GeoSearchOrigin;
+import glide.api.models.commands.geospatial.GeoSearchResultOptions;
+import glide.api.models.commands.geospatial.GeoSearchShape;
+import glide.api.models.commands.geospatial.GeoSearchStoreOptions;
 import glide.api.models.commands.geospatial.GeoUnit;
 import glide.api.models.commands.geospatial.GeospatialData;
+import glide.api.models.commands.scan.HScanOptions;
+import glide.api.models.commands.scan.SScanOptions;
+import glide.api.models.commands.scan.ZScanOptions;
 import glide.api.models.commands.stream.StreamAddOptions;
 import glide.api.models.commands.stream.StreamAddOptions.StreamAddOptionsBuilder;
+import glide.api.models.commands.stream.StreamClaimOptions;
 import glide.api.models.commands.stream.StreamGroupOptions;
+import glide.api.models.commands.stream.StreamPendingOptions;
 import glide.api.models.commands.stream.StreamRange;
+import glide.api.models.commands.stream.StreamRange.IdBound;
+import glide.api.models.commands.stream.StreamRange.InfRangeBound;
 import glide.api.models.commands.stream.StreamReadGroupOptions;
 import glide.api.models.commands.stream.StreamReadOptions;
 import glide.api.models.commands.stream.StreamTrimOptions;
 import glide.api.models.configuration.ReadFrom;
+import glide.managers.CommandManager;
 import java.util.Arrays;
 import java.util.Map;
 import lombok.Getter;
@@ -270,7 +298,27 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
     /** Command class to send a single request to Redis. */
     protected final Transaction.Builder protobufTransaction = Transaction.newBuilder();
 
+    protected static final GlideString GLIDE_STRING = GlideString.of("gs");
+
+    protected static final String STRING = "string";
+
+    protected boolean binarySafeOutput = false;
+
     protected abstract T getThis();
+
+    /** Enable binary output */
+    public T withBinarySafeOutput() {
+        binarySafeOutput = true;
+        return getThis();
+    }
+
+    /**
+     * Return true if the output array from this transaction should handle strings as valid UTF-8
+     * strings or use GlideString
+     */
+    public boolean isBinarySafeOutput() {
+        return this.binarySafeOutput;
+    }
 
     /**
      * Executes a single command, without checking inputs. Every part of the command, including
@@ -287,7 +335,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * Object result = client.customCommand(new String[]{ "CLIENT", "LIST", "TYPE", "PUBSUB" }).get();
      * }</pre>
      */
-    public T customCommand(String[] args) {
+    public <ArgType> T customCommand(ArgType[] args) {
         ArgsArray commandArgs = buildArgs(args);
         protobufTransaction.addCommands(buildCommand(CustomCommand, commandArgs));
         return getThis();
@@ -300,7 +348,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @param message The message to be echoed back.
      * @return Command Response - The provided <code>message</code>.
      */
-    public T echo(@NonNull String message) {
+    public <ArgType> T echo(@NonNull ArgType message) {
         ArgsArray commandArgs = buildArgs(message);
         protobufTransaction.addCommands(buildCommand(Echo, commandArgs));
         return getThis();
@@ -324,7 +372,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @param msg The ping argument that will be returned.
      * @return Command Response - A response from Redis with a <code>String</code>.
      */
-    public T ping(@NonNull String msg) {
+    public <ArgType> T ping(@NonNull ArgType msg) {
         ArgsArray commandArgs = buildArgs(msg);
         protobufTransaction.addCommands(buildCommand(Ping, commandArgs));
         return getThis();
@@ -364,7 +412,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @param keys The keys we wanted to remove.
      * @return Command Response - The number of keys that were removed.
      */
-    public T del(@NonNull String[] keys) {
+    public <ArgType> T del(@NonNull ArgType[] keys) {
         ArgsArray commandArgs = buildArgs(keys);
         protobufTransaction.addCommands(buildCommand(Del, commandArgs));
         return getThis();
@@ -378,9 +426,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @return Command Response - If <code>key</code> exists, returns the <code>value</code> of <code>
      *     key</code> as a String. Otherwise, return <code>null</code>.
      */
-    public T get(@NonNull String key) {
-        ArgsArray commandArgs = buildArgs(key);
-        protobufTransaction.addCommands(buildCommand(Get, commandArgs));
+    public <ArgType> T get(@NonNull ArgType key) {
+        protobufTransaction.addCommands(buildCommand(Get, newArgsBuilder().add(key)));
         return getThis();
     }
 
@@ -392,7 +439,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @return Command Response - If <code>key</code> exists, returns the <code>value</code> of <code>
      *     key</code>. Otherwise, return <code>null</code>.
      */
-    public T getdel(@NonNull String key) {
+    public <ArgType> T getdel(@NonNull ArgType key) {
         ArgsArray commandArgs = buildArgs(key);
         protobufTransaction.addCommands(buildCommand(GetDel, commandArgs));
         return getThis();
@@ -407,7 +454,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @return Command Response - If <code>key</code> exists, return the <code>value</code> of the
      *     <code>key</code>. Otherwise, return <code>null</code>.
      */
-    public T getex(@NonNull String key) {
+    public <ArgType> T getex(@NonNull ArgType key) {
         ArgsArray commandArgs = buildArgs(key);
         protobufTransaction.addCommands(buildCommand(GetEx, commandArgs));
         return getThis();
@@ -423,7 +470,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @return Command Response - If <code>key</code> exists, return the <code>value</code> of the
      *     <code>key</code>. Otherwise, return <code>null</code>.
      */
-    public T getex(@NonNull String key, @NonNull GetExOptions options) {
+    public <ArgType> T getex(@NonNull ArgType key, @NonNull GetExOptions options) {
         ArgsArray commandArgs = buildArgs(ArrayUtils.addFirst(options.toArgs(), key));
         protobufTransaction.addCommands(buildCommand(GetEx, commandArgs));
         return getThis();
@@ -437,9 +484,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @param value The value to store with the given <code>key</code>.
      * @return Command Response - A response from Redis.
      */
-    public T set(@NonNull String key, @NonNull String value) {
-        ArgsArray commandArgs = buildArgs(key, value);
-        protobufTransaction.addCommands(buildCommand(Set, commandArgs));
+    public <ArgType> T set(@NonNull ArgType key, @NonNull ArgType value) {
+        protobufTransaction.addCommands(buildCommand(Set, newArgsBuilder().add(key).add(value)));
         return getThis();
     }
 
@@ -456,11 +502,10 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     {@link ConditionalSet#ONLY_IF_DOES_NOT_EXIST} conditions, return <code>null</code>.
      *     Otherwise, return <code>OK</code>.
      */
-    public T set(@NonNull String key, @NonNull String value, @NonNull SetOptions options) {
-        ArgsArray commandArgs =
-                buildArgs(ArrayUtils.addAll(new String[] {key, value}, options.toArgs()));
-
-        protobufTransaction.addCommands(buildCommand(Set, commandArgs));
+    public <ArgType> T set(
+            @NonNull ArgType key, @NonNull ArgType value, @NonNull SetOptions options) {
+        protobufTransaction.addCommands(
+                buildCommand(Set, newArgsBuilder().add(key).add(value).add(options.toArgs())));
         return getThis();
     }
 
@@ -474,7 +519,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @param value The value to append.
      * @return Command Response - The length of the string after appending the value.
      */
-    public T append(@NonNull String key, @NonNull String value) {
+    public <ArgType> T append(@NonNull ArgType key, @NonNull ArgType value) {
         ArgsArray commandArgs = buildArgs(key, value);
         protobufTransaction.addCommands(buildCommand(Append, commandArgs));
         return getThis();
@@ -490,7 +535,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     If a <code>key</code>is not found, its corresponding value in the list will be <code>null
      *     </code>.
      */
-    public T mget(@NonNull String[] keys) {
+    public <ArgType> T mget(@NonNull ArgType[] keys) {
         ArgsArray commandArgs = buildArgs(keys);
         protobufTransaction.addCommands(buildCommand(MGet, commandArgs));
         return getThis();
@@ -503,8 +548,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @param keyValueMap A key-value map consisting of keys and their respective values to set.
      * @return Command Response - Always <code>OK</code>.
      */
-    public T mset(@NonNull Map<String, String> keyValueMap) {
-        String[] args = convertMapToKeyValueStringArray(keyValueMap);
+    public T mset(@NonNull Map<?, ?> keyValueMap) {
+        GlideString[] args = flattenMapToGlideStringArray(keyValueMap);
         ArgsArray commandArgs = buildArgs(args);
 
         protobufTransaction.addCommands(buildCommand(MSet, commandArgs));
@@ -520,8 +565,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @return Command Response - <code>true</code> if all keys were set, <code>false</code> if no key
      *     was set.
      */
-    public T msetnx(@NonNull Map<String, String> keyValueMap) {
-        String[] args = convertMapToKeyValueStringArray(keyValueMap);
+    public T msetnx(@NonNull Map<?, ?> keyValueMap) {
+        GlideString[] args = flattenMapToGlideStringArray(keyValueMap);
         ArgsArray commandArgs = buildArgs(args);
 
         protobufTransaction.addCommands(buildCommand(MSetNX, commandArgs));
@@ -536,7 +581,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @param key The key to increment its value.
      * @return Command Response - The value of <code>key</code> after the increment.
      */
-    public T incr(@NonNull String key) {
+    public <ArgType> T incr(@NonNull ArgType key) {
         ArgsArray commandArgs = buildArgs(key);
         protobufTransaction.addCommands(buildCommand(Incr, commandArgs));
         return getThis();
@@ -551,8 +596,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @param amount The amount to increment.
      * @return Command Response - The value of <code>key</code> after the increment.
      */
-    public T incrBy(@NonNull String key, long amount) {
-        ArgsArray commandArgs = buildArgs(key, Long.toString(amount));
+    public <ArgType> T incrBy(@NonNull ArgType key, long amount) {
+        ArgsArray commandArgs = buildArgs(key, this.convertTo(key.getClass(), amount));
         protobufTransaction.addCommands(buildCommand(IncrBy, commandArgs));
         return getThis();
     }
@@ -568,8 +613,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @param amount The amount to increment.
      * @return Command Response - The value of <code>key</code> after the increment.
      */
-    public T incrByFloat(@NonNull String key, double amount) {
-        ArgsArray commandArgs = buildArgs(key, Double.toString(amount));
+    public <ArgType> T incrByFloat(@NonNull ArgType key, double amount) {
+        ArgsArray commandArgs = buildArgs(key, this.convertTo(key.getClass(), amount));
         protobufTransaction.addCommands(buildCommand(IncrByFloat, commandArgs));
         return getThis();
     }
@@ -582,7 +627,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @param key The key to decrement its value.
      * @return Command Response - The value of <code>key</code> after the decrement.
      */
-    public T decr(@NonNull String key) {
+    public <ArgType> T decr(@NonNull ArgType key) {
         ArgsArray commandArgs = buildArgs(key);
         protobufTransaction.addCommands(buildCommand(Decr, commandArgs));
         return getThis();
@@ -597,8 +642,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @param amount The amount to decrement.
      * @return Command Response - The value of <code>key</code> after the decrement.
      */
-    public T decrBy(@NonNull String key, long amount) {
-        ArgsArray commandArgs = buildArgs(key, Long.toString(amount));
+    public <ArgType> T decrBy(@NonNull ArgType key, long amount) {
+        ArgsArray commandArgs = buildArgs(key, this.convertTo(key.getClass(), amount));
         protobufTransaction.addCommands(buildCommand(DecrBy, commandArgs));
         return getThis();
     }
@@ -612,7 +657,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     If <code>key</code> does not exist, it is treated as an empty string, and the command
      *     returns <code>0</code>.
      */
-    public T strlen(@NonNull String key) {
+    public <ArgType> T strlen(@NonNull ArgType key) {
         ArgsArray commandArgs = buildArgs(key);
         protobufTransaction.addCommands(buildCommand(Strlen, commandArgs));
         return getThis();
@@ -632,8 +677,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @return Command Response - The length of the string stored at <code>key</code> after it was
      *     modified.
      */
-    public T setrange(@NonNull String key, int offset, @NonNull String value) {
-        ArgsArray commandArgs = buildArgs(key, Integer.toString(offset), value);
+    public <ArgType> T setrange(@NonNull ArgType key, int offset, @NonNull ArgType value) {
+        ArgsArray commandArgs = buildArgs(key, this.convertTo(key.getClass(), offset), value);
         protobufTransaction.addCommands(buildCommand(SetRange, commandArgs));
         return getThis();
     }
@@ -650,8 +695,9 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @param end The ending offset.
      * @return Command Response - A substring extracted from the value stored at <code>key</code>.
      */
-    public T getrange(@NonNull String key, int start, int end) {
-        ArgsArray commandArgs = buildArgs(key, Integer.toString(start), Integer.toString(end));
+    public <ArgType> T getrange(@NonNull ArgType key, int start, int end) {
+        ArgsArray commandArgs =
+                buildArgs(key, this.convertTo(key.getClass(), start), this.convertTo(key.getClass(), end));
         protobufTransaction.addCommands(buildCommand(GetRange, commandArgs));
         return getThis();
     }
@@ -665,7 +711,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @return Command Response - The value associated with <code>field</code>, or <code>null</code>
      *     when <code>field</code> is not present in the hash or <code>key</code> does not exist.
      */
-    public T hget(@NonNull String key, @NonNull String field) {
+    public <ArgType> T hget(@NonNull ArgType key, @NonNull ArgType field) {
         ArgsArray commandArgs = buildArgs(key, field);
         protobufTransaction.addCommands(buildCommand(HGet, commandArgs));
         return getThis();
@@ -680,9 +726,12 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     be set in the hash stored at the specified key.
      * @return Command Response - The number of fields that were added.
      */
-    public T hset(@NonNull String key, @NonNull Map<String, String> fieldValueMap) {
+    public <ArgType> T hset(@NonNull ArgType key, @NonNull Map<ArgType, ArgType> fieldValueMap) {
         ArgsArray commandArgs =
-                buildArgs(ArrayUtils.addFirst(convertMapToKeyValueStringArray(fieldValueMap), key));
+                buildArgs(
+                        ArrayUtils.addFirst(
+                                flattenMapToGlideStringArray(fieldValueMap),
+                                this.convertTo(GlideString.class, key)));
 
         protobufTransaction.addCommands(buildCommand(HSet, commandArgs));
         return getThis();
@@ -701,7 +750,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @return Command Response - <code>true</code> if the field was set, <code>false</code> if the
      *     field already existed and was not set.
      */
-    public T hsetnx(@NonNull String key, @NonNull String field, @NonNull String value) {
+    public <ArgType> T hsetnx(@NonNull ArgType key, @NonNull ArgType field, @NonNull ArgType value) {
         ArgsArray commandArgs = buildArgs(key, field, value);
         protobufTransaction.addCommands(buildCommand(HSetNX, commandArgs));
         return getThis();
@@ -718,7 +767,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     specified but non-existing fields.<br>
      *     If <code>key</code> does not exist, it is treated as an empty hash and it returns 0.<br>
      */
-    public T hdel(@NonNull String key, @NonNull String[] fields) {
+    public <ArgType> T hdel(@NonNull ArgType key, @NonNull ArgType[] fields) {
         ArgsArray commandArgs = buildArgs(ArrayUtils.addFirst(fields, key));
         protobufTransaction.addCommands(buildCommand(HDel, commandArgs));
         return getThis();
@@ -733,7 +782,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     does not exist.<br>
      *     If <code>key</code> holds a value that is not a hash, an error is returned.
      */
-    public T hlen(@NonNull String key) {
+    public <ArgType> T hlen(@NonNull ArgType key) {
         ArgsArray commandArgs = buildArgs(key);
         protobufTransaction.addCommands(buildCommand(HLen, commandArgs));
         return getThis();
@@ -747,7 +796,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @return Command Response - An <code>array</code> of values in the hash, or an <code>empty array
      *     </code> when the key does not exist.
      */
-    public T hvals(@NonNull String key) {
+    public <ArgType> T hvals(@NonNull ArgType key) {
         ArgsArray commandArgs = buildArgs(key);
         protobufTransaction.addCommands(buildCommand(HVals, commandArgs));
         return getThis();
@@ -765,7 +814,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     If <code>key</code> does not exist, it is treated as an empty hash, and it returns an array
      *     of null values.<br>
      */
-    public T hmget(@NonNull String key, @NonNull String[] fields) {
+    public <ArgType> T hmget(@NonNull ArgType key, @NonNull ArgType[] fields) {
         ArgsArray commandArgs = buildArgs(ArrayUtils.addFirst(fields, key));
         protobufTransaction.addCommands(buildCommand(HMGet, commandArgs));
         return getThis();
@@ -3004,14 +3053,14 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *
      * @see <a href="https://valkey.io/commands/xgroup-create/">valkey.io</a> for details.
      * @param key The key of the stream.
-     * @param groupname The newly created consumer group name.
+     * @param groupName The newly created consumer group name.
      * @param id Stream entry ID that specifies the last delivered entry in the stream from the new
      *     group’s perspective. The special ID <code>"$"</code> can be used to specify the last entry
      *     in the stream.
      * @return Command Response - <code>OK</code>.
      */
-    public T xgroupCreate(@NonNull String key, @NonNull String groupname, @NonNull String id) {
-        protobufTransaction.addCommands(buildCommand(XGroupCreate, buildArgs(key, groupname, id)));
+    public T xgroupCreate(@NonNull String key, @NonNull String groupName, @NonNull String id) {
+        protobufTransaction.addCommands(buildCommand(XGroupCreate, buildArgs(key, groupName, id)));
         return getThis();
     }
 
@@ -3021,21 +3070,21 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *
      * @see <a href="https://valkey.io/commands/xgroup-create/">valkey.io</a> for details.
      * @param key The key of the stream.
-     * @param groupname The newly created consumer group name.
+     * @param groupName The newly created consumer group name.
      * @param id Stream entry ID that specifies the last delivered entry in the stream from the new
      *     group’s perspective. The special ID <code>"$"</code> can be used to specify the last entry
      *     in the stream.
      * @param options The group options {@link StreamGroupOptions}.
      * @return Command Response - <code>OK</code>.
      */
-    public T xgroupCreate(
-            @NonNull String key,
-            @NonNull String groupname,
-            @NonNull String id,
+    public <ArgType> T xgroupCreate(
+            @NonNull ArgType key,
+            @NonNull ArgType groupName,
+            @NonNull ArgType id,
             @NonNull StreamGroupOptions options) {
-        ArgsArray commandArgs =
-                buildArgs(concatenateArrays(new String[] {key, groupname, id}, options.toArgs()));
-        protobufTransaction.addCommands(buildCommand(XGroupCreate, commandArgs));
+        protobufTransaction.addCommands(
+                buildCommand(
+                        XGroupCreate, newArgsBuilder().add(key).add(groupName).add(id).add(options.toArgs())));
         return getThis();
     }
 
@@ -3084,6 +3133,52 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
     public T xgroupDelConsumer(@NonNull String key, @NonNull String group, @NonNull String consumer) {
         protobufTransaction.addCommands(
                 buildCommand(XGroupDelConsumer, buildArgs(key, group, consumer)));
+        return getThis();
+    }
+
+    /**
+     * Sets the last delivered ID for a consumer group.
+     *
+     * @see <a href="https://valkey.io/commands/xgroup-setid/">valkey.io</a> for details.
+     * @param key The key of the stream.
+     * @param groupName The consumer group name.
+     * @param id The stream entry ID that should be set as the last delivered ID for the consumer
+     *     group.
+     * @return Command Response - <code>OK</code>.
+     */
+    public T xgroupSetId(@NonNull String key, @NonNull String groupName, @NonNull String id) {
+        protobufTransaction.addCommands(buildCommand(XGroupSetId, buildArgs(key, groupName, id)));
+        return getThis();
+    }
+
+    /**
+     * Sets the last delivered ID for a consumer group.
+     *
+     * @since Redis 7.0 and above
+     * @see <a href="https://valkey.io/commands/xgroup-setid/">valkey.io</a> for details.
+     * @param key The key of the stream.
+     * @param groupName The consumer group name.
+     * @param id The stream entry ID that should be set as the last delivered ID for the consumer
+     *     group.
+     * @param entriesReadId An arbitrary ID (that isn't the first ID, last ID, or the zero ID (<code>
+     *     "0-0"</code>)) used to find out how many entries are between the arbitrary ID (excluding
+     *     it) and the stream's last entry.
+     * @return Command Response - <code>OK</code>.
+     */
+    public <ArgType> T xgroupSetId(
+            @NonNull ArgType key,
+            @NonNull ArgType groupName,
+            @NonNull ArgType id,
+            @NonNull ArgType entriesReadId) {
+        protobufTransaction.addCommands(
+                buildCommand(
+                        XGroupSetId,
+                        newArgsBuilder()
+                                .add(key)
+                                .add(groupName)
+                                .add(id)
+                                .add("ENTRIESREAD")
+                                .add(entriesReadId)));
         return getThis();
     }
 
@@ -3152,6 +3247,229 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
     public T xack(@NonNull String key, @NonNull String group, @NonNull String[] ids) {
         String[] args = concatenateArrays(new String[] {key, group}, ids);
         protobufTransaction.addCommands(buildCommand(XAck, buildArgs(args)));
+        return getThis();
+    }
+
+    /**
+     * Returns stream message summary information for pending messages matching a given range of IDs.
+     *
+     * @see <a href="https://valkey.io/commands/xpending/">valkey.io</a> for details.
+     * @param key The key of the stream.
+     * @param group The consumer group name.
+     * @return Command Response - A 2D-<code>array</code> that includes the summary of pending
+     *     messages, with the format <code>
+     *     [NumOfMessages, StartId, EndId, [[Consumer, NumOfMessages], ...]</code>, where:
+     *     <ul>
+     *       <li><code>NumOfMessages</code>: The total number of pending messages for this consumer
+     *           group.
+     *       <li><code>StartId</code>: The smallest ID among the pending messages.
+     *       <li><code>EndId</code>: The greatest ID among the pending messages.
+     *       <li><code>[[Consumer, NumOfMessages], ...]</code>: A 2D-<code>array</code> of every
+     *           consumer in the consumer group with at least one pending message, and the number of
+     *           pending messages it has.
+     *     </ul>
+     */
+    public T xpending(@NonNull String key, @NonNull String group) {
+        String[] args = {key, group};
+        protobufTransaction.addCommands(buildCommand(XPending, buildArgs(args)));
+        return getThis();
+    }
+
+    /**
+     * Returns an extended form of stream message information for pending messages matching a given
+     * range of IDs.
+     *
+     * @see <a href="https://valkey.io/commands/xpending/">valkey.io</a> for details.
+     * @param key The key of the stream.
+     * @param group The consumer group name.
+     * @param start Starting stream ID bound for range.
+     *     <ul>
+     *       <li>Use {@link IdBound#of} to specify a stream ID.
+     *       <li>Use {@link IdBound#ofExclusive} to specify an exclusive bounded stream ID.
+     *       <li>Use {@link InfRangeBound#MIN} to start with the minimum available ID.
+     *     </ul>
+     *
+     * @param end Ending stream ID bound for range.
+     *     <ul>
+     *       <li>Use {@link IdBound#of} to specify a stream ID.
+     *       <li>Use {@link IdBound#ofExclusive} to specify an exclusive bounded stream ID.
+     *       <li>Use {@link InfRangeBound#MAX} to end with the maximum available ID.
+     *     </ul>
+     *
+     * @param count Limits the number of messages returned.
+     * @return Command Response - A 2D-<code>array</code> of 4-tuples containing extended message
+     *     information with the format <code>[[ID, Consumer, TimeElapsed, NumOfDelivered], ... ]
+     *     </code>, where:
+     *     <ul>
+     *       <li><code>ID</code>: The ID of the message.
+     *       <li><code>Consumer</code>: The name of the consumer that fetched the message and has
+     *           still to acknowledge it. We call it the current owner of the message.
+     *       <li><code>TimeElapsed</code>: The number of milliseconds that elapsed since the last time
+     *           this message was delivered to this consumer.
+     *       <li><code>NumOfDelivered</code>: The number of times this message was delivered.
+     *     </ul>
+     */
+    public T xpending(
+            @NonNull String key,
+            @NonNull String group,
+            @NonNull StreamRange start,
+            @NonNull StreamRange end,
+            long count) {
+        return xpending(key, group, start, end, count, StreamPendingOptions.builder().build());
+    }
+
+    /**
+     * Returns an extended form of stream message information for pending messages matching a given
+     * range of IDs.
+     *
+     * @see <a href="https://valkey.io/commands/xpending/">valkey.io</a> for details.
+     * @param key The key of the stream.
+     * @param group The consumer group name.
+     * @param start Starting stream ID bound for range.
+     *     <ul>
+     *       <li>Use {@link IdBound#of} to specify a stream ID.
+     *       <li>Use {@link IdBound#ofExclusive} to specify an exclusive bounded stream ID.
+     *       <li>Use {@link InfRangeBound#MIN} to start with the minimum available ID.
+     *     </ul>
+     *
+     * @param end Ending stream ID bound for range.
+     *     <ul>
+     *       <li>Use {@link IdBound#of} to specify a stream ID.
+     *       <li>Use {@link IdBound#ofExclusive} to specify an exclusive bounded stream ID.
+     *       <li>Use {@link InfRangeBound#MAX} to end with the maximum available ID.
+     *     </ul>
+     *
+     * @param count Limits the number of messages returned.
+     * @param options Stream add options {@link StreamPendingOptions}.
+     * @return Command Response - A 2D-<code>array</code> of 4-tuples containing extended message
+     *     information with the format <code>[[ID, Consumer, TimeElapsed, NumOfDelivered], ... ]
+     *     </code>, where:
+     *     <ul>
+     *       <li><code>ID</code>: The ID of the message.
+     *       <li><code>Consumer</code>: The name of the consumer that fetched the message and has
+     *           still to acknowledge it. We call it the current owner of the message.
+     *       <li><code>TimeElapsed</code>: The number of milliseconds that elapsed since the last time
+     *           this message was delivered to this consumer.
+     *       <li><code>NumOfDelivered</code>: The number of times this message was delivered.
+     *     </ul>
+     */
+    public T xpending(
+            @NonNull String key,
+            @NonNull String group,
+            @NonNull StreamRange start,
+            @NonNull StreamRange end,
+            long count,
+            @NonNull StreamPendingOptions options) {
+        String[] args = concatenateArrays(new String[] {key, group}, options.toArgs(start, end, count));
+        protobufTransaction.addCommands(buildCommand(XPending, buildArgs(args)));
+        return getThis();
+    }
+
+    /**
+     * Changes the ownership of a pending message.
+     *
+     * @see <a href="https://valkey.io/commands/xclaim/">valkey.io</a> for details.
+     * @param key The key of the stream.
+     * @param group The consumer group name.
+     * @param consumer The group consumer.
+     * @param minIdleTime The minimum idle time for the message to be claimed.
+     * @param ids An array of entry ids.
+     * @return Command Response - A <code>Map</code> of message entries with the format <code>
+     *      {"entryId": [["entry", "data"], ...], ...}</code> that are claimed by the consumer.
+     */
+    public T xclaim(
+            @NonNull String key,
+            @NonNull String group,
+            @NonNull String consumer,
+            long minIdleTime,
+            @NonNull String[] ids) {
+        String[] args =
+                concatenateArrays(new String[] {key, group, consumer, Long.toString(minIdleTime)}, ids);
+        protobufTransaction.addCommands(buildCommand(XClaim, buildArgs(args)));
+        return getThis();
+    }
+
+    /**
+     * Changes the ownership of a pending message.
+     *
+     * @see <a href="https://valkey.io/commands/xclaim/">valkey.io</a> for details.
+     * @param key The key of the stream.
+     * @param group The consumer group name.
+     * @param consumer The group consumer.
+     * @param minIdleTime The minimum idle time for the message to be claimed.
+     * @param ids An array of entry ids.
+     * @param options Stream claim options {@link StreamClaimOptions}.
+     * @return Command Response - A <code>Map</code> of message entries with the format <code>
+     *      {"entryId": [["entry", "data"], ...], ...}</code> that are claimed by the consumer.
+     */
+    public T xclaim(
+            @NonNull String key,
+            @NonNull String group,
+            @NonNull String consumer,
+            long minIdleTime,
+            @NonNull String[] ids,
+            @NonNull StreamClaimOptions options) {
+        String[] args =
+                concatenateArrays(
+                        new String[] {key, group, consumer, Long.toString(minIdleTime)}, ids, options.toArgs());
+        protobufTransaction.addCommands(buildCommand(XClaim, buildArgs(args)));
+        return getThis();
+    }
+
+    /**
+     * Changes the ownership of a pending message. This function returns an <code>array</code> with
+     * only the message/entry IDs, and is equivalent to using <code>JUSTID</code> in the Redis API.
+     *
+     * @see <a href="https://valkey.io/commands/xclaim/">valkey.io</a> for details.
+     * @param key The key of the stream.
+     * @param group The consumer group name.
+     * @param consumer The group consumer.
+     * @param minIdleTime The minimum idle time for the message to be claimed.
+     * @param ids An array of entry ids.
+     * @return Command Response - An <code>array</code> of message ids claimed by the consumer.
+     */
+    public T xclaimJustId(
+            @NonNull String key,
+            @NonNull String group,
+            @NonNull String consumer,
+            long minIdleTime,
+            @NonNull String[] ids) {
+        String[] args =
+                concatenateArrays(
+                        new String[] {key, group, consumer, Long.toString(minIdleTime)},
+                        ids,
+                        new String[] {JUST_ID_REDIS_API});
+        protobufTransaction.addCommands(buildCommand(XClaim, buildArgs(args)));
+        return getThis();
+    }
+
+    /**
+     * Changes the ownership of a pending message. This function returns an <code>array</code> with
+     * only the message/entry IDs, and is equivalent to using <code>JUSTID</code> in the Redis API.
+     *
+     * @see <a href="https://valkey.io/commands/xclaim/">valkey.io</a> for details.
+     * @param key The key of the stream.
+     * @param group The consumer group name.
+     * @param consumer The group consumer.
+     * @param minIdleTime The minimum idle time for the message to be claimed.
+     * @param ids An array of entry ids.
+     * @param options Stream claim options {@link StreamClaimOptions}.
+     * @return Command Response - An <code>array</code> of message ids claimed by the consumer.
+     */
+    public T xclaimJustId(
+            @NonNull String key,
+            @NonNull String group,
+            @NonNull String consumer,
+            long minIdleTime,
+            @NonNull String[] ids,
+            @NonNull StreamClaimOptions options) {
+        String[] args =
+                concatenateArrays(
+                        new String[] {key, group, consumer, Long.toString(minIdleTime)},
+                        ids,
+                        options.toArgs(),
+                        new String[] {JUST_ID_REDIS_API});
+        protobufTransaction.addCommands(buildCommand(XClaim, buildArgs(args)));
         return getThis();
     }
 
@@ -4020,12 +4338,13 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @return Command Response - The distance between <code>member1</code> and <code>member2</code>.
      *     If one or both members do not exist or if the key does not exist returns <code>null</code>.
      */
-    public T geodist(
-            @NonNull String key,
-            @NonNull String member1,
-            @NonNull String member2,
+    public <ArgType> T geodist(
+            @NonNull ArgType key,
+            @NonNull ArgType member1,
+            @NonNull ArgType member2,
             @NonNull GeoUnit geoUnit) {
-        ArgsArray commandArgs = buildArgs(key, member1, member2, geoUnit.getRedisApi());
+        ArgsArray commandArgs =
+                buildArgs(key, member1, member2, this.convertTo(key.getClass(), geoUnit.getValkeyAPI()));
         protobufTransaction.addCommands(buildCommand(GeoDist, commandArgs));
         return getThis();
     }
@@ -4091,7 +4410,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @return Command Response - Info about all libraries and their functions.
      */
     public T functionList(boolean withCode) {
-        ArgsArray commandArgs = withCode ? buildArgs(WITH_CODE_REDIS_API) : buildArgs();
+        ArgsArray commandArgs = withCode ? buildArgs(WITH_CODE_REDIS_API) : emptyArgs();
         protobufTransaction.addCommands(buildCommand(FunctionList, commandArgs));
         return getThis();
     }
@@ -4611,8 +4930,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     length.<br>
      *     If <code>key</code> does not exist, an empty <code>Set</code> will be returned.
      */
-    public T spopCount(@NonNull String key, long count) {
-        ArgsArray commandArgs = buildArgs(key, Long.toString(count));
+    public <ArgType> T spopCount(@NonNull ArgType key, long count) {
+        ArgsArray commandArgs = buildArgs(key, this.convertTo(key.getClass(), count));
         protobufTransaction.addCommands(buildCommand(SPop, commandArgs));
         return getThis();
     }
@@ -4743,6 +5062,19 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
     }
 
     /**
+     * Publishes message on pubsub channel.
+     *
+     * @see <a href="https://valkey.io/commands/publish/">redis.io</a> for details.
+     * @param channel The channel to publish the message on.
+     * @param message The message to publish.
+     * @return Command response - The number of clients that received the message.
+     */
+    public T publish(@NonNull String channel, @NonNull String message) {
+        protobufTransaction.addCommands(buildCommand(Publish, buildArgs(channel, message)));
+        return getThis();
+    }
+
+    /**
      * Gets the union of all the given sets.
      *
      * @see <a href="https://valkey.io/commands/sunion">valkey.io</a> for details.
@@ -4752,6 +5084,214 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      */
     public T sunion(@NonNull String[] keys) {
         protobufTransaction.addCommands(buildCommand(SUnion, buildArgs(keys)));
+        return getThis();
+    }
+
+    /**
+     * Returns the indices and length of the longest common subsequence between strings stored at
+     * <code>key1</code> and <code>key2</code>.
+     *
+     * @since Redis 7.0 and above.
+     * @see <a href="https://valkey.io/commands/lcs/">valkey.io</a> for details.
+     * @param key1 The key that stores the first string.
+     * @param key2 The key that stores the second string.
+     * @return Command Response - A <code>Map</code> containing the indices of the longest common
+     *     subsequence between the 2 strings and the length of the longest common subsequence. The
+     *     resulting map contains two keys, "matches" and "len":
+     *     <ul>
+     *       <li>"len" is mapped to the length of the longest common subsequence between the 2 strings
+     *           stored as <code>Long</code>.
+     *       <li>"matches" is mapped to a three dimensional <code>Long</code> array that stores pairs
+     *           of indices that represent the location of the common subsequences in the strings held
+     *           by <code>key1</code> and <code>key2</code>.
+     *     </ul>
+     *
+     * @example If <code>key1</code> holds the string <code>"abcd123"</code> and <code>key2</code>
+     *     holds the string <code>"bcdef123"</code> then the sample result would be
+     *     <pre>{@code
+     * new Long[][][] {
+     *      {
+     *          {4L, 6L},
+     *          {5L, 7L}
+     *      },
+     *      {
+     *          {1L, 3L},
+     *          {0L, 2L}
+     *      }
+     *  }
+     * }</pre>
+     *     The result indicates that the first substring match is <code>"123"</code> in <code>key1
+     *     </code> at index <code>4</code> to <code>6</code> which matches the substring in <code>key2
+     *     </code> at index <code>5</code> to <code>7</code>. And the second substring match is <code>
+     *     "bcd"</code> in <code>key1</code> at index <code>1</code> to <code>3</code> which matches
+     *     the substring in <code>key2</code> at index <code>0</code> to <code>2</code>.
+     */
+    public <ArgType> T lcsIdx(@NonNull ArgType key1, @NonNull ArgType key2) {
+        protobufTransaction.addCommands(
+                buildCommand(LCS, newArgsBuilder().add(key1).add(key2).add(IDX_COMMAND_STRING)));
+        return getThis();
+    }
+
+    /**
+     * Returns the indices and length of the longest common subsequence between strings stored at
+     * <code>key1</code> and <code>key2</code>.
+     *
+     * @since Redis 7.0 and above.
+     * @see <a href="https://valkey.io/commands/lcs/">valkey.io</a> for details.
+     * @param key1 The key that stores the first string.
+     * @param key2 The key that stores the second string.
+     * @param minMatchLen The minimum length of matches to include in the result.
+     * @return Command Response - A <code>Map</code> containing the indices of the longest common
+     *     subsequence between the 2 strings and the length of the longest common subsequence. The
+     *     resulting map contains two keys, "matches" and "len":
+     *     <ul>
+     *       <li>"len" is mapped to the length of the longest common subsequence between the 2 strings
+     *           stored as <code>Long</code>.
+     *       <li>"matches" is mapped to a three dimensional <code>Long</code> array that stores pairs
+     *           of indices that represent the location of the common subsequences in the strings held
+     *           by <code>key1</code> and <code>key2</code>.
+     *     </ul>
+     *
+     * @example If <code>key1</code> holds the string <code>"abcd123"</code> and <code>key2</code>
+     *     holds the string <code>"bcdef123"</code> then the sample result would be
+     *     <pre>{@code
+     * new Long[][][] {
+     *      {
+     *          {4L, 6L},
+     *          {5L, 7L}
+     *      },
+     *      {
+     *          {1L, 3L},
+     *          {0L, 2L}
+     *      }
+     *  }
+     * }</pre>
+     *     The result indicates that the first substring match is <code>"123"</code> in <code>key1
+     *     </code> at index <code>4</code> to <code>6</code> which matches the substring in <code>key2
+     *     </code> at index <code>5</code> to <code>7</code>. And the second substring match is <code>
+     *     "bcd"</code> in <code>key1</code> at index <code>1</code> to <code>3</code> which matches
+     *     the substring in <code>key2</code> at index <code>0</code> to <code>2</code>.
+     */
+    public <ArgType> T lcsIdx(@NonNull ArgType key1, @NonNull ArgType key2, long minMatchLen) {
+        protobufTransaction.addCommands(
+                buildCommand(
+                        LCS,
+                        newArgsBuilder()
+                                .add(key1)
+                                .add(key2)
+                                .add(IDX_COMMAND_STRING)
+                                .add(MINMATCHLEN_COMMAND_STRING)
+                                .add(minMatchLen)));
+        return getThis();
+    }
+
+    /**
+     * Returns the indices and length of the longest common subsequence between strings stored at
+     * <code>key1</code> and <code>key2</code>.
+     *
+     * @since Redis 7.0 and above.
+     * @see <a href="https://valkey.io/commands/lcs/">valkey.io</a> for details.
+     * @param key1 The key that stores the first string.
+     * @param key2 The key that stores the second string.
+     * @return Command Response - A <code>Map</code> containing the indices of the longest common
+     *     subsequence between the 2 strings and the length of the longest common subsequence. The
+     *     resulting map contains two keys, "matches" and "len":
+     *     <ul>
+     *       <li>"len" is mapped to the length of the longest common subsequence between the 2 strings
+     *           stored as <code>Long</code>.
+     *       <li>"matches" is mapped to a three dimensional <code>Long</code> array that stores pairs
+     *           of indices that represent the location of the common subsequences in the strings held
+     *           by <code>key1</code> and <code>key2</code>. For example,
+     *     </ul>
+     *
+     * @example If <code>key1</code> holds the string <code>"abcd1234"</code> and <code>key2</code>
+     *     holds the string <code>"bcdef1234"</code> then the sample result would be
+     *     <pre>{@code
+     * new Object[] {
+     *      new Object[] {
+     *          new Long[] {4L, 7L},
+     *          new Long[] {5L, 8L},
+     *          4L},
+     *      new Object[] {
+     *          new Long[] {1L, 3L},
+     *          new Long[] {0L, 2L},
+     *          3L}
+     *      }
+     * }</pre>
+     *     The result indicates that the first substring match is <code>"1234"</code> in <code>key1
+     *     </code> at index <code>4</code> to <code>7</code> which matches the substring in <code>key2
+     *     </code> at index <code>5</code> to <code>8</code> and the last element in the array is the
+     *     length of the substring match which is <code>4</code>. And the second substring match is
+     *     <code>"bcd"</code> in <code>key1</code> at index <code>1</code> to <code>3</code> which
+     *     matches the substring in <code>key2</code> at index <code>0</code> to <code>2</code> and
+     *     the last element in the array is the length of the substring match which is <code>3</code>.
+     */
+    public <ArgType> T lcsIdxWithMatchLen(@NonNull ArgType key1, @NonNull ArgType key2) {
+        protobufTransaction.addCommands(
+                buildCommand(
+                        LCS,
+                        newArgsBuilder()
+                                .add(key1)
+                                .add(key2)
+                                .add(IDX_COMMAND_STRING)
+                                .add(WITHMATCHLEN_COMMAND_STRING)));
+        return getThis();
+    }
+
+    /**
+     * Returns the indices and length of the longest common subsequence between strings stored at
+     * <code>key1</code> and <code>key2</code>.
+     *
+     * @since Redis 7.0 and above.
+     * @see <a href="https://valkey.io/commands/lcs/">valkey.io</a> for details.
+     * @param key1 The key that stores the first string.
+     * @param key2 The key that stores the second string.
+     * @param minMatchLen The minimum length of matches to include in the result.
+     * @return Command Response - A <code>Map</code> containing the indices of the longest common
+     *     subsequence between the 2 strings and the length of the longest common subsequence. The
+     *     resulting map contains two keys, "matches" and "len":
+     *     <ul>
+     *       <li>"len" is mapped to the length of the longest common subsequence between the 2 strings
+     *           stored as <code>Long</code>.
+     *       <li>"matches" is mapped to a three dimensional <code>Long</code> array that stores pairs
+     *           of indices that represent the location of the common subsequences in the strings held
+     *           by <code>key1</code> and <code>key2</code>.
+     *     </ul>
+     *
+     * @example If <code>key1</code> holds the string <code>"abcd1234"</code> and <code>key2</code>
+     *     holds the string <code>"bcdef1234"</code> then the sample result would be
+     *     <pre>{@code
+     * new Object[] {
+     *      new Object[] {
+     *          new Long[] {4L, 7L},
+     *          new Long[] {5L, 8L},
+     *          4L},
+     *      new Object[] {
+     *          new Long[] {1L, 3L},
+     *          new Long[] {0L, 2L},
+     *          3L}
+     *      }
+     * }</pre>
+     *     The result indicates that the first substring match is <code>"1234"</code> in <code>key1
+     *     </code> at index <code>4</code> to <code>7</code> which matches the substring in <code>key2
+     *     </code> at index <code>5</code> to <code>8</code> and the last element in the array is the
+     *     length of the substring match which is <code>4</code>. And the second substring match is
+     *     <code>"bcd"</code> in <code>key1</code> at index <code>1</code> to <code>3</code> which
+     *     matches the substring in <code>key2</code> at index <code>0</code> to <code>2</code> and
+     *     the last element in the array is the length of the substring match which is <code>3</code>.
+     */
+    public <ArgType> T lcsIdxWithMatchLen(
+            @NonNull ArgType key1, @NonNull ArgType key2, long minMatchLen) {
+        protobufTransaction.addCommands(
+                buildCommand(
+                        LCS,
+                        newArgsBuilder()
+                                .add(key1)
+                                .add(key2)
+                                .add(IDX_COMMAND_STRING)
+                                .add(MINMATCHLEN_COMMAND_STRING)
+                                .add(minMatchLen)
+                                .add(WITHMATCHLEN_COMMAND_STRING)));
         return getThis();
     }
 
@@ -4800,15 +5340,525 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @return Command Response - The number of elements in the sorted key stored at <code>destination
      *     </code>.
      */
-    public T sortStore(@NonNull String key, @NonNull String destination) {
-        ArgsArray commandArgs = buildArgs(new String[] {key, STORE_COMMAND_STRING, destination});
-        protobufTransaction.addCommands(buildCommand(Sort, commandArgs));
+    public <ArgType> T sortStore(@NonNull ArgType key, @NonNull ArgType destination) {
+        protobufTransaction.addCommands(
+                buildCommand(Sort, newArgsBuilder().add(key).add(STORE_COMMAND_STRING).add(destination)));
+        return getThis();
+    }
+
+    /**
+     * Returns the members of a sorted set populated with geospatial information using {@link
+     * #geoadd(String, Map)}, which are within the borders of the area specified by a given shape.
+     *
+     * @since Valkey 6.2.0 and above.
+     * @see <a href="https://valkey.io/commands/geosearch">valkey.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param searchFrom The query's center point options, could be one of:
+     *     <ul>
+     *       <li>{@link GeoSearchOrigin.MemberOrigin} to use the position of the given existing member
+     *           in the sorted set.
+     *       <li>{@link GeoSearchOrigin.CoordOrigin} to use the given longitude and latitude
+     *           coordinates.
+     *     </ul>
+     *
+     * @param searchBy The query's shape options:
+     *     <ul>
+     *       <li>{@link GeoSearchShape#GeoSearchShape(double, GeoUnit)} to search inside circular area
+     *           according to given radius.
+     *       <li>{@link GeoSearchShape#GeoSearchShape(double, double, GeoUnit)} to search inside an
+     *           axis-aligned rectangle, determined by height and width.
+     *     </ul>
+     *
+     * @return Command Response - An <code>array</code> of matched member names.
+     */
+    public <ArgType> T geosearch(
+            @NonNull ArgType key,
+            @NonNull GeoSearchOrigin.SearchOrigin searchFrom,
+            @NonNull GeoSearchShape searchBy) {
+        protobufTransaction.addCommands(
+                buildCommand(
+                        GeoSearch, newArgsBuilder().add(key).add(searchFrom.toArgs()).add(searchBy.toArgs())));
+        return getThis();
+    }
+
+    /**
+     * Returns the members of a sorted set populated with geospatial information using {@link
+     * #geoadd(String, Map)}, which are within the borders of the area specified by a given shape.
+     *
+     * @since Valkey 6.2.0 and above.
+     * @see <a href="https://valkey.io/commands/geosearch">valkey.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param searchFrom The query's center point options, could be one of:
+     *     <ul>
+     *       <li>{@link GeoSearchOrigin.MemberOrigin} to use the position of the given existing member
+     *           in the sorted set.
+     *       <li>{@link GeoSearchOrigin.CoordOrigin} to use the given longitude and latitude
+     *           coordinates.
+     *     </ul>
+     *
+     * @param searchBy The query's shape options:
+     *     <ul>
+     *       <li>{@link GeoSearchShape#GeoSearchShape(double, GeoUnit)} to search inside circular area
+     *           according to given radius.
+     *       <li>{@link GeoSearchShape#GeoSearchShape(double, double, GeoUnit)} to search inside an
+     *           axis-aligned rectangle, determined by height and width.
+     *     </ul>
+     *
+     * @param resultOptions Optional inputs for sorting/limiting the results. See - {@link
+     *     GeoSearchResultOptions}
+     * @return Command Response - An <code>array</code> of matched member names.
+     */
+    public <ArgType> T geosearch(
+            @NonNull ArgType key,
+            @NonNull GeoSearchOrigin.SearchOrigin searchFrom,
+            @NonNull GeoSearchShape searchBy,
+            @NonNull GeoSearchResultOptions resultOptions) {
+        protobufTransaction.addCommands(
+                buildCommand(
+                        GeoSearch,
+                        newArgsBuilder()
+                                .add(key)
+                                .add(searchFrom.toArgs())
+                                .add(searchBy.toArgs())
+                                .add(resultOptions.toArgs())));
+        return getThis();
+    }
+
+    /**
+     * Returns the members of a sorted set populated with geospatial information using {@link
+     * #geoadd(String, Map)}, which are within the borders of the area specified by a given shape.
+     *
+     * @since Valkey 6.2.0 and above.
+     * @see <a href="https://valkey.io/commands/geosearch">valkey.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param searchFrom The query's center point options, could be one of:
+     *     <ul>
+     *       <li>{@link GeoSearchOrigin.MemberOrigin} to use the position of the given existing member
+     *           in the sorted set.
+     *       <li>{@link GeoSearchOrigin.CoordOrigin} to use the given longitude and latitude
+     *           coordinates.
+     *     </ul>
+     *
+     * @param searchBy The query's shape options:
+     *     <ul>
+     *       <li>{@link GeoSearchShape#GeoSearchShape(double, GeoUnit)} to search inside circular area
+     *           according to given radius.
+     *       <li>{@link GeoSearchShape#GeoSearchShape(double, double, GeoUnit)} to search inside an
+     *           axis-aligned rectangle, determined by height and width.
+     *     </ul>
+     *
+     * @param options The optional inputs to request additional information.
+     * @return Command Response - An array of arrays where each sub-array represents a single item in
+     *     the following order:
+     *     <ul>
+     *       <li>The member (location) name.
+     *       <li>The distance from the center as a <code>Double</code>, in the same unit specified for
+     *           <code>searchBy</code>.
+     *       <li>The geohash of the location as a <code>Long</code>.
+     *       <li>The coordinates as a two item <code>array</code> of <code>Double</code>.
+     *     </ul>
+     */
+    public <ArgType> T geosearch(
+            @NonNull ArgType key,
+            @NonNull GeoSearchOrigin.SearchOrigin searchFrom,
+            @NonNull GeoSearchShape searchBy,
+            @NonNull GeoSearchOptions options) {
+        protobufTransaction.addCommands(
+                buildCommand(
+                        GeoSearch,
+                        newArgsBuilder()
+                                .add(key)
+                                .add(searchFrom.toArgs())
+                                .add(searchBy.toArgs())
+                                .add(options.toArgs())));
+        return getThis();
+    }
+
+    /**
+     * Returns the members of a sorted set populated with geospatial information using {@link
+     * #geoadd(String, Map)}, which are within the borders of the area specified by a given shape.
+     *
+     * @since Valkey 6.2.0 and above.
+     * @see <a href="https://valkey.io/commands/geosearch">valkey.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param searchFrom The query's center point options, could be one of:
+     *     <ul>
+     *       <li>{@link GeoSearchOrigin.MemberOrigin} to use the position of the given existing member
+     *           in the sorted set.
+     *       <li>{@link GeoSearchOrigin.CoordOrigin} to use the given longitude and latitude
+     *           coordinates.
+     *     </ul>
+     *
+     * @param searchBy The query's shape options:
+     *     <ul>
+     *       <li>{@link GeoSearchShape#GeoSearchShape(double, GeoUnit)} to search inside circular area
+     *           according to given radius.
+     *       <li>{@link GeoSearchShape#GeoSearchShape(double, double, GeoUnit)} to search inside an
+     *           axis-aligned rectangle, determined by height and width.
+     *     </ul>
+     *
+     * @param options The optional inputs to request additional information.
+     * @param resultOptions Optional inputs for sorting/limiting the results. See - {@link
+     *     GeoSearchResultOptions}
+     * @return Command Response - An array of arrays where each sub-array represents a single item in
+     *     the following order:
+     *     <ul>
+     *       <li>The member (location) name.
+     *       <li>The distance from the center as a <code>Double</code>, in the same unit specified for
+     *           <code>searchBy</code>.
+     *       <li>The geohash of the location as a <code>Long</code>.
+     *       <li>The coordinates as a two item <code>array</code> of <code>Double</code>.
+     *     </ul>
+     */
+    public <ArgType> T geosearch(
+            @NonNull ArgType key,
+            @NonNull GeoSearchOrigin.SearchOrigin searchFrom,
+            @NonNull GeoSearchShape searchBy,
+            @NonNull GeoSearchOptions options,
+            @NonNull GeoSearchResultOptions resultOptions) {
+        protobufTransaction.addCommands(
+                buildCommand(
+                        GeoSearch,
+                        newArgsBuilder()
+                                .add(key)
+                                .add(searchFrom.toArgs())
+                                .add(searchBy.toArgs())
+                                .add(options.toArgs())
+                                .add(resultOptions.toArgs())));
+        return getThis();
+    }
+
+    /**
+     * Searches for members in a sorted set stored at <code>source</code> representing geospatial data
+     * within a circular or rectangular area and stores the result in <code>destination</code>. If
+     * <code>destination</code> already exists, it is overwritten. Otherwise, a new sorted set will be
+     * created. To get the result directly, see `{@link #geosearch(String,
+     * GeoSearchOrigin.SearchOrigin, GeoSearchShape)}.
+     *
+     * @since Valkey 6.2.0 and above.
+     * @see <a href="https://valkey.io/commands/geosearch">valkey.io</a> for more details.
+     * @param destination The key of the destination sorted set.
+     * @param source The key of the source sorted set.
+     * @param searchFrom The query's center point options, could be one of:
+     *     <ul>
+     *       <li>{@link GeoSearchOrigin.MemberOrigin} to use the position of the given existing member
+     *           in the sorted set.
+     *       <li>{@link GeoSearchOrigin.CoordOrigin} to use the given longitude and latitude
+     *           coordinates.
+     *     </ul>
+     *
+     * @param searchBy The query's shape options:
+     *     <ul>
+     *       <li>{@link GeoSearchShape#GeoSearchShape(double, GeoUnit)} to search inside circular area
+     *           according to given radius.
+     *       <li>{@link GeoSearchShape#GeoSearchShape(double, double, GeoUnit)} to search inside an
+     *           axis-aligned rectangle, determined by height and width.
+     *     </ul>
+     *
+     * @return Command Response - The number of elements in the resulting set.
+     */
+    public <ArgType> T geosearchstore(
+            @NonNull ArgType destination,
+            @NonNull ArgType source,
+            @NonNull GeoSearchOrigin.SearchOrigin searchFrom,
+            @NonNull GeoSearchShape searchBy) {
+        protobufTransaction.addCommands(
+                buildCommand(
+                        GeoSearchStore,
+                        newArgsBuilder()
+                                .add(destination)
+                                .add(source)
+                                .add(searchFrom.toArgs())
+                                .add(searchBy.toArgs())));
+        return getThis();
+    }
+
+    /**
+     * Searches for members in a sorted set stored at <code>source</code> representing geospatial data
+     * within a circular or rectangular area and stores the result in <code>destination</code>. If
+     * <code>destination</code> already exists, it is overwritten. Otherwise, a new sorted set will be
+     * created. To get the result directly, see `{@link #geosearch(String,
+     * GeoSearchOrigin.SearchOrigin, GeoSearchShape, GeoSearchResultOptions)}.
+     *
+     * @since Valkey 6.2.0 and above.
+     * @see <a href="https://valkey.io/commands/geosearch">valkey.io</a> for more details.
+     * @param destination The key of the destination sorted set.
+     * @param source The key of the source sorted set.
+     * @param searchFrom The query's center point options, could be one of:
+     *     <ul>
+     *       <li>{@link GeoSearchOrigin.MemberOrigin} to use the position of the given existing member
+     *           in the sorted set.
+     *       <li>{@link GeoSearchOrigin.CoordOrigin} to use the given longitude and latitude
+     *           coordinates.
+     *     </ul>
+     *
+     * @param searchBy The query's shape options:
+     *     <ul>
+     *       <li>{@link GeoSearchShape#GeoSearchShape(double, GeoUnit)} to search inside circular area
+     *           according to given radius.
+     *       <li>{@link GeoSearchShape#GeoSearchShape(double, double, GeoUnit)} to search inside an
+     *           axis-aligned rectangle, determined by height and width.
+     *     </ul>
+     *
+     * @param resultOptions Optional inputs for sorting/limiting the results. See - {@link
+     *     GeoSearchResultOptions}
+     * @return Command Response - The number of elements in the resulting set.
+     */
+    public <ArgType> T geosearchstore(
+            @NonNull ArgType destination,
+            @NonNull ArgType source,
+            @NonNull GeoSearchOrigin.SearchOrigin searchFrom,
+            @NonNull GeoSearchShape searchBy,
+            @NonNull GeoSearchResultOptions resultOptions) {
+        protobufTransaction.addCommands(
+                buildCommand(
+                        GeoSearchStore,
+                        newArgsBuilder()
+                                .add(destination)
+                                .add(source)
+                                .add(searchFrom.toArgs())
+                                .add(searchBy.toArgs())
+                                .add(resultOptions.toArgs())));
+        return getThis();
+    }
+
+    /**
+     * Searches for members in a sorted set stored at <code>source</code> representing geospatial data
+     * within a circular or rectangular area and stores the result in <code>destination</code>. If
+     * <code>destination</code> already exists, it is overwritten. Otherwise, a new sorted set will be
+     * created. To get the result directly, see `{@link #geosearch(String,
+     * GeoSearchOrigin.SearchOrigin, GeoSearchShape, GeoSearchOptions)}.
+     *
+     * @since Valkey 6.2.0 and above.
+     * @see <a href="https://valkey.io/commands/geosearch">valkey.io</a> for more details.
+     * @param destination The key of the destination sorted set.
+     * @param source The key of the source sorted set.
+     * @param searchFrom The query's center point options, could be one of:
+     *     <ul>
+     *       <li>{@link GeoSearchOrigin.MemberOrigin} to use the position of the given existing member
+     *           in the sorted set.
+     *       <li>{@link GeoSearchOrigin.CoordOrigin} to use the given longitude and latitude
+     *           coordinates.
+     *     </ul>
+     *
+     * @param searchBy The query's shape options:
+     *     <ul>
+     *       <li>{@link GeoSearchShape#GeoSearchShape(double, GeoUnit)} to search inside circular area
+     *           according to given radius.
+     *       <li>{@link GeoSearchShape#GeoSearchShape(double, double, GeoUnit)} to search inside an
+     *           axis-aligned rectangle, determined by height and width.
+     *     </ul>
+     *
+     * @param options The optional inputs to request additional information.
+     * @return Command Response - The number of elements in the resulting set.
+     */
+    public <ArgType> T geosearchstore(
+            @NonNull ArgType destination,
+            @NonNull ArgType source,
+            @NonNull GeoSearchOrigin.SearchOrigin searchFrom,
+            @NonNull GeoSearchShape searchBy,
+            @NonNull GeoSearchStoreOptions options) {
+        protobufTransaction.addCommands(
+                buildCommand(
+                        GeoSearchStore,
+                        newArgsBuilder()
+                                .add(destination)
+                                .add(source)
+                                .add(searchFrom.toArgs())
+                                .add(searchBy.toArgs())
+                                .add(options.toArgs())));
+        return getThis();
+    }
+
+    /**
+     * Searches for members in a sorted set stored at <code>source</code> representing geospatial data
+     * within a circular or rectangular area and stores the result in <code>destination</code>. If
+     * <code>destination</code> already exists, it is overwritten. Otherwise, a new sorted set will be
+     * created. To get the result directly, see `{@link #geosearch(String,
+     * GeoSearchOrigin.SearchOrigin, GeoSearchShape, GeoSearchOptions, GeoSearchResultOptions)}.
+     *
+     * @since Valkey 6.2.0 and above.
+     * @see <a href="https://valkey.io/commands/geosearch">valkey.io</a> for more details.
+     * @param destination The key of the destination sorted set.
+     * @param source The key of the source sorted set.
+     * @param searchFrom The query's center point options, could be one of:
+     *     <ul>
+     *       <li>{@link GeoSearchOrigin.MemberOrigin} to use the position of the given existing member
+     *           in the sorted set.
+     *       <li>{@link GeoSearchOrigin.CoordOrigin} to use the given longitude and latitude
+     *           coordinates.
+     *     </ul>
+     *
+     * @param searchBy The query's shape options:
+     *     <ul>
+     *       <li>{@link GeoSearchShape#GeoSearchShape(double, GeoUnit)} to search inside circular area
+     *           according to given radius.
+     *       <li>{@link GeoSearchShape#GeoSearchShape(double, double, GeoUnit)} to search inside an
+     *           axis-aligned rectangle, determined by height and width.
+     *     </ul>
+     *
+     * @param options The optional inputs to request additional information.
+     * @param resultOptions Optional inputs for sorting/limiting the results. See - {@link
+     *     GeoSearchResultOptions}
+     * @return Command Response - The number of elements in the resulting set.
+     */
+    public <ArgType> T geosearchstore(
+            @NonNull ArgType destination,
+            @NonNull ArgType source,
+            @NonNull GeoSearchOrigin.SearchOrigin searchFrom,
+            @NonNull GeoSearchShape searchBy,
+            @NonNull GeoSearchStoreOptions options,
+            @NonNull GeoSearchResultOptions resultOptions) {
+        protobufTransaction.addCommands(
+                buildCommand(
+                        GeoSearchStore,
+                        newArgsBuilder()
+                                .add(destination)
+                                .add(source)
+                                .add(searchFrom.toArgs())
+                                .add(searchBy.toArgs())
+                                .add(options.toArgs())
+                                .add(resultOptions.toArgs())));
+        return getThis();
+    }
+
+    /**
+     * Iterates incrementally over a set.
+     *
+     * @see <a href="https://valkey.io/commands/sscan">valkey.io</a> for details.
+     * @param key The key of the set.
+     * @param cursor The cursor that points to the next iteration of results. A value of <code>"0"
+     *     </code> indicates the start of the search.
+     * @return Command Response - An <code>Array</code> of <code>Objects</code>. The first element is
+     *     always the <code>cursor</code> for the next iteration of results. <code>"0"</code> will be
+     *     the <code>cursor</code> returned on the last iteration of the set. The second element is
+     *     always an <code>Array</code> of the subset of the set held in <code>key</code>.
+     */
+    public <ArgType> T sscan(@NonNull ArgType key, @NonNull ArgType cursor) {
+        protobufTransaction.addCommands(buildCommand(SScan, buildArgs(key, cursor)));
+        return getThis();
+    }
+
+    /**
+     * Iterates incrementally over a set.
+     *
+     * @see <a href="https://valkey.io/commands/sscan">valkey.io</a> for details.
+     * @param key The key of the set.
+     * @param cursor The cursor that points to the next iteration of results. A value of <code>"0"
+     *     </code> indicates the start of the search.
+     * @param sScanOptions The {@link SScanOptions}.
+     * @return Command Response - An <code>Array</code> of <code>Objects</code>. The first element is
+     *     always the <code>cursor</code> for the next iteration of results. <code>"0"</code> will be
+     *     the <code>cursor</code> returned on the last iteration of the set. The second element is
+     *     always an <code>Array</code> of the subset of the set held in <code>key</code>.
+     */
+    public <ArgType> T sscan(
+            @NonNull ArgType key, @NonNull ArgType cursor, @NonNull SScanOptions sScanOptions) {
+        protobufTransaction.addCommands(
+                buildCommand(SScan, newArgsBuilder().add(key).add(cursor).add(sScanOptions.toArgs())));
+        return getThis();
+    }
+
+    /**
+     * Iterates incrementally over a sorted set.
+     *
+     * @see <a href="https://valkey.io/commands/zscan">valkey.io</a> for details.
+     * @param key The key of the sorted set.
+     * @param cursor The cursor that points to the next iteration of results. A value of <code>"0"
+     *     </code> indicates the start of the search.
+     * @return Command Response - An <code>Array</code> of <code>Objects</code>. The first element is
+     *     always the <code>cursor</code> for the next iteration of results. <code>"0"</code> will be
+     *     the <code>cursor</code> returned on the last iteration of the sorted set. The second
+     *     element is always an <code>Array</code> of the subset of the sorted set held in <code>key
+     *     </code>. The array in the second element is always a flattened series of <code>String
+     *     </code> pairs, where the value is at even indices and the score is at odd indices.
+     */
+    public <ArgType> T zscan(@NonNull ArgType key, @NonNull ArgType cursor) {
+        protobufTransaction.addCommands(buildCommand(ZScan, buildArgs(key, cursor)));
+        return getThis();
+    }
+
+    /**
+     * Iterates incrementally over a sorted set.
+     *
+     * @see <a href="https://valkey.io/commands/zscan">valkey.io</a> for details.
+     * @param key The key of the sorted set.
+     * @param cursor The cursor that points to the next iteration of results. A value of <code>"0"
+     *     </code> indicates the start of the search.
+     * @param zScanOptions The {@link ZScanOptions}.
+     * @return Command Response - An <code>Array</code> of <code>Objects</code>. The first element is
+     *     always the <code>cursor</code> for the next iteration of results. <code>"0"</code> will be
+     *     the <code>cursor</code> returned on the last iteration of the sorted set. The second
+     *     element is always an <code>Array</code> of the subset of the sorted set held in <code>key
+     *     </code>. The array in the second element is always a flattened series of <code>String
+     *     </code> pairs, where the value is at even indices and the score is at odd indices.
+     */
+    public <ArgType> T zscan(
+            @NonNull ArgType key, @NonNull ArgType cursor, @NonNull ZScanOptions zScanOptions) {
+        protobufTransaction.addCommands(
+                buildCommand(ZScan, newArgsBuilder().add(key).add(cursor).add(zScanOptions.toArgs())));
+        return getThis();
+    }
+
+    /**
+     * Iterates fields of Hash types and their associated values.
+     *
+     * @see <a href="https://valkey.io/commands/hscan">valkey.io</a> for details.
+     * @param key The key of the hash.
+     * @param cursor The cursor that points to the next iteration of results. A value of <code>"0"
+     *     </code> indicates the start of the search.
+     * @return Command Response - An <code>Array</code> of <code>Objects</code>. The first element is
+     *     always the <code>cursor</code> for the next iteration of results. <code>"0"</code> will be
+     *     the <code>cursor</code> returned on the last iteration of the result. The second element is
+     *     always an <code>Array</code> of the subset of the hash held in <code>key</code>. The array
+     *     in the second element is always a flattened series of <code>String</code> pairs, where the
+     *     key is at even indices and the value is at odd indices.
+     */
+    public <ArgType> T hscan(@NonNull ArgType key, @NonNull ArgType cursor) {
+        protobufTransaction.addCommands(buildCommand(HScan, buildArgs(key, cursor)));
+        return getThis();
+    }
+
+    /**
+     * Iterates fields of Hash types and their associated values.
+     *
+     * @see <a href="https://valkey.io/commands/hscan">valkey.io</a> for details.
+     * @param key The key of the hash.
+     * @param cursor The cursor that points to the next iteration of results. A value of <code>"0"
+     *     </code> indicates the start of the search.
+     * @param hScanOptions The {@link HScanOptions}.
+     * @return Command Response - An <code>Array</code> of <code>Objects</code>. The first element is
+     *     always the <code>cursor</code> for the next iteration of results. <code>"0"</code> will be
+     *     the <code>cursor</code> returned on the last iteration of the result. The second element is
+     *     always an <code>Array</code> of the subset of the hash held in <code>key</code>. The array
+     *     in the second element is always a flattened series of <code>String</code> pairs, where the
+     *     key is at even indices and the value is at odd indices.
+     */
+    public <ArgType> T hscan(
+            @NonNull ArgType key, @NonNull ArgType cursor, @NonNull HScanOptions hScanOptions) {
+        protobufTransaction.addCommands(
+                buildCommand(HScan, newArgsBuilder().add(key).add(cursor).add(hScanOptions.toArgs())));
+        return getThis();
+    }
+
+    /**
+     * Returns the number of replicas that acknowledged the write commands sent by the current client
+     * before this command, both in the case where the specified number of replicas are reached, or
+     * when the timeout is reached.
+     *
+     * @param numreplicas The number of replicas to reach.
+     * @param timeout The timeout value specified in milliseconds.
+     * @return Command Response - The number of replicas reached by all the writes performed in the
+     *     context of the current connection.
+     */
+    public T wait(long numreplicas, long timeout) {
+        protobufTransaction.addCommands(buildCommand(Wait, buildArgs(numreplicas, timeout)));
         return getThis();
     }
 
     /** Build protobuf {@link Command} object for given command and arguments. */
     protected Command buildCommand(RequestType requestType) {
-        return buildCommand(requestType, buildArgs());
+        return buildCommand(requestType, emptyArgs());
     }
 
     /** Build protobuf {@link Command} object for given command and arguments. */
@@ -4816,14 +5866,52 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
         return Command.newBuilder().setRequestType(requestType).setArgsArray(args).build();
     }
 
-    /** Build protobuf {@link ArgsArray} object for given arguments. */
-    protected ArgsArray buildArgs(String... stringArgs) {
+    /** Build protobuf {@link Command} object for given command and arguments. */
+    protected Command buildCommand(RequestType requestType, ArgsBuilder argsBuilder) {
+        final Command.Builder builder = Command.newBuilder();
+        builder.setRequestType(requestType);
+        CommandManager.populateCommandWithArgs(argsBuilder.toArray(), builder);
+        return builder.build();
+    }
+
+    /** Build protobuf {@link ArgsArray} object for empty arguments. */
+    protected ArgsArray emptyArgs() {
         ArgsArray.Builder commandArgs = ArgsArray.newBuilder();
-
-        for (String string : stringArgs) {
-            commandArgs.addArgs(ByteString.copyFromUtf8(string));
-        }
-
         return commandArgs.build();
+    }
+
+    protected <ArgType> ArgsArray.Builder newArgsArrayBuilder(ArgType... args) {
+        ArgsArray.Builder builder = ArgsArray.newBuilder();
+        for (ArgType arg : args) {
+            builder.addArgs(ByteString.copyFrom(GlideString.of(arg).getBytes()));
+        }
+        return builder;
+    }
+
+    /** Build protobuf {@link ArgsArray} object for given arguments. */
+    protected <ArgType> ArgsArray buildArgs(ArgType... args) {
+        return this.newArgsArrayBuilder(args).build();
+    }
+
+    /** Convert value to either String or GlideString. If cls is neither, throw an exception */
+    protected <StringType, ValueType> StringType convertTo(Class cls, ValueType value) {
+        if (cls.isInstance(this.GLIDE_STRING)) {
+            return (StringType) GlideString.of(value.toString());
+        } else if (cls.isInstance(this.STRING)) {
+            return (StringType) value.toString();
+        } else {
+            // arguments can be of type String or GlideString
+            throw new IllegalArgumentException(
+                    "Arguments can only be of type String or GlideString. Got: "
+                            + cls.getClass().getSimpleName());
+        }
+    }
+
+    protected ArgsBuilder newArgsBuilder() {
+        return new ArgsBuilder();
+    }
+
+    protected <ArgType> ArgType[] intoArray(ArgType... args) {
+        return args;
     }
 }

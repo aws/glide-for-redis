@@ -1,4 +1,4 @@
-# Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0
+# Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0
 
 import threading
 from typing import List, Mapping, Optional, Tuple, TypeVar, Union
@@ -44,9 +44,13 @@ from glide.async_commands.sorted_set import (
 )
 from glide.async_commands.stream import (
     StreamAddOptions,
+    StreamGroupOptions,
+    StreamPendingOptions,
     StreamRangeBound,
+    StreamReadGroupOptions,
     StreamReadOptions,
     StreamTrimOptions,
+    _create_xpending_range_args,
 )
 from glide.protobuf.redis_request_pb2 import RequestType
 
@@ -1774,6 +1778,102 @@ class BaseTransaction:
         """
         return self.append_command(RequestType.Type, [key])
 
+    def function_load(
+        self: TTransaction, library_code: str, replace: bool = False
+    ) -> TTransaction:
+        """
+        Loads a library to Redis.
+
+        See https://valkey.io/docs/latest/commands/function-load/ for more details.
+
+        Args:
+            library_code (str): The source code that implements the library.
+            replace (bool): Whether the given library should overwrite a library with the same name if
+                it already exists.
+
+        Commands response:
+            str: The library name that was loaded.
+
+        Since: Redis 7.0.0.
+        """
+        return self.append_command(
+            RequestType.FunctionLoad,
+            ["REPLACE", library_code] if replace else [library_code],
+        )
+
+    def function_flush(
+        self: TTransaction, mode: Optional[FlushMode] = None
+    ) -> TTransaction:
+        """
+        Deletes all function libraries.
+
+        See https://valkey.io/docs/latest/commands/function-flush/ for more details.
+
+        Args:
+            mode (Optional[FlushMode]): The flushing mode, could be either `SYNC` or `ASYNC`.
+
+        Commands response:
+            TOK: A simple `OK`.
+
+        Since: Redis 7.0.0.
+        """
+        return self.append_command(
+            RequestType.FunctionFlush,
+            [mode.value] if mode else [],
+        )
+
+    def function_delete(self: TTransaction, library_name: str) -> TTransaction:
+        """
+        Deletes a library and all its functions.
+
+        See https://valkey.io/docs/latest/commands/function-delete/ for more details.
+
+        Args:
+            library_code (str): The libary name to delete
+
+        Commands response:
+            TOK: A simple `OK`.
+
+        Since: Redis 7.0.0.
+        """
+        return self.append_command(
+            RequestType.FunctionDelete,
+            [library_name],
+        )
+
+    def fcall_ro(
+        self: TTransaction,
+        function: str,
+        keys: Optional[List[str]] = None,
+        arguments: Optional[List[str]] = None,
+    ) -> TTransaction:
+        """
+        Invokes a previously loaded read-only function.
+
+        See https://valkey.io/commands/fcall_ro for more details.
+
+        Args:
+            function (str): The function name.
+            keys (List[str]): An `array` of keys accessed by the function. To ensure the correct
+                execution of functions, all names of keys that a function accesses must be
+                explicitly provided as `keys`.
+            arguments (List[str]): An `array` of `function` arguments. `arguments` should not
+                represent names of keys.
+
+        Command Response:
+            TResult: The return value depends on the function that was executed.
+
+        Since: Redis version 7.0.0.
+        """
+        args = []
+        if keys is not None:
+            args.extend([function, str(len(keys))] + keys)
+        else:
+            args.extend([function, str(0)])
+        if arguments is not None:
+            args.extend(arguments)
+        return self.append_command(RequestType.FCallReadOnly, args)
+
     def xadd(
         self: TTransaction,
         key: str,
@@ -1954,6 +2054,331 @@ class BaseTransaction:
         args.extend([value for value in keys_and_ids.values()])
 
         return self.append_command(RequestType.XRead, args)
+
+    def xgroup_create(
+        self: TTransaction,
+        key: str,
+        group_name: str,
+        group_id: str,
+        options: Optional[StreamGroupOptions] = None,
+    ) -> TTransaction:
+        """
+        Creates a new consumer group uniquely identified by `group_name` for the stream stored at `key`.
+
+        See https://valkey.io/commands/xgroup-create for more details.
+
+        Args:
+            key (str): The key of the stream.
+            group_name (str): The newly created consumer group name.
+            group_id (str): The stream entry ID that specifies the last delivered entry in the stream from the new
+                group’s perspective. The special ID "$" can be used to specify the last entry in the stream.
+            options (Optional[StreamGroupOptions]): Options for creating the stream group.
+
+        Command response:
+            TOK: A simple "OK" response.
+        """
+        args = [key, group_name, group_id]
+        if options is not None:
+            args.extend(options.to_args())
+
+        return self.append_command(RequestType.XGroupCreate, args)
+
+    def xgroup_destroy(self: TTransaction, key: str, group_name: str) -> TTransaction:
+        """
+        Destroys the consumer group `group_name` for the stream stored at `key`.
+
+        See https://valkey.io/commands/xgroup-destroy for more details.
+
+        Args:
+            key (str): The key of the stream.
+            group_name (str): The consumer group name to delete.
+
+        Command response:
+            bool: True if the consumer group was destroyed. Otherwise, returns False.
+        """
+        return self.append_command(RequestType.XGroupDestroy, [key, group_name])
+
+    def xgroup_create_consumer(
+        self: TTransaction, key: str, group_name: str, consumer_name: str
+    ) -> TTransaction:
+        """
+        Creates a consumer named `consumer_name` in the consumer group `group_name` for the stream stored at `key`.
+
+        See https://valkey.io/commands/xgroup-createconsumer for more details.
+
+        Args:
+            key (str): The key of the stream.
+            group_name (str): The consumer group name.
+            consumer_name (str): The newly created consumer.
+
+        Command response:
+            bool: True if the consumer is created. Otherwise, returns False.
+        """
+        return self.append_command(
+            RequestType.XGroupCreateConsumer, [key, group_name, consumer_name]
+        )
+
+    def xgroup_del_consumer(
+        self: TTransaction, key: str, group_name: str, consumer_name: str
+    ) -> TTransaction:
+        """
+        Deletes a consumer named `consumer_name` in the consumer group `group_name` for the stream stored at `key`.
+
+        See https://valkey.io/commands/xgroup-delconsumer for more details.
+
+        Args:
+            key (str): The key of the stream.
+            group_name (str): The consumer group name.
+            consumer_name (str): The consumer to delete.
+
+        Command response:
+            int: The number of pending messages the `consumer` had before it was deleted.
+        """
+        return self.append_command(
+            RequestType.XGroupDelConsumer, [key, group_name, consumer_name]
+        )
+
+    def xgroup_set_id(
+        self: TTransaction,
+        key: str,
+        group_name: str,
+        stream_id: str,
+        entries_read_id: Optional[str] = None,
+    ) -> TTransaction:
+        """
+        Set the last delivered ID for a consumer group.
+
+        See https://valkey.io/commands/xgroup-setid for more details.
+
+        Args:
+            key (str): The key of the stream.
+            group_name (str): The consumer group name.
+            stream_id (str): The stream entry ID that should be set as the last delivered ID for the consumer group.
+            entries_read_id (Optional[str]): An arbitrary ID (that isn't the first ID, last ID, or the zero ID ("0-0"))
+                used to find out how many entries are between the arbitrary ID (excluding it) and the stream's last
+                entry. This argument can only be specified if you are using Redis version 7.0.0 or above.
+
+        Command response:
+            TOK: A simple "OK" response.
+        """
+        args = [key, group_name, stream_id]
+        if entries_read_id is not None:
+            args.extend(["ENTRIESREAD", entries_read_id])
+
+        return self.append_command(RequestType.XGroupSetId, args)
+
+    def xreadgroup(
+        self: TTransaction,
+        keys_and_ids: Mapping[str, str],
+        group_name: str,
+        consumer_name: str,
+        options: Optional[StreamReadGroupOptions] = None,
+    ) -> TTransaction:
+        """
+        Reads entries from the given streams owned by a consumer group.
+
+        See https://valkey.io/commands/xreadgroup for more details.
+
+        Args:
+            keys_and_ids (Mapping[str, str]): A mapping of stream keys to stream entry IDs to read from. The special ">"
+                ID returns messages that were never delivered to any other consumer. Any other valid ID will return
+                entries pending for the consumer with IDs greater than the one provided.
+            group_name (str): The consumer group name.
+            consumer_name (str): The consumer name. The consumer will be auto-created if it does not already exist.
+            options (Optional[StreamReadGroupOptions]): Options detailing how to read the stream.
+
+        Command response:
+            Optional[Mapping[str, Mapping[str, Optional[List[List[str]]]]]]: A mapping of stream keys, to a mapping of
+                stream IDs, to a list of pairings with format `[[field, entry], [field, entry], ...]`.
+                Returns None if the BLOCK option is given and a timeout occurs, or if there is no stream that can be served.
+        """
+        args = ["GROUP", group_name, consumer_name]
+        if options is not None:
+            args.extend(options.to_args())
+
+        args.append("STREAMS")
+        args.extend([key for key in keys_and_ids.keys()])
+        args.extend([value for value in keys_and_ids.values()])
+
+        return self.append_command(RequestType.XReadGroup, args)
+
+    def xack(
+        self: TTransaction,
+        key: str,
+        group_name: str,
+        ids: List[str],
+    ) -> TTransaction:
+        """
+        Removes one or multiple messages from the Pending Entries List (PEL) of a stream consumer group.
+        This command should be called on pending messages so that such messages do not get processed again by the
+        consumer group.
+
+        See https://valkey.io/commands/xack for more details.
+
+        Args:
+            key (str): The key of the stream.
+            group_name (str): The consumer group name.
+            ids (List[str]): The stream entry IDs to acknowledge and consume for the given consumer group.
+
+        Command response:
+            int: The number of messages that were successfully acknowledged.
+        """
+        return self.append_command(RequestType.XAck, [key, group_name] + ids)
+
+    def xpending(
+        self: TTransaction,
+        key: str,
+        group_name: str,
+    ) -> TTransaction:
+        """
+        Returns stream message summary information for pending messages for the given consumer group.
+
+        See https://valkey.io/commands/xpending for more details.
+
+        Args:
+            key (str): The key of the stream.
+            group_name (str): The consumer group name.
+
+        Command response:
+            List[Union[int, str, List[List[str]], None]]: A list that includes the summary of pending messages, with the
+                format `[num_group_messages, start_id, end_id, [[consumer_name, num_consumer_messages]]]`, where:
+                - `num_group_messages`: The total number of pending messages for this consumer group.
+                - `start_id`: The smallest ID among the pending messages.
+                - `end_id`: The greatest ID among the pending messages.
+                - `[[consumer_name, num_consumer_messages]]`: A 2D list of every consumer in the consumer group with at
+                least one pending message, and the number of pending messages it has.
+
+                If there are no pending messages for the given consumer group, `[0, None, None, None]` will be returned.
+        """
+        return self.append_command(RequestType.XPending, [key, group_name])
+
+    def xpending_range(
+        self: TTransaction,
+        key: str,
+        group_name: str,
+        start: StreamRangeBound,
+        end: StreamRangeBound,
+        count: int,
+        options: Optional[StreamPendingOptions] = None,
+    ) -> TTransaction:
+        """
+        Returns an extended form of stream message information for pending messages matching a given range of IDs.
+
+        See https://valkey.io/commands/xpending for more details.
+
+        Args:
+            key (str): The key of the stream.
+            group_name (str): The consumer group name.
+            start (StreamRangeBound): The starting stream ID bound for the range.
+                - Use `IdBound` to specify a stream ID.
+                - Use `ExclusiveIdBound` to specify an exclusive bounded stream ID.
+                - Use `MinId` to start with the minimum available ID.
+            end (StreamRangeBound): The ending stream ID bound for the range.
+                - Use `IdBound` to specify a stream ID.
+                - Use `ExclusiveIdBound` to specify an exclusive bounded stream ID.
+                - Use `MaxId` to end with the maximum available ID.
+            count (int): Limits the number of messages returned.
+            options (Optional[StreamPendingOptions]): The stream pending options.
+
+        Command response:
+            List[List[Union[str, int]]]: A list of lists, where each inner list is a length 4 list containing extended
+                message information with the format `[[id, consumer_name, time_elapsed, num_delivered]]`, where:
+                - `id`: The ID of the message.
+                - `consumer_name`: The name of the consumer that fetched the message and has still to acknowledge it. We
+                call it the current owner of the message.
+                - `time_elapsed`: The number of milliseconds that elapsed since the last time this message was delivered
+                to this consumer.
+                - `num_delivered`: The number of times this message was delivered.
+        """
+        args = _create_xpending_range_args(key, group_name, start, end, count, options)
+        return self.append_command(RequestType.XPending, args)
+
+    def xautoclaim(
+        self: TTransaction,
+        key: str,
+        group_name: str,
+        consumer_name: str,
+        min_idle_time_ms: int,
+        start: str,
+        count: Optional[int] = None,
+    ) -> TTransaction:
+        """
+        Transfers ownership of pending stream entries that match the specified criteria.
+
+        See https://valkey.io/commands/xautoclaim for more details.
+
+        Args:
+            key (str): The key of the stream.
+            group_name (str): The consumer group name.
+            consumer_name (str): The consumer name.
+            min_idle_time_ms (int): Filters the claimed entries to those that have been idle for more than the specified
+                value.
+            start (str): Filters the claimed entries to those that have an ID equal or greater than the specified value.
+            count (Optional[int]): Limits the number of claimed entries to the specified value.
+
+        Command response:
+            List[Union[str, Mapping[str, List[List[str]]], List[str]]]: A list containing the following elements:
+                - A stream ID to be used as the start argument for the next call to `XAUTOCLAIM`. This ID is equivalent
+                to the next ID in the stream after the entries that were scanned, or "0-0" if the entire stream was
+                scanned.
+                - A mapping of the claimed entries, with the keys being the claimed entry IDs and the values being a
+                2D list of the field-value pairs in the format `[[field1, value1], [field2, value2], ...]`.
+                - If you are using Redis 7.0.0 or above, the response list will also include a list containing the
+                message IDs that were in the Pending Entries List but no longer exist in the stream. These IDs are
+                deleted from the Pending Entries List.
+
+        Since: Redis version 6.2.0.
+        """
+        args = [key, group_name, consumer_name, str(min_idle_time_ms), start]
+        if count is not None:
+            args.extend(["COUNT", str(count)])
+
+        return self.append_command(RequestType.XAutoClaim, args)
+
+    def xautoclaim_just_id(
+        self: TTransaction,
+        key: str,
+        group_name: str,
+        consumer_name: str,
+        min_idle_time_ms: int,
+        start: str,
+        count: Optional[int] = None,
+    ) -> TTransaction:
+        """
+        Transfers ownership of pending stream entries that match the specified criteria. This command uses the JUSTID
+        argument to further specify that the return value should contain a list of claimed IDs without their
+        field-value info.
+
+        See https://valkey.io/commands/xautoclaim for more details.
+
+        Args:
+            key (str): The key of the stream.
+            group_name (str): The consumer group name.
+            consumer_name (str): The consumer name.
+            min_idle_time_ms (int): Filters the claimed entries to those that have been idle for more than the specified
+                value.
+            start (str): Filters the claimed entries to those that have an ID equal or greater than the specified value.
+            count (Optional[int]): Limits the number of claimed entries to the specified value.
+
+        Command response:
+            List[Union[str, List[str]]]: A list containing the following elements:
+                - A stream ID to be used as the start argument for the next call to `XAUTOCLAIM`. This ID is equivalent
+                to the next ID in the stream after the entries that were scanned, or "0-0" if the entire stream was
+                scanned.
+                - A list of the IDs for the claimed entries.
+                - If you are using Redis 7.0.0 or above, the response list will also include a list containing the
+                message IDs that were in the Pending Entries List but no longer exist in the stream. These IDs are
+                deleted from the Pending Entries List.
+
+        Since: Redis version 6.2.0.
+        """
+        args = [key, group_name, consumer_name, str(min_idle_time_ms), start]
+        if count is not None:
+            args.extend(["COUNT", str(count)])
+
+        args.append("JUSTID")
+
+        return self.append_command(RequestType.XAutoClaim, args)
 
     def geoadd(
         self: TTransaction,
@@ -3524,6 +3949,25 @@ class BaseTransaction:
             args.append(flush_mode.value)
         return self.append_command(RequestType.FlushAll, args)
 
+    def flushdb(
+        self: TTransaction, flush_mode: Optional[FlushMode] = None
+    ) -> TTransaction:
+        """
+        Deletes all the keys of the currently selected database. This command never fails.
+
+        See https://valkey.io/commands/flushdb for more details.
+
+        Args:
+            flush_mode (Optional[FlushMode]): The flushing mode, could be either `SYNC` or `ASYNC`.
+
+        Command Response:
+            TOK: OK.
+        """
+        args = []
+        if flush_mode is not None:
+            args.append(flush_mode.value)
+        return self.append_command(RequestType.FlushDB, args)
+
     def getex(
         self: TTransaction, key: str, expiry: Optional[ExpiryGetEx] = None
     ) -> TTransaction:
@@ -3547,6 +3991,289 @@ class BaseTransaction:
         if expiry is not None:
             args.extend(expiry.get_cmd_args())
         return self.append_command(RequestType.GetEx, args)
+
+    def lolwut(
+        self: TTransaction,
+        version: Optional[int] = None,
+        parameters: Optional[List[int]] = None,
+    ) -> TTransaction:
+        """
+        Displays a piece of generative computer art and the Redis version.
+
+        See https://valkey.io/commands/lolwut for more details.
+
+        Args:
+            version (Optional[int]): Version of computer art to generate.
+            parameters (Optional[List[int]]): Additional set of arguments in order to change the output:
+                For version `5`, those are length of the line, number of squares per row, and number of squares per column.
+                For version `6`, those are number of columns and number of lines.
+
+        Command Response:
+            str: A piece of generative computer art along with the current Redis version.
+        """
+        args = []
+        if version is not None:
+            args.extend(["VERSION", str(version)])
+        if parameters:
+            for var in parameters:
+                args.extend(str(var))
+        return self.append_command(RequestType.Lolwut, args)
+
+    def random_key(self: TTransaction) -> TTransaction:
+        """
+        Returns a random existing key name.
+
+        See https://valkey.io/commands/randomkey for more details.
+
+        Command response:
+            Optional[str]: A random existing key name.
+        """
+        return self.append_command(RequestType.RandomKey, [])
+
+    def sscan(
+        self: TTransaction,
+        key: str,
+        cursor: str,
+        match: Optional[str] = None,
+        count: Optional[int] = None,
+    ) -> TTransaction:
+        """
+        Iterates incrementally over a set.
+
+        See https://valkey.io/commands/sscan for more details.
+
+        Args:
+            key (str): The key of the set.
+            cursor (str): The cursor that points to the next iteration of results. A value of "0" indicates the start of
+                the search.
+            match (Optional[str]): The match filter is applied to the result of the command and will only include
+                strings that match the pattern specified. If the set is large enough for scan commands to return only a
+                subset of the set then there could be a case where the result is empty although there are items that
+                match the pattern specified. This is due to the default `COUNT` being `10` which indicates that it will
+                only fetch and match `10` items from the list.
+            count (Optional[int]): `COUNT` is a just a hint for the command for how many elements to fetch from the set.
+                `COUNT` could be ignored until the set is large enough for the `SCAN` commands to represent the results
+                as compact single-allocation packed encoding.
+
+        Command Response:
+            List[Union[str, List[str]]]: An `Array` of the `cursor` and the subset of the set held by `key`.
+                The first element is always the `cursor` for the next iteration of results. `0` will be the `cursor`
+                returned on the last iteration of the set. The second element is always an `Array` of the subset of the
+                set held in `key`.
+        """
+        args = [key, cursor]
+        if match is not None:
+            args += ["MATCH", match]
+        if count is not None:
+            args += ["COUNT", str(count)]
+
+        return self.append_command(RequestType.SScan, args)
+
+    def zscan(
+        self: TTransaction,
+        key: str,
+        cursor: str,
+        match: Optional[str] = None,
+        count: Optional[int] = None,
+    ) -> TTransaction:
+        """
+        Iterates incrementally over a sorted set.
+
+        See https://valkey.io/commands/zscan for more details.
+
+        Args:
+            key (str): The key of the sorted set.
+            cursor (str): The cursor that points to the next iteration of results. A value of "0" indicates the start of
+                the search.
+            match (Optional[str]): The match filter is applied to the result of the command and will only include
+                strings that match the pattern specified. If the sorted set is large enough for scan commands to return
+                only a subset of the sorted set then there could be a case where the result is empty although there are
+                items that match the pattern specified. This is due to the default `COUNT` being `10` which indicates
+                that it will only fetch and match `10` items from the list.
+            count (Optional[int]): `COUNT` is a just a hint for the command for how many elements to fetch from the
+                sorted set. `COUNT` could be ignored until the sorted set is large enough for the `SCAN` commands to
+                represent the results as compact single-allocation packed encoding.
+
+        Returns:
+            List[Union[str, List[str]]]: An `Array` of the `cursor` and the subset of the sorted set held by `key`.
+                The first element is always the `cursor` for the next iteration of results. `0` will be the `cursor`
+                returned on the last iteration of the sorted set. The second element is always an `Array` of the subset
+                of the sorted set held in `key`. The `Array` in the second element is always a flattened series of
+                `String` pairs, where the value is at even indices and the score is at odd indices.
+        """
+        args = [key, cursor]
+        if match is not None:
+            args += ["MATCH", match]
+        if count is not None:
+            args += ["COUNT", str(count)]
+
+        return self.append_command(RequestType.ZScan, args)
+
+    def hscan(
+        self: TTransaction,
+        key: str,
+        cursor: str,
+        match: Optional[str] = None,
+        count: Optional[int] = None,
+    ) -> TTransaction:
+        """
+        Iterates incrementally over a hash.
+
+        See https://valkey.io/commands/hscan for more details.
+
+        Args:
+            key (str): The key of the set.
+            cursor (str): The cursor that points to the next iteration of results. A value of "0" indicates the start of
+                the search.
+            match (Optional[str]): The match filter is applied to the result of the command and will only include
+                strings that match the pattern specified. If the hash is large enough for scan commands to return only a
+                subset of the hash then there could be a case where the result is empty although there are items that
+                match the pattern specified. This is due to the default `COUNT` being `10` which indicates that it will
+                only fetch and match `10` items from the list.
+            count (Optional[int]): `COUNT` is a just a hint for the command for how many elements to fetch from the hash.
+                `COUNT` could be ignored until the hash is large enough for the `SCAN` commands to represent the results
+                as compact single-allocation packed encoding.
+
+        Returns:
+            List[Union[str, List[str]]]: An `Array` of the `cursor` and the subset of the hash held by `key`.
+                The first element is always the `cursor` for the next iteration of results. `0` will be the `cursor`
+                returned on the last iteration of the hash. The second element is always an `Array` of the subset of the
+                hash held in `key`. The `Array` in the second element is always a flattened series of `String` pairs,
+                where the value is at even indices and the score is at odd indices.
+        """
+        args = [key, cursor]
+        if match is not None:
+            args += ["MATCH", match]
+        if count is not None:
+            args += ["COUNT", str(count)]
+
+        return self.append_command(RequestType.HScan, args)
+
+    def lcs(
+        self: TTransaction,
+        key1: str,
+        key2: str,
+    ) -> TTransaction:
+        """
+        Returns the longest common subsequence between strings stored at key1 and key2.
+
+        Note that this is different than the longest common string algorithm, since
+        matching characters in the two strings do not need to be contiguous.
+
+        For instance the LCS between "foo" and "fao" is "fo", since scanning the two strings
+        from left to right, the longest common set of characters is composed of the first "f" and then the "o".
+
+        See https://valkey.io/commands/lcs for more details.
+
+        Args:
+            key1 (str): The key that stores the first string.
+            key2 (str): The key that stores the second string.
+
+        Command Response:
+            A String containing the longest common subsequence between the 2 strings.
+            An empty String is returned if the keys do not exist or have no common subsequences.
+
+        Since: Redis version 7.0.0.
+        """
+        args = [key1, key2]
+
+        return self.append_command(RequestType.LCS, args)
+
+    def lcs_len(
+        self: TTransaction,
+        key1: str,
+        key2: str,
+    ) -> TTransaction:
+        """
+        Returns the length of the longest common subsequence between strings stored at key1 and key2.
+
+        Note that this is different than the longest common string algorithm, since
+        matching characters in the two strings do not need to be contiguous.
+
+        For instance the LCS between "foo" and "fao" is "fo", since scanning the two strings
+        from left to right, the longest common set of characters is composed of the first "f" and then the "o".
+
+        See https://valkey.io/commands/lcs for more details.
+
+        Args:
+            key1 (str): The key that stores the first string.
+            key2 (str): The key that stores the second string.
+
+        Command Response:
+            The length of the longest common subsequence between the 2 strings.
+
+        Since: Redis version 7.0.0.
+        """
+        args = [key1, key2, "LEN"]
+
+        return self.append_command(RequestType.LCS, args)
+
+    def lcs_idx(
+        self: TTransaction,
+        key1: str,
+        key2: str,
+        min_match_len: Optional[int] = None,
+        with_match_len: Optional[bool] = False,
+    ) -> TTransaction:
+        """
+        Returns the indices and length of the longest common subsequence between strings stored at key1 and key2.
+
+        Note that this is different than the longest common string algorithm, since
+        matching characters in the two strings do not need to be contiguous.
+
+        For instance the LCS between "foo" and "fao" is "fo", since scanning the two strings
+        from left to right, the longest common set of characters is composed of the first "f" and then the "o".
+
+        See https://valkey.io/commands/lcs for more details.
+
+        Args:
+            key1 (str): The key that stores the first string.
+            key2 (str): The key that stores the second string.
+            min_match_len (Optional[int]): The minimum length of matches to include in the result.
+            with_match_len (Optional[bool]): If True, include the length of the substring matched for each substring.
+
+        Command Response:
+            A Map containing the indices of the longest common subsequence between the
+            2 strings and the length of the longest common subsequence. The resulting map contains two
+            keys, "matches" and "len":
+                - "len" is mapped to the length of the longest common subsequence between the 2 strings.
+                - "matches" is mapped to a three dimensional int array that stores pairs of indices that
+                  represent the location of the common subsequences in the strings held by key1 and key2,
+                  with the length of the match after each matches, if with_match_len is enabled.
+
+        Since: Redis version 7.0.0.
+        """
+        args = [key1, key2, "IDX"]
+
+        if min_match_len is not None:
+            args.extend(["MINMATCHLEN", str(min_match_len)])
+
+        if with_match_len:
+            args.append("WITHMATCHLEN")
+
+        return self.append_command(RequestType.LCS, args)
+
+    def wait(
+        self: TTransaction,
+        numreplicas: int,
+        timeout: int,
+    ) -> TTransaction:
+        """
+        Returns the number of replicas that acknowledged the write commands sent by the current client
+        before this command, both in the case where the specified number of replicas are reached, or
+        when the timeout is reached.
+
+        See https://valkey.io/commands/wait for more details.
+
+        Args:
+            numreplicas (int): The number of replicas to reach.
+            timeout (int): The timeout value specified in milliseconds.
+
+        Command Response:
+            str: The number of replicas reached by all the writes performed in the context of the current connection.
+        """
+        args = [str(numreplicas), str(timeout)]
+        return self.append_command(RequestType.Wait, args)
 
 
 class Transaction(BaseTransaction):

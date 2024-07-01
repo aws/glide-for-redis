@@ -8,6 +8,8 @@ on:
         - .github/workflows/pypi-cd.yml
         - .github/workflows/build-python-wrapper/action.yml
         - .github/workflows/start-self-hosted-runner/action.yml
+        - .github/workflows/install-shared-dependencies/action.yml
+        - .github/workflows/install-valkey/action.yml
     push:
         tags:
             - "v*.*"
@@ -33,7 +35,7 @@ jobs:
               shell: bash
               run: |
                 # Get the matrix from the matrix.json file, without the object that has the IMAGE key
-                export "PLATFORM_MATRIX=$(jq 'map(select(.PACKAGE_MANAGERS | contains(["pypi"])))' < .github/workflows/build-matrix.json | jq -c .)"
+                export "PLATFORM_MATRIX=$(jq 'map(select(.PACKAGE_MANAGERS | contains(["pypi"])))' < .github/json_matrices/build-matrix.json | jq -c .)"
                 echo "PLATFORM_MATRIX=${PLATFORM_MATRIX}" >> $GITHUB_OUTPUT
                 
 
@@ -136,6 +138,7 @@ jobs:
                   target: ${{ matrix.build.TARGET }}
                   publish: "true"
                   github-token: ${{ secrets.GITHUB_TOKEN }}
+                  engine-version: "7.2.5"
 
             - name: Include protobuf files in the package
               working-directory: ./python

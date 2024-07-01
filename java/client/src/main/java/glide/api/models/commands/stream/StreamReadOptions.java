@@ -1,4 +1,4 @@
-/** Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0 */
+/** Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0 */
 package glide.api.models.commands.stream;
 
 import glide.api.commands.StreamBaseCommands;
@@ -12,7 +12,7 @@ import lombok.experimental.SuperBuilder;
 /**
  * Optional arguments for {@link StreamBaseCommands#xread(Map, StreamReadOptions)}
  *
- * @see <a href="https://redis.io/commands/xread/">redis.io</a>
+ * @see <a href="https://valkey.io/commands/xread/">valkey.io</a>
  */
 @SuperBuilder
 public class StreamReadOptions {

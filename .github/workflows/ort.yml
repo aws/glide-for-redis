@@ -28,6 +28,7 @@ jobs:
           PYTHON_ATTRIBUTIONS: "python/THIRD_PARTY_LICENSES_PYTHON"
           NODE_ATTRIBUTIONS: "node/THIRD_PARTY_LICENSES_NODE"
           RUST_ATTRIBUTIONS: "glide-core/THIRD_PARTY_LICENSES_RUST"
+          JAVA_ATTRIBUTIONS: "java/THIRD_PARTY_LICENSES_JAVA"
         steps:
             - name: Set the release version
               shell: bash
@@ -158,6 +159,19 @@ jobs:
               with:
                 folder_path: "${{ github.workspace }}/glide-core"
 
+            ### Java ###
+
+            - name: Set up JDK 11
+              uses: actions/setup-java@v4
+              with:
+                  distribution: "temurin"
+                  java-version: 11
+
+            - name: Run ORT tools for Java 
+              uses: ./.github/workflows/run-ort-tools
+              with:
+                folder_path: "${{ github.workspace }}/java"
+
             ### Process results ###
 
             - name: Check for diff
@@ -165,7 +179,8 @@ jobs:
                 cp python/ort_results/NOTICE_DEFAULT $PYTHON_ATTRIBUTIONS
                 cp node/ort_results/NOTICE_DEFAULT $NODE_ATTRIBUTIONS
                 cp glide-core/ort_results/NOTICE_DEFAULT $RUST_ATTRIBUTIONS
-                GIT_DIFF=`git diff $PYTHON_ATTRIBUTIONS $NODE_ATTRIBUTIONS $RUST_ATTRIBUTIONS`
+                cp java/ort_results/NOTICE_DEFAULT $JAVA_ATTRIBUTIONS
+                GIT_DIFF=`git diff $PYTHON_ATTRIBUTIONS $NODE_ATTRIBUTIONS $RUST_ATTRIBUTIONS $JAVA_ATTRIBUTIONS`
                 if [ -n "$GIT_DIFF" ]; then
                 echo "FOUND_DIFF=true" >> $GITHUB_ENV
                 else
@@ -191,7 +206,7 @@ jobs:
                 git config --global user.email "glide-for-redis@amazon.com"
                 git config --global user.name "ort-bot"
                 git checkout -b ${BRANCH_NAME}
-                git add $PYTHON_ATTRIBUTIONS $NODE_ATTRIBUTIONS $RUST_ATTRIBUTIONS
+                git add $PYTHON_ATTRIBUTIONS $NODE_ATTRIBUTIONS $RUST_ATTRIBUTIONS $JAVA_ATTRIBUTIONS
                 git commit -m "Updated attribution files"
                 git push --set-upstream origin ${BRANCH_NAME} -f
                 title="Updated attribution files for ${BRANCH_NAME}"

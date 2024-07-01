@@ -1,8 +1,8 @@
 /**
- * Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0
+ * Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0
  */
 
-import { Logger, RedisClient, RedisClusterClient } from "@aws/glide-for-redis";
+import { GlideClient, GlideClusterClient, Logger } from "@aws/glide-for-redis";
 
 async function sendPingToNode() {
     // When in Redis is in standalone mode, add address of the primary node, and any replicas you'd like to be able to read from.
@@ -12,8 +12,8 @@ async function sendPingToNode() {
             port: 6379,
         },
     ];
-    // Check `RedisClientConfiguration/ClusterClientConfiguration` for additional options.
-    const client = await RedisClient.createClient({
+    // Check `GlideClientConfiguration/ClusterClientConfiguration` for additional options.
+    const client = await GlideClient.createClient({
         addresses: addresses,
         // if the server uses TLS, you'll need to enable it. Otherwise the connection attempt will time out silently.
         // useTLS: true,
@@ -26,7 +26,7 @@ async function sendPingToNode() {
     client.close();
 }
 
-async function send_set_and_get(client: RedisClient | RedisClusterClient) {
+async function send_set_and_get(client: GlideClient | GlideClusterClient) {
     const set_response = await client.set("foo", "bar");
     console.log(`Set response is = ${set_response}`);
     const get_response = await client.get("foo");
@@ -41,8 +41,8 @@ async function sendPingToRandomNodeInCluster() {
             port: 6380,
         },
     ];
-    // Check `RedisClientConfiguration/ClusterClientConfiguration` for additional options.
-    const client = await RedisClusterClient.createClient({
+    // Check `GlideClientConfiguration/ClusterClientConfiguration` for additional options.
+    const client = await GlideClusterClient.createClient({
         addresses: addresses,
         // if the cluster nodes use TLS, you'll need to enable it. Otherwise the connection attempt will time out silently.
         // useTLS: true,

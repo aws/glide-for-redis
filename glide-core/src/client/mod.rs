@@ -1,5 +1,5 @@
 /**
- * Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0
+ * Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0
  */
 mod types;
 
@@ -204,6 +204,7 @@ fn get_request_timeout(cmd: &Cmd, default_timeout: Duration) -> RedisResult<Opti
             .position(b"BLOCK")
             .map(|idx| get_timeout_from_cmd_arg(cmd, idx + 1, TimeUnit::Milliseconds))
             .unwrap_or(Ok(RequestTimeoutOption::ClientConfig)),
+        b"WAIT" => get_timeout_from_cmd_arg(cmd, 2, TimeUnit::Milliseconds),
         _ => Ok(RequestTimeoutOption::ClientConfig),
     }?;
 
@@ -734,6 +735,17 @@ mod tests {
             result.unwrap(),
             Some(Duration::from_secs_f64(
                 0.857 + BLOCKING_CMD_TIMEOUT_EXTENSION
+            ))
+        );
+
+        let mut cmd = Cmd::new();
+        cmd.arg("WAIT").arg(1).arg("500");
+        let result = get_request_timeout(&cmd, Duration::from_millis(500));
+        assert!(result.is_ok());
+        assert_eq!(
+            result.unwrap(),
+            Some(Duration::from_secs_f64(
+                0.5 + BLOCKING_CMD_TIMEOUT_EXTENSION
             ))
         );
     }

@@ -45,11 +45,11 @@ To install GLIDE for Redis using `pip`, follow these steps:
 
 ```python:
 >>> import asyncio
->>> from glide import ClusterClientConfiguration, NodeAddress, RedisClusterClient
+>>> from glide import ClusterClientConfiguration, NodeAddress, GlideClusterClient
 >>> async def test_cluster_client():
 ...     addresses = [NodeAddress("redis.example.com", 6379)]
 ...     config = ClusterClientConfiguration(addresses)
-...     client = await RedisClusterClient.create(config)
+...     client = await GlideClusterClient.create(config)
 ...     set_result = await client.set("foo", "bar")
 ...     print(f"Set response is {set_result}")
 ...     get_result = await client.get("foo")
@@ -64,14 +64,14 @@ Get response is bar
 
 ```python:
 >>> import asyncio
->>> from glide import RedisClientConfiguration, NodeAddress, RedisClient
+>>> from glide import GlideClientConfiguration, NodeAddress, GlideClient
 >>> async def test_standalone_client():
 ...     addresses = [
-...             NodeAddress("redis_primary.example.com", 6379),
-...             NodeAddress("redis_replica.example.com", 6379)
+...             NodeAddress("server_primary.example.com", 6379),
+...             NodeAddress("server_replica.example.com", 6379)
 ...     ]
-...     config = RedisClientConfiguration(addresses)
-...     client = await RedisClient.create(config)
+...     config = GlideClientConfiguration(addresses)
+...     client = await GlideClient.create(config)
 ...     set_result = await client.set("foo", "bar")
 ...     print(f"Set response is {set_result}")
 ...     get_result = await client.get("foo")

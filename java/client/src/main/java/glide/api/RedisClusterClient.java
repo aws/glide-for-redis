@@ -1,4 +1,4 @@
-/** Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0 */
+/** Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0 */
 package glide.api;
 
 import static glide.api.commands.ServerManagementCommands.VERSION_REDIS_API;
@@ -37,6 +37,7 @@ import static redis_request.RedisRequestOuterClass.RequestType.LastSave;
 import static redis_request.RedisRequestOuterClass.RequestType.Lolwut;
 import static redis_request.RedisRequestOuterClass.RequestType.Ping;
 import static redis_request.RedisRequestOuterClass.RequestType.RandomKey;
+import static redis_request.RedisRequestOuterClass.RequestType.SPublish;
 import static redis_request.RedisRequestOuterClass.RequestType.Sort;
 import static redis_request.RedisRequestOuterClass.RequestType.SortReadOnly;
 import static redis_request.RedisRequestOuterClass.RequestType.Time;
@@ -44,6 +45,7 @@ import static redis_request.RedisRequestOuterClass.RequestType.UnWatch;
 
 import glide.api.commands.ConnectionManagementClusterCommands;
 import glide.api.commands.GenericClusterCommands;
+import glide.api.commands.PubSubClusterCommands;
 import glide.api.commands.ScriptingAndFunctionsClusterCommands;
 import glide.api.commands.ServerManagementClusterCommands;
 import glide.api.commands.TransactionsClusterCommands;
@@ -57,8 +59,6 @@ import glide.api.models.commands.function.FunctionRestorePolicy;
 import glide.api.models.configuration.RedisClusterClientConfiguration;
 import glide.api.models.configuration.RequestRoutingConfiguration.Route;
 import glide.api.models.configuration.RequestRoutingConfiguration.SingleNodeRoute;
-import glide.managers.CommandManager;
-import glide.managers.ConnectionManager;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -77,17 +77,19 @@ public class RedisClusterClient extends BaseClient
                 GenericClusterCommands,
                 ServerManagementClusterCommands,
                 ScriptingAndFunctionsClusterCommands,
-                TransactionsClusterCommands {
+                TransactionsClusterCommands,
+                PubSubClusterCommands {
 
-    protected RedisClusterClient(ConnectionManager connectionManager, CommandManager commandManager) {
-        super(connectionManager, commandManager);
+    /** A private constructor. Use {@link #CreateClient} to get a client. */
+    RedisClusterClient(ClientBuilder builder) {
+        super(builder);
     }
 
     /**
      * Async request for an async (non-blocking) Redis client in Cluster mode.
      *
-     * @param config Redis cluster client Configuration
-     * @return A Future to connect and return a RedisClusterClient
+     * @param config Redis cluster client Configuration.
+     * @return A Future to connect and return a RedisClusterClient.
      */
     public static CompletableFuture<RedisClusterClient> CreateClient(
             @NonNull RedisClusterClientConfiguration config) {
@@ -120,15 +122,25 @@ public class RedisClusterClient extends BaseClient
 
     @Override
     public CompletableFuture<Object[]> exec(@NonNull ClusterTransaction transaction) {
-        return commandManager.submitNewTransaction(
-                transaction, Optional.empty(), this::handleArrayOrNullResponse);
+        if (transaction.isBinarySafeOutput()) {
+            return commandManager.submitNewTransaction(
+                    transaction, Optional.empty(), this::handleArrayOrNullResponseBinary);
+        } else {
+            return commandManager.submitNewTransaction(
+                    transaction, Optional.empty(), this::handleArrayOrNullResponse);
+        }
     }
 
     @Override
     public CompletableFuture<Object[]> exec(
             @NonNull ClusterTransaction transaction, @NonNull SingleNodeRoute route) {
-        return commandManager.submitNewTransaction(
-                transaction, Optional.of(route), this::handleArrayOrNullResponse);
+        if (transaction.isBinarySafeOutput()) {
+            return commandManager.submitNewTransaction(
+                    transaction, Optional.of(route), this::handleArrayOrNullResponseBinary);
+        } else {
+            return commandManager.submitNewTransaction(
+                    transaction, Optional.of(route), this::handleArrayOrNullResponse);
+        }
     }
 
     @Override
@@ -286,6 +298,12 @@ public class RedisClusterClient extends BaseClient
     }
 
     @Override
+    public CompletableFuture<GlideString> echo(@NonNull GlideString message) {
+        return commandManager.submitNewCommand(
+                Echo, new GlideString[] {message}, this::handleGlideStringResponse);
+    }
+
+    @Override
     public CompletableFuture<ClusterValue<String>> echo(
             @NonNull String message, @NonNull Route route) {
         return commandManager.submitNewCommand(
@@ -296,6 +314,19 @@ public class RedisClusterClient extends BaseClient
                         route instanceof SingleNodeRoute
                                 ? ClusterValue.ofSingleValue(handleStringResponse(response))
                                 : ClusterValue.ofMultiValue(handleMapResponse(response)));
+    }
+
+    @Override
+    public CompletableFuture<ClusterValue<GlideString>> echo(
+            @NonNull GlideString message, @NonNull Route route) {
+        return commandManager.submitNewCommand(
+                Echo,
+                new GlideString[] {message},
+                route,
+                response ->
+                        route instanceof SingleNodeRoute
+                                ? ClusterValue.ofSingleValue(handleGlideStringResponse(response))
+                                : ClusterValue.ofMultiValueBinary(handleBinaryStringMapResponse(response)));
     }
 
     @Override
@@ -759,6 +790,18 @@ public class RedisClusterClient extends BaseClient
     public CompletableFuture<String> randomKey() {
         return commandManager.submitNewCommand(
                 RandomKey, new String[0], this::handleStringOrNullResponse);
+    }
+
+    @Override
+    public CompletableFuture<String> spublish(@NonNull String channel, @NonNull String message) {
+        return commandManager.submitNewCommand(
+                SPublish,
+                new String[] {channel, message},
+                response -> {
+                    // Check, but ignore the number - it is never valid. A GLIDE bug/limitation TODO
+                    handleLongResponse(response);
+                    return OK;
+                });
     }
 
     @Override

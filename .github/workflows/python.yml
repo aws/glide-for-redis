@@ -11,7 +11,9 @@ on:
             - .github/workflows/python.yml
             - .github/workflows/build-python-wrapper/action.yml
             - .github/workflows/install-shared-dependencies/action.yml
-            - .github/workflows/install-redis-modules/action.yml
+            - .github/workflows/test-benchmark/action.yml
+            - .github/workflows/lint-rust/action.yml
+            - .github/workflows/install-valkey/action.yml
 
     pull_request:
         paths:
@@ -22,7 +24,9 @@ on:
             - .github/workflows/python.yml
             - .github/workflows/build-python-wrapper/action.yml
             - .github/workflows/install-shared-dependencies/action.yml
-            - .github/workflows/install-redis-modules/action.yml
+            - .github/workflows/test-benchmark/action.yml
+            - .github/workflows/lint-rust/action.yml
+            - .github/workflows/install-valkey/action.yml
 
 concurrency:
     group: python-${{ github.head_ref || github.ref }}
@@ -32,25 +36,32 @@ permissions:
     contents: read
 
 jobs:
+    load-engine-matrix:
+      runs-on: ubuntu-latest
+      outputs:
+        matrix: ${{ steps.load-engine-matrix.outputs.matrix }}
+      steps:
+          - name: Checkout
+            uses: actions/checkout@v4
+
+          - name: Load the engine matrix
+            id: load-engine-matrix
+            shell: bash
+            run: echo "matrix=$(jq -c . < .github/json_matrices/engine-matrix.json)" >> $GITHUB_OUTPUT
+
     test-ubuntu-latest:
         runs-on: ubuntu-latest
+        needs: load-engine-matrix
         timeout-minutes: 25
         strategy:
             fail-fast: false
             matrix:
-                redis:
-                    - 6.2.14
-                    - 7.2.3
+                engine: ${{ fromJson(needs.load-engine-matrix.outputs.matrix) }}
 
         steps:
             - uses: actions/checkout@v4
               with:
                   submodules: recursive
-
-            - name: Install redis
-              uses: ./.github/workflows/install-redis
-              with:
-                  redis-version: ${{ matrix.redis }}
 
             - name: Set up Python 3.10
               uses: actions/setup-python@v4
@@ -87,6 +98,7 @@ jobs:
                   os: "ubuntu"
                   target: "x86_64-unknown-linux-gnu"
                   github-token: ${{ secrets.GITHUB_TOKEN }}
+                  engine-version: ${{ matrix.engine.version }}
 
             - name: Type check with mypy
               working-directory: ./python
@@ -95,7 +107,7 @@ jobs:
                   # all installed dependencies and build files
                   source .env/bin/activate
                   pip install mypy types-protobuf
-                  # Install the benchmark requirements 
+                  # Install the benchmark requirements
                   pip install -r ../benchmarks/python/requirements.txt
                   python -m mypy ..
 
@@ -139,6 +151,7 @@ jobs:
                   os: "macos"
                   target: "aarch64-apple-darwin"
                   github-token: ${{ secrets.GITHUB_TOKEN }}
+                  engine-version: "7.2.5"
 
             - name: Test compatibility with pytest
               working-directory: ./python
@@ -156,7 +169,7 @@ jobs:
                   yum -y remove git
                   yum -y remove git-*
                   yum -y install https://packages.endpointdev.com/rhel/7/os/x86_64/endpoint-repo.x86_64.rpm
-                  yum install -y git 
+                  yum install -y git
                   git --version
 
             - uses: actions/checkout@v4
@@ -176,12 +189,7 @@ jobs:
                   os: "amazon-linux"
                   target: "x86_64-unknown-linux-gnu"
                   github-token: ${{ secrets.GITHUB_TOKEN }}
-
-            - name: Create a symbolic Link for redis6 binaries
-              working-directory: ./python
-              run: |
-                  ln -s /usr/bin/redis6-server /usr/bin/redis-server
-                  ln -s /usr/bin/redis6-cli /usr/bin/redis-cli
+                  engine-version: "7.2.5"
 
             - name: Test compatibility with pytest
               working-directory: ./python

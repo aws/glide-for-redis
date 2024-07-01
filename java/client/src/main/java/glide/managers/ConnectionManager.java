@@ -1,9 +1,12 @@
-/** Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0 */
+/** Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0 */
 package glide.managers;
 
+import com.google.protobuf.ByteString;
 import connection_request.ConnectionRequestOuterClass;
 import connection_request.ConnectionRequestOuterClass.AuthenticationInfo;
 import connection_request.ConnectionRequestOuterClass.ConnectionRequest;
+import connection_request.ConnectionRequestOuterClass.PubSubChannelsOrPatterns;
+import connection_request.ConnectionRequestOuterClass.PubSubSubscriptions;
 import connection_request.ConnectionRequestOuterClass.TlsMode;
 import glide.api.models.configuration.BaseClientConfiguration;
 import glide.api.models.configuration.NodeAddress;
@@ -141,6 +144,20 @@ public class ConnectionManager {
             connectionRequestBuilder.setDatabaseId(configuration.getDatabaseId());
         }
 
+        if (configuration.getSubscriptionConfiguration() != null) {
+            // TODO throw ConfigurationError if RESP2
+            var subscriptionsBuilder = PubSubSubscriptions.newBuilder();
+            for (var entry : configuration.getSubscriptionConfiguration().getSubscriptions().entrySet()) {
+                var channelsBuilder = PubSubChannelsOrPatterns.newBuilder();
+                for (var channel : entry.getValue()) {
+                    channelsBuilder.addChannelsOrPatterns(ByteString.copyFromUtf8(channel));
+                }
+                subscriptionsBuilder.putChannelsOrPatternsByType(
+                        entry.getKey().ordinal(), channelsBuilder.build());
+            }
+            connectionRequestBuilder.setPubsubSubscriptions(subscriptionsBuilder.build());
+        }
+
         return connectionRequestBuilder;
     }
 
@@ -149,12 +166,25 @@ public class ConnectionManager {
      *
      * @param configuration
      */
-    private ConnectionRequestOuterClass.ConnectionRequest.Builder
-            setupConnectionRequestBuilderRedisClusterClient(
-                    RedisClusterClientConfiguration configuration) {
+    private ConnectionRequest.Builder setupConnectionRequestBuilderRedisClusterClient(
+            RedisClusterClientConfiguration configuration) {
         ConnectionRequest.Builder connectionRequestBuilder =
                 setupConnectionRequestBuilderBaseConfiguration(configuration);
         connectionRequestBuilder.setClusterModeEnabled(true);
+
+        if (configuration.getSubscriptionConfiguration() != null) {
+            // TODO throw ConfigurationError if RESP2
+            var subscriptionsBuilder = PubSubSubscriptions.newBuilder();
+            for (var entry : configuration.getSubscriptionConfiguration().getSubscriptions().entrySet()) {
+                var channelsBuilder = PubSubChannelsOrPatterns.newBuilder();
+                for (var channel : entry.getValue()) {
+                    channelsBuilder.addChannelsOrPatterns(ByteString.copyFromUtf8(channel));
+                }
+                subscriptionsBuilder.putChannelsOrPatternsByType(
+                        entry.getKey().ordinal(), channelsBuilder.build());
+            }
+            connectionRequestBuilder.setPubsubSubscriptions(subscriptionsBuilder.build());
+        }
 
         return connectionRequestBuilder;
     }

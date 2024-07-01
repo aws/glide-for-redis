@@ -1,5 +1,5 @@
 /**
- * Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0
+ * Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0
  */
 
 import {
@@ -61,6 +61,8 @@ import {
     createMSet,
     createObjectEncoding,
     createObjectFreq,
+    createObjectIdletime,
+    createObjectRefcount,
     createPExpire,
     createPExpireAt,
     createPTTL,
@@ -80,6 +82,7 @@ import {
     createSMove,
     createSPop,
     createSRem,
+    createSUnionStore,
     createSelect,
     createSet,
     createStrlen,
@@ -88,11 +91,13 @@ import {
     createType,
     createUnlink,
     createXAdd,
+    createXLen,
     createXRead,
     createXTrim,
     createZAdd,
     createZCard,
     createZCount,
+    createZInterCard,
     createZInterstore,
     createZPopMax,
     createZPopMin,
@@ -103,11 +108,6 @@ import {
     createZRemRangeByRank,
     createZRemRangeByScore,
     createZScore,
-    createSUnionStore,
-    createXLen,
-    createZInterCard,
-    createObjectIdletime,
-    createObjectRefcount,
 } from "./Commands";
 import { redis_request } from "./ProtobufMessage";
 
@@ -1529,7 +1529,7 @@ export class BaseTransaction<T extends BaseTransaction<T>> {
  * Transactions allow the execution of a group of commands in a single step.
  *
  * Command Response:
- *  An array of command responses is returned by the RedisClient.exec command, in the order they were given.
+ *  An array of command responses is returned by the GlideClient.exec command, in the order they were given.
  *  Each element in the array represents a command given to the transaction.
  *  The response for each command depends on the executed Redis command.
  *  Specific response types are documented alongside each method.
@@ -1540,7 +1540,7 @@ export class BaseTransaction<T extends BaseTransaction<T>> {
  *    .set("key", "value")
  *    .select(1)  /// Standalone command
  *    .get("key");
- * const result = await redisClient.exec(transaction);
+ * const result = await GlideClient.exec(transaction);
  * console.log(result); // Output: ['OK', 'OK', null]
  * ```
  */
@@ -1564,7 +1564,7 @@ export class Transaction extends BaseTransaction<Transaction> {
  * Transactions allow the execution of a group of commands in a single step.
  *
  * Command Response:
- *  An array of command responses is returned by the RedisClusterClient.exec command, in the order they were given.
+ *  An array of command responses is returned by the GlideClusterClient.exec command, in the order they were given.
  *  Each element in the array represents a command given to the transaction.
  *  The response for each command depends on the executed Redis command.
  *  Specific response types are documented alongside each method.

@@ -1,6 +1,7 @@
-/** Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0 */
+/** Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0 */
 package glide.api.commands;
 
+import glide.api.models.GlideString;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -77,4 +78,18 @@ public interface ConnectionManagementCommands {
      * }</pre>
      */
     CompletableFuture<String> echo(String message);
+
+    /**
+     * Echoes the provided <code>message</code> back.
+     *
+     * @see <a href="https://redis.io/commands/echo/>redis.io</a> for details.
+     * @param message The message to be echoed back.
+     * @return The provided <code>message</code>.
+     * @example
+     *     <pre>{@code
+     * GlideString payload = client.echo(gs("GLIDE")).get();
+     * assert payload.equals(gs("GLIDE"));
+     * }</pre>
+     */
+    CompletableFuture<GlideString> echo(GlideString message);
 }

@@ -7,7 +7,7 @@ indent_size = 2
 [*.cs]
 
 # License header
-file_header_template = Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0
+file_header_template = Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0
 
 # Organize usings
 dotnet_separate_import_directive_groups = true

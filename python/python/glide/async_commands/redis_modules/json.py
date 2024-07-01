@@ -1,4 +1,4 @@
-# Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0
+# Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0
 """module for `RedisJSON` commands.
 
     Examples:
@@ -19,8 +19,8 @@ from typing import List, Optional, Union, cast
 
 from glide.async_commands.core import ConditionalChange
 from glide.constants import TOK, TJsonResponse
+from glide.glide_client import TGlideClient
 from glide.protobuf.redis_request_pb2 import RequestType
-from glide.redis_client import TRedisClient
 
 
 class JsonGetOptions:
@@ -55,7 +55,7 @@ class JsonGetOptions:
 
 
 async def set(
-    client: TRedisClient,
+    client: TGlideClient,
     key: str,
     path: str,
     value: str,
@@ -67,7 +67,7 @@ async def set(
     See https://redis.io/commands/json.set/ for more details.
 
     Args:
-        client (TRedisClient): The Redis client to execute the command.
+        client (TGlideClient): The Redis client to execute the command.
         key (str): The key of the JSON document.
         path (str): Represents the path within the JSON document where the value will be set.
             The key will be modified only if `value` is added as the last child in the specified `path`, or if the specified `path` acts as the parent of a new child being added.
@@ -95,7 +95,7 @@ async def set(
 
 
 async def get(
-    client: TRedisClient,
+    client: TGlideClient,
     key: str,
     paths: Optional[Union[str, List[str]]] = None,
     options: Optional[JsonGetOptions] = None,
@@ -106,7 +106,7 @@ async def get(
     See https://redis.io/commands/json.get/ for more details.
 
     Args:
-        client (TRedisClient): The Redis client to execute the command.
+        client (TGlideClient): The Redis client to execute the command.
         key (str): The key of the JSON document.
         paths (Optional[Union[str, List[str]]]): The path or list of paths within the JSON document. Default is root `$`.
         options (Optional[JsonGetOptions]): Options for formatting the string representation of the JSON data. See `JsonGetOptions`.
@@ -140,7 +140,7 @@ async def get(
 
 
 async def delete(
-    client: TRedisClient,
+    client: TGlideClient,
     key: str,
     path: Optional[str] = None,
 ) -> int:
@@ -150,7 +150,7 @@ async def delete(
     See https://redis.io/commands/json.del/ for more details.
 
     Args:
-        client (TRedisClient): The Redis client to execute the command.
+        client (TGlideClient): The Redis client to execute the command.
         key (str): The key of the JSON document.
         path (Optional[str]): Represents the path within the JSON document where the value will be deleted.
             If None, deletes the entire JSON document at `key`. Defaults to None.
@@ -177,7 +177,7 @@ async def delete(
 
 
 async def forget(
-    client: TRedisClient,
+    client: TGlideClient,
     key: str,
     path: Optional[str] = None,
 ) -> Optional[int]:
@@ -187,7 +187,7 @@ async def forget(
     See https://redis.io/commands/json.forget/ for more details.
 
     Args:
-        client (TRedisClient): The Redis client to execute the command.
+        client (TGlideClient): The Redis client to execute the command.
         key (str): The key of the JSON document.
         path (Optional[str]): Represents the path within the JSON document where the value will be deleted.
             If None, deletes the entire JSON document at `key`. Defaults to None.
@@ -215,7 +215,7 @@ async def forget(
 
 
 async def toggle(
-    client: TRedisClient,
+    client: TGlideClient,
     key: str,
     path: str,
 ) -> TJsonResponse[bool]:
@@ -225,7 +225,7 @@ async def toggle(
     See https://redis.io/commands/json.toggle/ for more details.
 
     Args:
-        client (TRedisClient): The Redis client to execute the command.
+        client (TGlideClient): The Redis client to execute the command.
         key (str): The key of the JSON document.
         path (str): The JSONPath to specify.
 

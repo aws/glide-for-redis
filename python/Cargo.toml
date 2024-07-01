@@ -12,6 +12,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 pyo3 = { version = "^0.20", features = ["extension-module", "num-bigint"] }
+bytes = { version = "1.6.0" }
 redis = { path = "../submodules/redis-rs/redis", features = ["aio", "tokio-comp", "connection-manager","tokio-rustls-comp"] }
 glide-core = { path = "../glide-core", features = ["socket-layer"] }
 logger_core = {path = "../logger_core"}

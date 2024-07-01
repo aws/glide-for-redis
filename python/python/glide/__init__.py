@@ -1,4 +1,4 @@
-# Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0
+# Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0
 
 from glide.async_commands.bitmap import (
     BitEncoding,
@@ -52,7 +52,10 @@ from glide.async_commands.stream import (
     MaxId,
     MinId,
     StreamAddOptions,
+    StreamGroupOptions,
+    StreamPendingOptions,
     StreamRangeBound,
+    StreamReadGroupOptions,
     StreamReadOptions,
     StreamTrimOptions,
     TrimByMaxLen,
@@ -63,25 +66,27 @@ from glide.config import (
     BackoffStrategy,
     BaseClientConfiguration,
     ClusterClientConfiguration,
+    GlideClientConfiguration,
     NodeAddress,
     PeriodicChecksManualInterval,
     PeriodicChecksStatus,
     ProtocolVersion,
     ReadFrom,
-    RedisClientConfiguration,
     RedisCredentials,
 )
 from glide.constants import OK
 from glide.exceptions import (
     ClosingError,
+    ConfigurationError,
+    ConnectionError,
     ExecAbortError,
     RedisError,
     RequestError,
     TimeoutError,
 )
+from glide.glide_client import GlideClient, GlideClusterClient
 from glide.logger import Level as LogLevel
 from glide.logger import Logger
-from glide.redis_client import RedisClient, RedisClusterClient
 from glide.routes import (
     AllNodes,
     AllPrimaries,
@@ -96,13 +101,13 @@ from .glide import Script
 
 __all__ = [
     # Client
-    "RedisClient",
-    "RedisClusterClient",
+    "GlideClient",
+    "GlideClusterClient",
     "Transaction",
     "ClusterTransaction",
     # Config
     "BaseClientConfiguration",
-    "RedisClientConfiguration",
+    "GlideClientConfiguration",
     "ClusterClientConfiguration",
     "BackoffStrategy",
     "ReadFrom",
@@ -133,8 +138,10 @@ __all__ = [
     "ScoreBoundary",
     "ConditionalChange",
     "ExpireOptions",
+    "ExpiryGetEx",
     "ExpirySet",
     "ExpiryType",
+    "ExpiryTypeGetEx",
     "FlushMode",
     "GeoSearchByBox",
     "GeoSearchByRadius",
@@ -159,6 +166,9 @@ __all__ = [
     "MaxId",
     "MinId",
     "StreamAddOptions",
+    "StreamGroupOptions",
+    "StreamPendingOptions",
+    "StreamReadGroupOptions",
     "StreamRangeBound",
     "StreamReadOptions",
     "StreamTrimOptions",
@@ -178,6 +188,8 @@ __all__ = [
     "SlotIdRoute",
     # Exceptions
     "ClosingError",
+    "ConfigurationError",
+    "ConnectionError",
     "ExecAbortError",
     "RedisError",
     "RequestError",

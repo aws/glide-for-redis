@@ -9,9 +9,9 @@ on:
             - java/**
             - .github/workflows/java.yml
             - .github/workflows/install-shared-dependencies/action.yml
-            - .github/workflows/install-redis/action.yml
             - .github/workflows/test-benchmark/action.yml
             - .github/workflows/lint-rust/action.yml
+            - .github/workflows/install-valkey/action.yml
     pull_request:
         paths:
             - glide-core/src/**
@@ -19,16 +19,30 @@ on:
             - java/**
             - .github/workflows/java.yml
             - .github/workflows/install-shared-dependencies/action.yml
-            - .github/workflows/install-redis/action.yml
             - .github/workflows/test-benchmark/action.yml
             - .github/workflows/lint-rust/action.yml
+            - .github/workflows/install-valkey/action.yml
 
 concurrency:
     group: java-${{ github.head_ref || github.ref }}
     cancel-in-progress: true
 
 jobs:
+    load-engine-matrix:
+      runs-on: ubuntu-latest
+      outputs:
+        matrix: ${{ steps.load-engine-matrix.outputs.matrix }}
+      steps:
+          - name: Checkout
+            uses: actions/checkout@v4
+
+          - name: Load the engine matrix
+            id: load-engine-matrix
+            shell: bash
+            run: echo "matrix=$(jq -c . < .github/json_matrices/engine-matrix.json)" >> $GITHUB_OUTPUT
+
     build-and-test-java-client:
+        needs: load-engine-matrix
         timeout-minutes: 35
         strategy:
             # Run all jobs
@@ -37,9 +51,7 @@ jobs:
                 java:
                     - 11
                     - 17
-                redis:
-                    - 6.2.14
-                    - 7.2.3
+                engine: ${{ fromJson(needs.load-engine-matrix.outputs.matrix) }}
                 host:
                   - {
                     OS: ubuntu,
@@ -71,19 +83,13 @@ jobs:
                   os: ${{ matrix.host.OS }}
                   target: ${{ matrix.host.TARGET }}
                   github-token: ${{ secrets.GITHUB_TOKEN }}
+                  engine-version: ${{ matrix.engine.version }}
 
             - name: Install protoc (protobuf)
               uses: arduino/setup-protoc@v3
               with:
                   version: "26.1"
                   repo-token: ${{ secrets.GITHUB_TOKEN }}
-
-            - name: Install redis
-              # TODO: make this step macos compatible: https://github.com/aws/glide-for-redis/issues/781
-              if: ${{ matrix.host.OS == 'ubuntu' }}
-              uses: ./.github/workflows/install-redis
-              with:
-                  redis-version: ${{ matrix.redis }}
 
             - name: Build java client
               working-directory: java
@@ -144,17 +150,13 @@ jobs:
                   os: "amazon-linux"
                   target: "x86_64-unknown-linux-gnu"
                   github-token: ${{ secrets.GITHUB_TOKEN }}
+                  engine-version: "7.2.5"
 
             - name: Install protoc (protobuf)
               uses: arduino/setup-protoc@v3
               with:
                   version: "26.1"
                   repo-token: ${{ secrets.GITHUB_TOKEN }}
-
-            - name: Create a symbolic Link for redis6 binaries
-              run: |
-                  ln -s /usr/bin/redis6-server /usr/bin/redis-server
-                  ln -s /usr/bin/redis6-cli /usr/bin/redis-cli
 
             - name: Install Java
               run: |

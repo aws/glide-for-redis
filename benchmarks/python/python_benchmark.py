@@ -1,4 +1,4 @@
-# Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0
+# Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0
 
 import argparse
 import asyncio
@@ -17,11 +17,11 @@ import numpy as np
 import redis.asyncio as redispy  # type: ignore
 from glide import (
     BaseClientConfiguration,
+    GlideClient,
+    GlideClusterClient,
     Logger,
     LogLevel,
     NodeAddress,
-    RedisClient,
-    RedisClusterClient,
 )
 
 
@@ -288,7 +288,7 @@ async def main(
 
     if clients_to_run == "all" or clients_to_run == "glide":
         # Glide Socket
-        client_class = RedisClusterClient if is_cluster else RedisClient
+        client_class = GlideClusterClient if is_cluster else GlideClient
         config = BaseClientConfiguration(
             [NodeAddress(host=host, port=port)], use_tls=use_tls
         )

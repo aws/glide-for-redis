@@ -1,5 +1,5 @@
 /**
- * Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0
+ * Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0
  */
 
 import * as net from "net";
@@ -204,7 +204,7 @@ function toProtobufRoute(
  * For full documentation, see
  * https://github.com/aws/babushka/wiki/NodeJS-wrapper#redis-cluster
  */
-export class RedisClusterClient extends BaseClient {
+export class GlideClusterClient extends BaseClient {
     /**
      * @internal
      */
@@ -235,22 +235,22 @@ export class RedisClusterClient extends BaseClient {
 
     public static async createClient(
         options: ClusterClientConfiguration,
-    ): Promise<RedisClusterClient> {
+    ): Promise<GlideClusterClient> {
         return await super.createClientInternal(
             options,
             (socket: net.Socket, options?: ClusterClientConfiguration) =>
-                new RedisClusterClient(socket, options),
+                new GlideClusterClient(socket, options),
         );
     }
 
     static async __createClient(
         options: BaseClientConfiguration,
         connectedSocket: net.Socket,
-    ): Promise<RedisClusterClient> {
+    ): Promise<GlideClusterClient> {
         return super.__createClientInternal(
             options,
             connectedSocket,
-            (socket, options) => new RedisClusterClient(socket, options),
+            (socket, options) => new GlideClusterClient(socket, options),
         );
     }
 

@@ -1,5 +1,5 @@
 /**
- * Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0
+ * Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0
  */
 use redis::{
     cluster_routing::Routable, from_owned_redis_value, Cmd, ErrorKind, RedisResult, Value,
@@ -33,6 +33,8 @@ pub(crate) enum ExpectedReturnType<'a> {
     KeyWithMemberAndScore,
     FunctionStatsReturnType,
     GeoSearchReturnType,
+    SimpleString,
+    XAutoClaimReturnType,
 }
 
 pub(crate) fn convert_to_expected_type(
@@ -140,6 +142,9 @@ pub(crate) fn convert_to_expected_type(
         },
         ExpectedReturnType::BulkString => Ok(Value::BulkString(
             from_owned_redis_value::<String>(value)?.into(),
+        )),
+        ExpectedReturnType::SimpleString => Ok(Value::SimpleString(
+            from_owned_redis_value::<String>(value)?,
         )),
         ExpectedReturnType::JsonToggleReturnType => match value {
             Value::Array(array) => {
@@ -603,6 +608,71 @@ pub(crate) fn convert_to_expected_type(
             }
             _ => Err((ErrorKind::TypeError, "Response couldn't be converted").into()),
         },
+        // Used by XAUTOCLAIM. The command returns a list of length 2 if the Redis version is less than 7.0.0 or a list
+        // of length 3 otherwise. It has the following response format:
+        /* Redis version < 7.0.0 example:
+        1) "0-0"
+        2) 1) 1) "1-0"
+              2) 1) "field1"
+                 2) "value1"
+                 3) "field2"
+                 4) "value2"
+           2) 1) "1-1"
+              2) 1) "field3"
+                 2) "value3"
+           3) (nil)  // Entry IDs that were in the Pending Entry List but no longer in the stream get a nil value.
+           4) (nil)  // These nil values will be dropped so that we can return a map value for the second response element.
+
+        Redis version >= 7.0.0 example:
+        1) "0-0"
+        2) 1) 1) "1-0"
+              2) 1) "field1"
+                 2) "value1"
+                 3) "field2"
+                 4) "value2"
+           2) 1) "1-1"
+              2) 1) "field3"
+                 2) "value3"
+        3) 1) "1-2"  // Entry IDs that were in the Pending Entry List but no longer in the stream are listed in the
+           2) "1-3"  // third response element, which is an array of these IDs.
+        */
+        ExpectedReturnType::XAutoClaimReturnType => match value {
+            // Response will have 2 elements if Redis version < 7.0.0, and 3 elements otherwise.
+            Value::Array(mut array) if array.len() == 2 || array.len() == 3 => {
+                let mut result: Vec<Value> = Vec::with_capacity(array.len());
+                // The first element is always a stream ID as a string, so the clone is cheap.
+                result.push(array[0].clone());
+
+                let mut stale_entry_ids: Option<Value> = None;
+                if array.len() == 3 {
+                    // We use array.remove to avoid having to clone the other element(s). If we removed the second
+                    // element before the third, the third would have to be shifted, so we remove the third element
+                    // first to improve performance.
+                    stale_entry_ids = Some(array.remove(2));
+                }
+
+                // Only the element at index 1 needs conversion.
+                result.push(convert_to_expected_type(
+                    array.remove(1),
+                    Some(ExpectedReturnType::Map {
+                        key_type: &Some(ExpectedReturnType::BulkString),
+                        value_type: &Some(ExpectedReturnType::ArrayOfPairs),
+                    })
+                )?);
+
+                if let Some(value) = stale_entry_ids {
+                    result.push(value);
+                }
+
+                Ok(Value::Array(result))
+            },
+            _ => Err((
+                ErrorKind::TypeError,
+                "Response couldn't be converted to an XAUTOCLAIM response",
+                format!("(response was {:?})", get_value_type(&value)),
+            )
+                .into()),
+        },
     }
 }
 
@@ -758,6 +828,12 @@ fn convert_array_to_map_by_type(
                     convert_to_expected_type(inner_value, value_type)?,
                 ));
             }
+            Value::Nil => {
+                // Ignore nil key values - they will not be placed in the map. This is necessary for commands like
+                // XAUTOCLAIM, which can contain an array representation of a map with nil keys in place of stream IDs
+                // that existed in the Pending Entries List but no longer existed in the stream.
+                continue;
+            }
             _ => {
                 let Some(value) = iterator.next() else {
                     return Err((
@@ -849,6 +925,24 @@ pub(crate) fn expected_type_for_cmd(cmd: &Cmd) -> Option<ExpectedReturnType> {
             key_type: &None,
             value_type: &None,
         }),
+        b"XCLAIM" => {
+            if cmd.position(b"JUSTID").is_some() {
+                Some(ExpectedReturnType::ArrayOfStrings)
+            } else {
+                Some(ExpectedReturnType::Map {
+                    key_type: &Some(ExpectedReturnType::SimpleString),
+                    value_type: &Some(ExpectedReturnType::ArrayOfPairs),
+                })
+            }
+        }
+        b"XAUTOCLAIM" => {
+            if cmd.position(b"JUSTID").is_some() {
+                // Value conversion is not needed if the JUSTID arg was passed.
+                None
+            } else {
+                Some(ExpectedReturnType::XAutoClaimReturnType)
+            }
+        }
         b"XRANGE" | b"XREVRANGE" => Some(ExpectedReturnType::Map {
             key_type: &Some(ExpectedReturnType::BulkString),
             value_type: &Some(ExpectedReturnType::ArrayOfPairs),
@@ -859,6 +953,10 @@ pub(crate) fn expected_type_for_cmd(cmd: &Cmd) -> Option<ExpectedReturnType> {
                 key_type: &Some(ExpectedReturnType::BulkString),
                 value_type: &Some(ExpectedReturnType::ArrayOfPairs),
             }),
+        }),
+        b"LCS" => cmd.position(b"IDX").map(|_| ExpectedReturnType::Map {
+            key_type: &Some(ExpectedReturnType::SimpleString),
+            value_type: &None,
         }),
         b"INCRBYFLOAT" | b"HINCRBYFLOAT" | b"ZINCRBY" => Some(ExpectedReturnType::Double),
         b"HEXISTS"
@@ -1175,6 +1273,36 @@ mod tests {
     }
 
     #[test]
+    fn convert_xclaim() {
+        assert!(matches!(
+            expected_type_for_cmd(
+                redis::cmd("XCLAIM")
+                    .arg("key")
+                    .arg("grou")
+                    .arg("consumer")
+                    .arg("0")
+                    .arg("id")
+            ),
+            Some(ExpectedReturnType::Map {
+                key_type: &Some(ExpectedReturnType::SimpleString),
+                value_type: &Some(ExpectedReturnType::ArrayOfPairs),
+            })
+        ));
+        assert!(matches!(
+            expected_type_for_cmd(
+                redis::cmd("XCLAIM")
+                    .arg("key")
+                    .arg("grou")
+                    .arg("consumer")
+                    .arg("0")
+                    .arg("id")
+                    .arg("JUSTID")
+            ),
+            Some(ExpectedReturnType::ArrayOfStrings)
+        ));
+    }
+
+    #[test]
     fn convert_xrange_xrevrange() {
         assert!(matches!(
             expected_type_for_cmd(redis::cmd("XRANGE").arg("key").arg("start").arg("end")),
@@ -1226,6 +1354,150 @@ mod tests {
                 }),
             })
         ));
+    }
+
+    #[test]
+    fn convert_xautoclaim() {
+        // Value conversion is not needed if the JUSTID arg was passed.
+        assert!(expected_type_for_cmd(
+            redis::cmd("XAUTOCLAIM")
+                .arg("key")
+                .arg("group")
+                .arg("consumer")
+                .arg("0")
+                .arg("0-0")
+                .arg("JUSTID")
+        )
+        .is_none());
+
+        assert!(matches!(
+            expected_type_for_cmd(
+                redis::cmd("XAUTOCLAIM")
+                    .arg("key")
+                    .arg("group")
+                    .arg("consumer")
+                    .arg("0")
+                    .arg("0-0")
+            ),
+            Some(ExpectedReturnType::XAutoClaimReturnType)
+        ));
+
+        let v6_response = Value::Array(vec![
+            Value::BulkString("0-0".to_string().into_bytes()),
+            Value::Array(vec![
+                Value::Array(vec![
+                    Value::BulkString("1-0".to_string().into_bytes()),
+                    Value::Array(vec![
+                        Value::BulkString("field1".to_string().into_bytes()),
+                        Value::BulkString("value1".to_string().into_bytes()),
+                        Value::BulkString("field2".to_string().into_bytes()),
+                        Value::BulkString("value2".to_string().into_bytes()),
+                    ]),
+                ]),
+                Value::Nil, // Entry IDs that were in the Pending Entry List but no longer in the stream get a nil value.
+                Value::Array(vec![
+                    Value::BulkString("1-1".to_string().into_bytes()),
+                    Value::Array(vec![
+                        Value::BulkString("field3".to_string().into_bytes()),
+                        Value::BulkString("value3".to_string().into_bytes()),
+                    ]),
+                ]),
+            ]),
+        ]);
+
+        let expected_v6_response = Value::Array(vec![
+            Value::BulkString("0-0".to_string().into_bytes()),
+            Value::Map(vec![
+                (
+                    Value::BulkString("1-0".to_string().into_bytes()),
+                    Value::Array(vec![
+                        Value::Array(vec![
+                            Value::BulkString("field1".to_string().into_bytes()),
+                            Value::BulkString("value1".to_string().into_bytes()),
+                        ]),
+                        Value::Array(vec![
+                            Value::BulkString("field2".to_string().into_bytes()),
+                            Value::BulkString("value2".to_string().into_bytes()),
+                        ]),
+                    ]),
+                ),
+                (
+                    Value::BulkString("1-1".to_string().into_bytes()),
+                    Value::Array(vec![Value::Array(vec![
+                        Value::BulkString("field3".to_string().into_bytes()),
+                        Value::BulkString("value3".to_string().into_bytes()),
+                    ])]),
+                ),
+            ]),
+        ]);
+
+        assert_eq!(
+            convert_to_expected_type(
+                v6_response.clone(),
+                Some(ExpectedReturnType::XAutoClaimReturnType)
+            )
+            .unwrap(),
+            expected_v6_response.clone()
+        );
+
+        let v7_response = Value::Array(vec![
+            Value::BulkString("0-0".to_string().into_bytes()),
+            Value::Array(vec![
+                Value::Array(vec![
+                    Value::BulkString("1-0".to_string().into_bytes()),
+                    Value::Array(vec![
+                        Value::BulkString("field1".to_string().into_bytes()),
+                        Value::BulkString("value1".to_string().into_bytes()),
+                        Value::BulkString("field2".to_string().into_bytes()),
+                        Value::BulkString("value2".to_string().into_bytes()),
+                    ]),
+                ]),
+                Value::Array(vec![
+                    Value::BulkString("1-1".to_string().into_bytes()),
+                    Value::Array(vec![
+                        Value::BulkString("field3".to_string().into_bytes()),
+                        Value::BulkString("value3".to_string().into_bytes()),
+                    ]),
+                ]),
+            ]),
+            Value::Array(vec![Value::BulkString("1-2".to_string().into_bytes())]),
+        ]);
+
+        let expected_v7_response = Value::Array(vec![
+            Value::BulkString("0-0".to_string().into_bytes()),
+            Value::Map(vec![
+                (
+                    Value::BulkString("1-0".to_string().into_bytes()),
+                    Value::Array(vec![
+                        Value::Array(vec![
+                            Value::BulkString("field1".to_string().into_bytes()),
+                            Value::BulkString("value1".to_string().into_bytes()),
+                        ]),
+                        Value::Array(vec![
+                            Value::BulkString("field2".to_string().into_bytes()),
+                            Value::BulkString("value2".to_string().into_bytes()),
+                        ]),
+                    ]),
+                ),
+                (
+                    Value::BulkString("1-1".to_string().into_bytes()),
+                    Value::Array(vec![Value::Array(vec![
+                        Value::BulkString("field3".to_string().into_bytes()),
+                        Value::BulkString("value3".to_string().into_bytes()),
+                    ])]),
+                ),
+            ]),
+            Value::Array(vec![Value::BulkString("1-2".to_string().into_bytes())]),
+        ]);
+
+        assert_eq!(
+            convert_to_expected_type(
+                v7_response.clone(),
+                Some(ExpectedReturnType::XAutoClaimReturnType)
+            )
+            .unwrap(),
+            expected_v7_response.clone()
+        );
     }
 
     #[test]
@@ -2374,5 +2646,15 @@ mod tests {
         ));
 
         assert!(expected_type_for_cmd(redis::cmd("GEOSEARCH").arg("key")).is_none());
+    }
+    #[test]
+    fn convert_lcs_idx() {
+        assert!(matches!(
+            expected_type_for_cmd(redis::cmd("LCS").arg("key1").arg("key2").arg("IDX")),
+            Some(ExpectedReturnType::Map {
+                key_type: &Some(ExpectedReturnType::SimpleString),
+                value_type: &None,
+            })
+        ));
     }
 }

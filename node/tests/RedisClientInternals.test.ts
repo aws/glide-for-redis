@@ -1,5 +1,5 @@
 /**
- * Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0
+ * Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0
  */
 
 import { beforeAll, describe, expect, it } from "@jest/globals";
@@ -22,11 +22,11 @@ import {
     BaseClientConfiguration,
     ClosingError,
     ClusterClientConfiguration,
+    GlideClient,
+    GlideClientConfiguration,
+    GlideClusterClient,
     InfoOptions,
     Logger,
-    RedisClient,
-    RedisClientConfiguration,
-    RedisClusterClient,
     RequestError,
     ReturnType,
     SlotKeyTypes,
@@ -124,11 +124,11 @@ function sendResponse(
 
 function getConnectionAndSocket(
     checkRequest?: (request: connection_request.ConnectionRequest) => boolean,
-    connectionOptions?: ClusterClientConfiguration | RedisClientConfiguration,
+    connectionOptions?: ClusterClientConfiguration | GlideClientConfiguration,
     isCluster?: boolean,
 ): Promise<{
     socket: net.Socket;
-    connection: RedisClient | RedisClusterClient;
+    connection: GlideClient | GlideClusterClient;
     server: net.Server;
 }> {
     return new Promise((resolve, reject) => {
@@ -136,7 +136,7 @@ function getConnectionAndSocket(
             path.join(os.tmpdir(), `socket_listener`),
         );
         const socketName = path.join(temporaryFolder, "read");
-        let connectionPromise: Promise<RedisClient | RedisClusterClient>; // eslint-disable-line prefer-const
+        let connectionPromise: Promise<GlideClient | GlideClusterClient>; // eslint-disable-line prefer-const
         const server = net
             .createServer(async (socket) => {
                 socket.once("data", (data) => {
@@ -174,8 +174,8 @@ function getConnectionAndSocket(
                     addresses: [{ host: "foo" }],
                 };
                 const connection = isCluster
-                    ? await RedisClusterClient.__createClient(options, socket)
-                    : await RedisClient.__createClient(options, socket);
+                    ? await GlideClusterClient.__createClient(options, socket)
+                    : await GlideClient.__createClient(options, socket);
 
                 resolve(connection);
             });
@@ -184,7 +184,7 @@ function getConnectionAndSocket(
 }
 
 function closeTestResources(
-    connection: RedisClient | RedisClusterClient,
+    connection: GlideClient | GlideClusterClient,
     server: net.Server,
     socket: net.Socket,
 ) {
@@ -195,7 +195,7 @@ function closeTestResources(
 
 async function testWithResources(
     testFunction: (
-        connection: RedisClient | RedisClusterClient,
+        connection: GlideClient | GlideClusterClient,
         socket: net.Socket,
     ) => Promise<void>,
     connectionOptions?: BaseClientConfiguration,
@@ -212,7 +212,7 @@ async function testWithResources(
 
 async function testWithClusterResources(
     testFunction: (
-        connection: RedisClusterClient,
+        connection: GlideClusterClient,
         socket: net.Socket,
     ) => Promise<void>,
     connectionOptions?: BaseClientConfiguration,
@@ -224,7 +224,7 @@ async function testWithClusterResources(
     );
 
     try {
-        if (connection instanceof RedisClusterClient) {
+        if (connection instanceof GlideClusterClient) {
             await testFunction(connection, socket);
         } else {
             throw new Error("Not cluster connection");
@@ -235,7 +235,7 @@ async function testWithClusterResources(
 }
 
 async function testSentValueMatches(config: {
-    sendRequest: (client: RedisClient | RedisClusterClient) => Promise<unknown>;
+    sendRequest: (client: GlideClient | GlideClusterClient) => Promise<unknown>;
     expectedRequestType: redis_request.RequestType | null | undefined;
     expectedValue: unknown;
 }) {

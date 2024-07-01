@@ -1,5 +1,5 @@
 /**
- * Copyright GLIDE-for-Redis Project Contributors - SPDX Identifier: Apache-2.0
+ * Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0
  */
 
 import { expect, it } from "@jest/globals";
@@ -8,22 +8,22 @@ import { v4 as uuidv4 } from "uuid";
 import {
     ClosingError,
     ExpireOptions,
+    GlideClient,
+    GlideClusterClient,
     InfoOptions,
     InsertPosition,
     ProtocolVersion,
-    RedisClient,
-    RedisClusterClient,
     Script,
     parseInfoResponse,
 } from "../";
 import {
     Client,
-    checkSimple,
     GetAndSetRandomValue,
+    checkSimple,
     compareMaps,
     getFirstResult,
-    intoString,
     intoArray,
+    intoString,
 } from "./TestUtilities";
 
 async function getVersion(): Promise<[number, number, number]> {
@@ -59,7 +59,7 @@ export async function checkIfServerVersionLessThan(
     return versionToCompare < minVersion;
 }
 
-export type BaseClient = RedisClient | RedisClusterClient;
+export type BaseClient = GlideClient | GlideClusterClient;
 
 export function runBaseTests<Context>(config: {
     init: (
@@ -2473,7 +2473,7 @@ export function runBaseTests<Context>(config: {
                 await expect(client.brpop(["foo"], 0.1)).rejects.toThrow();
 
                 // Same-slot requirement
-                if (client instanceof RedisClusterClient) {
+                if (client instanceof GlideClusterClient) {
                     try {
                         expect(
                             await client.brpop(["abc", "zxy", "lkn"], 0.1),
@@ -2510,7 +2510,7 @@ export function runBaseTests<Context>(config: {
                 await expect(client.blpop(["foo"], 0.1)).rejects.toThrow();
 
                 // Same-slot requirement
-                if (client instanceof RedisClusterClient) {
+                if (client instanceof GlideClusterClient) {
                     try {
                         expect(
                             await client.blpop(["abc", "zxy", "lkn"], 0.1),
@@ -3158,7 +3158,7 @@ export function runBaseTests<Context>(config: {
 
                 expect(await client.lpush(list_key, ["1"])).toEqual(1);
 
-                if (versionLessThan7) {
+                if (versionLessThan72) {
                     checkSimple(await client.objectEncoding(list_key)).toEqual(
                         "quicklist",
                     );

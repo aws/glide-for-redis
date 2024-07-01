@@ -212,9 +212,9 @@ pub enum RequestType {
     ZScan = 201,
     HScan = 202,
     XAutoClaim = 203,
+    Scan = 204,
     Wait = 208,
     XClaim = 209,
-    Scan = 210,
 }
 
 fn get_two_word_command(first: &str, second: &str) -> Cmd {

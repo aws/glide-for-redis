@@ -278,7 +278,7 @@ public interface GenericCommands {
      *     </code> indicates the start of the search.
      * @return An <code>Array</code> of <code>Objects</code>. The first element is always the <code>
      *     cursor</code> for the next iteration of results. <code>"0"</code> will be the <code>cursor
-     *     </code> returned on the last iteration of the sorted set. <br>
+     *     </code> returned on the last iteration of the scan. <br>
      *     The second element is always an <code>Array</code> of matched keys from the database.
      * @example
      *     <pre>{@code
@@ -307,7 +307,7 @@ public interface GenericCommands {
      * @param options The {@link ScanOptions}.
      * @return An <code>Array</code> of <code>Objects</code>. The first element is always the <code>
      *     cursor</code> for the next iteration of results. <code>"0"</code> will be the <code>cursor
-     *     </code> returned on the last iteration of the sorted set. <br>
+     *     </code> returned on the last iteration of the scan. <br>
      *     The second element is always an <code>Array</code> of matched keys from the database.
      * @example
      *     <pre>{@code

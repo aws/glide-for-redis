@@ -10,9 +10,6 @@ import static glide.api.models.commands.SortBaseOptions.ALPHA_COMMAND_STRING;
 import static glide.api.models.commands.SortBaseOptions.LIMIT_COMMAND_STRING;
 import static glide.api.models.commands.SortBaseOptions.OrderBy.DESC;
 import static glide.api.models.commands.SortBaseOptions.STORE_COMMAND_STRING;
-import static glide.api.models.commands.SortOptions.ALPHA_COMMAND_STRING;
-import static glide.api.models.commands.SortOptions.LIMIT_COMMAND_STRING;
-import static glide.api.models.commands.SortOptions.STORE_COMMAND_STRING;
 import static glide.api.models.commands.function.FunctionListOptions.LIBRARY_NAME_REDIS_API;
 import static glide.api.models.commands.function.FunctionListOptions.WITH_CODE_REDIS_API;
 import static glide.api.models.configuration.RequestRoutingConfiguration.SimpleMultiNodeRoute.ALL_NODES;
@@ -2878,7 +2875,7 @@ public class RedisClusterClientTest {
 
     @SneakyThrows
     @Test
-    public void clusterScan_new_cursor() {
+    public void scan_new_cursor() {
         ClusterScanCursor mockCursor = Mockito.mock(ClusterScanCursor.class);
         when(mockCursor.getCursorHandle()).thenReturn("1");
 
@@ -2891,7 +2888,7 @@ public class RedisClusterClientTest {
                 .thenReturn(testResponse);
 
         final CompletableFuture<Object[]> actualResponse =
-                service.clusterScan(ClusterScanCursor.initalCursor());
+                service.scan(ClusterScanCursor.initalCursor());
         assertEquals(
                 mockCursor.getCursorHandle(),
                 ((ClusterScanCursor) actualResponse.get()[0]).getCursorHandle());
@@ -2899,7 +2896,7 @@ public class RedisClusterClientTest {
 
     @SneakyThrows
     @Test
-    public void clusterScan_existing_cursor() {
+    public void scan_existing_cursor() {
         ClusterScanCursor mockCursor = Mockito.mock(ClusterScanCursor.class);
         when(mockCursor.getCursorHandle()).thenReturn("1");
 
@@ -2912,7 +2909,7 @@ public class RedisClusterClientTest {
                         eq(mockCursor), eq(ScanOptions.builder().build()), any()))
                 .thenReturn(testResponse);
 
-        CompletableFuture<Object[]> actualResponse = service.clusterScan(mockCursor);
+        CompletableFuture<Object[]> actualResponse = service.scan(mockCursor);
         assertEquals(
                 mockResultCursor.getCursorHandle(),
                 ((ClusterScanCursor) actualResponse.get()[0]).getCursorHandle());
@@ -2920,7 +2917,7 @@ public class RedisClusterClientTest {
 
     @SneakyThrows
     @Test
-    public void clusterScan_new_cursor_options() {
+    public void scan_new_cursor_options() {
         ClusterScanCursor mockCursor = Mockito.mock(ClusterScanCursor.class);
         when(mockCursor.getCursorHandle()).thenReturn("1");
 
@@ -2938,7 +2935,7 @@ public class RedisClusterClientTest {
                 .thenReturn(testResponse);
 
         final CompletableFuture<Object[]> actualResponse =
-                service.clusterScan(
+                service.scan(
                         ClusterScanCursor.initalCursor(),
                         ScanOptions.builder()
                                 .matchPattern("key:*")
@@ -2953,7 +2950,7 @@ public class RedisClusterClientTest {
 
     @SneakyThrows
     @Test
-    public void clusterScan_existing_cursor_options() {
+    public void scan_existing_cursor_options() {
         ClusterScanCursor mockCursor = Mockito.mock(ClusterScanCursor.class);
         when(mockCursor.getCursorHandle()).thenReturn("1");
 
@@ -2974,7 +2971,7 @@ public class RedisClusterClientTest {
                 .thenReturn(testResponse);
 
         CompletableFuture<Object[]> actualResponse =
-                service.clusterScan(
+                service.scan(
                         mockCursor,
                         ScanOptions.builder()
                                 .matchPattern("key:*")

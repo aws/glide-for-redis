@@ -7,8 +7,7 @@ import glide.utils.ArrayTransformUtils;
 import lombok.experimental.SuperBuilder;
 
 /**
- * Optional arguments for {@link GenericCommands#scan} and {@link
- * GenericClusterCommands#clusterScan}.
+ * Optional arguments for {@link GenericCommands#scan} and {@link GenericClusterCommands#scan}.
  *
  * @see <a href="https://valkey.io/commands/scan/">valkey.io</a>
  */

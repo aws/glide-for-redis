@@ -914,7 +914,7 @@ public class RedisClusterClient extends BaseClient
     }
 
     @Override
-    public CompletableFuture<Object[]> clusterScan(ClusterScanCursor cursor) {
+    public CompletableFuture<Object[]> scan(ClusterScanCursor cursor) {
         return commandManager
                 .submitClusterScan(cursor, ScanOptions.builder().build(), this::handleArrayResponse)
                 .thenApply(
@@ -922,7 +922,7 @@ public class RedisClusterClient extends BaseClient
     }
 
     @Override
-    public CompletableFuture<Object[]> clusterScan(ClusterScanCursor cursor, ScanOptions options) {
+    public CompletableFuture<Object[]> scan(ClusterScanCursor cursor, ScanOptions options) {
         return commandManager
                 .submitClusterScan(cursor, options, this::handleArrayResponse)
                 .thenApply(

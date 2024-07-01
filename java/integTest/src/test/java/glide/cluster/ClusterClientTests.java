@@ -189,7 +189,7 @@ public class ClusterClientTests {
             Set<String> result = new LinkedHashSet<>();
             ClusterScanCursor cursor = ClusterScanCursor.initalCursor();
             while (!cursor.isFinished()) {
-                final Object[] response = client.clusterScan(cursor).get();
+                final Object[] response = client.scan(cursor).get();
                 cursor.releaseCursorHandle();
 
                 cursor = (ClusterScanCursor) response[0];
@@ -240,7 +240,7 @@ public class ClusterClientTests {
             while (!cursor.isFinished()) {
                 final Object[] response =
                         client
-                                .clusterScan(
+                                .scan(
                                         cursor,
                                         ScanOptions.builder()
                                                 .matchPattern("key:*")
@@ -284,8 +284,7 @@ public class ClusterClientTests {
             Set<String> keys = new LinkedHashSet<>();
             int successfulComparedScans = 0;
             while (!cursor.isFinished()) {
-                Object[] resultOf1 =
-                        client.clusterScan(cursor, ScanOptions.builder().count(1L).build()).get();
+                Object[] resultOf1 = client.scan(cursor, ScanOptions.builder().count(1L).build()).get();
                 cursor.releaseCursorHandle();
                 cursor = (ClusterScanCursor) resultOf1[0];
                 keys.addAll(
@@ -296,8 +295,7 @@ public class ClusterClientTests {
                     break;
                 }
 
-                Object[] resultOf100 =
-                        client.clusterScan(cursor, ScanOptions.builder().count(100L).build()).get();
+                Object[] resultOf100 = client.scan(cursor, ScanOptions.builder().count(100L).build()).get();
                 cursor.releaseCursorHandle();
                 cursor = (ClusterScanCursor) resultOf100[0];
                 keys.addAll(
@@ -341,7 +339,7 @@ public class ClusterClientTests {
             Set<String> keys = new LinkedHashSet<>();
             while (!cursor.isFinished()) {
                 Object[] result =
-                        client.clusterScan(cursor, ScanOptions.builder().matchPattern("key:*").build()).get();
+                        client.scan(cursor, ScanOptions.builder().matchPattern("key:*").build()).get();
                 cursor.releaseCursorHandle();
                 cursor = (ClusterScanCursor) result[0];
                 keys.addAll(
@@ -371,12 +369,12 @@ public class ClusterClientTests {
             assertEquals(OK, client.mset(expectedData).get());
 
             ClusterScanCursor cursor = ClusterScanCursor.initalCursor();
-            final Object[] response = client.clusterScan(cursor).get();
+            final Object[] response = client.scan(cursor).get();
             cursor = (ClusterScanCursor) (response[0]);
             cursor.releaseCursorHandle();
             final ClusterScanCursor brokenCursor = cursor;
             ExecutionException exception =
-                    assertThrows(ExecutionException.class, () -> client.clusterScan(brokenCursor).get());
+                    assertThrows(ExecutionException.class, () -> client.scan(brokenCursor).get());
             assertInstanceOf(RequestException.class, exception.getCause());
             assertTrue(exception.getCause().getMessage().contains("Invalid scan_state_cursor id"));
         }
@@ -438,8 +436,7 @@ public class ClusterClientTests {
             while (!cursor.isFinished()) {
                 Object[] response =
                         client
-                                .clusterScan(
-                                        cursor, ScanOptions.builder().type(ScanOptions.ObjectType.STRING).build())
+                                .scan(cursor, ScanOptions.builder().type(ScanOptions.ObjectType.STRING).build())
                                 .get();
                 cursor.releaseCursorHandle();
                 cursor = (ClusterScanCursor) response[0];
@@ -456,7 +453,7 @@ public class ClusterClientTests {
             while (!cursor.isFinished()) {
                 Object[] response =
                         client
-                                .clusterScan(cursor, ScanOptions.builder().type(ScanOptions.ObjectType.SET).build())
+                                .scan(cursor, ScanOptions.builder().type(ScanOptions.ObjectType.SET).build())
                                 .get();
                 cursor.releaseCursorHandle();
                 cursor = (ClusterScanCursor) response[0];
@@ -473,8 +470,7 @@ public class ClusterClientTests {
             while (!cursor.isFinished()) {
                 Object[] response =
                         client
-                                .clusterScan(
-                                        cursor, ScanOptions.builder().type(ScanOptions.ObjectType.HASH).build())
+                                .scan(cursor, ScanOptions.builder().type(ScanOptions.ObjectType.HASH).build())
                                 .get();
                 cursor.releaseCursorHandle();
                 cursor = (ClusterScanCursor) response[0];
@@ -491,8 +487,7 @@ public class ClusterClientTests {
             while (!cursor.isFinished()) {
                 Object[] response =
                         client
-                                .clusterScan(
-                                        cursor, ScanOptions.builder().type(ScanOptions.ObjectType.LIST).build())
+                                .scan(cursor, ScanOptions.builder().type(ScanOptions.ObjectType.LIST).build())
                                 .get();
                 cursor.releaseCursorHandle();
                 cursor = (ClusterScanCursor) response[0];
@@ -509,8 +504,7 @@ public class ClusterClientTests {
             while (!cursor.isFinished()) {
                 Object[] response =
                         client
-                                .clusterScan(
-                                        cursor, ScanOptions.builder().type(ScanOptions.ObjectType.ZSET).build())
+                                .scan(cursor, ScanOptions.builder().type(ScanOptions.ObjectType.ZSET).build())
                                 .get();
                 cursor.releaseCursorHandle();
                 cursor = (ClusterScanCursor) response[0];

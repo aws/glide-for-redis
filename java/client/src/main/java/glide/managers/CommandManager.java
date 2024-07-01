@@ -310,7 +310,18 @@ public class CommandManager {
             clusterScanBuilder.setCursor(cursor.getCursorHandle());
         }
 
-        options.populate(clusterScanBuilder);
+        if (options.getMatchPattern() != null) {
+            clusterScanBuilder.setMatchPattern(options.getMatchPattern());
+        }
+
+        if (options.getCount() != null) {
+            clusterScanBuilder.setCount(options.getCount());
+        }
+
+        if (options.getType() != null) {
+            clusterScanBuilder.setObjectType(options.getType().getNativeName());
+        }
+
         return RedisRequest.newBuilder().setClusterScan(clusterScanBuilder.build());
     }
 

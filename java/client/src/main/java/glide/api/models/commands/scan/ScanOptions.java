@@ -4,12 +4,11 @@ package glide.api.models.commands.scan;
 import glide.api.commands.GenericClusterCommands;
 import glide.api.commands.GenericCommands;
 import glide.utils.ArrayTransformUtils;
-import lombok.NonNull;
 import lombok.experimental.SuperBuilder;
-import redis_request.RedisRequestOuterClass;
 
 /**
- * Optional arguments for {@link GenericCommands#scan} and {@link GenericClusterCommands#clusterScan}.
+ * Optional arguments for {@link GenericCommands#scan} and {@link
+ * GenericClusterCommands#clusterScan}.
  *
  * @see <a href="https://valkey.io/commands/scan/">valkey.io</a>
  */
@@ -34,6 +33,15 @@ public class ScanOptions extends BaseScanOptions {
         ZSET("ZSet"),
         HASH("Hash"),
         STREAM("Stream");
+
+        /**
+         * Returns the name of the enum when communicating with the native layer.
+         *
+         * @return the name of the enum when communicating with the native layer.
+         */
+        public String getNativeName() {
+            return nativeName;
+        }
 
         private final String nativeName;
 
@@ -60,17 +68,30 @@ public class ScanOptions extends BaseScanOptions {
         return type == that.type;
     }
 
-    public void populate(@NonNull RedisRequestOuterClass.ClusterScan.Builder clusterScanMessage) {
-        if (matchPattern != null) {
-            clusterScanMessage.setMatchPattern(matchPattern);
-        }
+    /**
+     * Returns the pattern used for the <code>MATCH</code> filter.
+     *
+     * @return the pattern used for the <code>MATCH</code> filter.
+     */
+    public String getMatchPattern() {
+        return matchPattern;
+    }
 
-        if (count != null) {
-            clusterScanMessage.setCount(count);
-        }
+    /**
+     * Returns the count used for the <code>COUNT</code> field. .
+     *
+     * @return the count used for the <code>COUNT</code> field.
+     */
+    public Long getCount() {
+        return count;
+    }
 
-        if (type != null) {
-            clusterScanMessage.setObjectType(type.nativeName);
-        }
+    /**
+     * Returns the type used for the <code>TYPE</code> filter.
+     *
+     * @return the type used for the <code>TYPE</code> filter.
+     */
+    public ObjectType getType() {
+        return type;
     }
 }

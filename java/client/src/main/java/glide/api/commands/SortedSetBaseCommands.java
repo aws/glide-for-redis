@@ -90,7 +90,7 @@ public interface SortedSetBaseCommands {
      *     <pre>{@code
      * ZaddOptions options = ZaddOptions.builder().conditionalChange(ONLY_IF_DOES_NOT_EXIST).build();
      * Long num = client.zadd(gs("mySortedSet"), Map.of(gs("member1"), 10.5, gs("member2"), 8.2), options, false).get();
-     * assert num == 2L; // Indicates that two elements have been added or updated in the sorted set "mySortedSet".
+     * assert num == 2L; // Indicates that two elements have been to the sorted set "mySortedSet".
      *
      * options = ZaddOptions.builder().conditionalChange(ONLY_IF_EXISTS).build();
      * Long num = client.zadd(gs("existingSortedSet"), Map.of(gs("member1"), 15.0, gs("member2"), 5.5), options, false).get();
@@ -821,7 +821,7 @@ public interface SortedSetBaseCommands {
      * Map<GlideString, Double> payload1 = client.zrangeWithScores(gs("mySortedSet"), query1).get();
      * assert payload1.equals(Map.of(gs('member1'), 10.5, gs('member2'), 15.2)); // Returns members with scores between 10 and 20 (inclusive) with their scores.
      *
-     * RangeByScore query2 = new RangeByScore(InfScoreBoundBinary.NEGATIVE_INFINITY, new ScoreBoundaryBinary(3));
+     * RangeByScoreBinary query2 = new RangeByScoreBinary(InfScoreBoundBinary.NEGATIVE_INFINITY, new ScoreBoundaryBinary(3));
      * Map<GlideString, Double> payload2 = client.zrangeWithScores(gs("mySortedSet"), query2).get();
      * assert payload2.equals(Map.of(gs('member4'), -2.0, gs('member7'), 1.5)); // Returns members with with scores within the range of negative infinity to 3, with their scores.
      * }</pre>
@@ -1189,7 +1189,7 @@ public interface SortedSetBaseCommands {
      * @example
      *     <pre>{@code
      * GlideString[] payload = client.zdiff(new GlideString[] {gs("sortedSet1"), gs("sortedSet2"), gs("sortedSet3")}).get();
-     * assert payload.equals(new String[]{"element1"});
+     * assert payload.equals(new GlideString[]{gs("element1")});
      * }</pre>
      */
     CompletableFuture<GlideString[]> zdiff(GlideString[] keys);
@@ -1646,7 +1646,7 @@ public interface SortedSetBaseCommands {
      * @return The number of elements in the resulting sorted set stored at <code>destination</code>.
      * @example
      *     <pre>{@code
-     * WeightedKeysBinary weightedKeys = new WeightedKeys(List.of(Pair.of(gs("mySortedSet1"), 1.0), Pair.of(gs("mySortedSet2"), 2.0)));
+     * WeightedKeysBinary weightedKeys = new WeightedKeysBinary(List.of(Pair.of(gs("mySortedSet1"), 1.0), Pair.of(gs("mySortedSet2"), 2.0)));
      * Long payload = client.zinterstore(gs("newSortedSet"), weightedKeys, Aggregate.MAX).get()
      * assert payload == 3L; // Indicates the new sorted set contains three members from the intersection of "mySortedSet1" and "mySortedSet2".
      * }</pre>
@@ -1699,7 +1699,7 @@ public interface SortedSetBaseCommands {
      * @return The number of elements in the resulting sorted set stored at <code>destination</code>.
      * @example
      *     <pre>{@code
-     * KeyArrayBinary keyArray = new KeyArray(new GlideString[] {gs("mySortedSet1"), gs("mySortedSet2")});
+     * KeyArrayBinary keyArray = new KeyArrayBinary(new GlideString[] {gs("mySortedSet1"), gs("mySortedSet2")});
      * Long payload = client.zinterstore(gs("newSortedSet"), keyArray).get()
      * assert payload == 3L; // Indicates the new sorted set contains three members from the intersection of "mySortedSet1" and "mySortedSet2".
      * }</pre>
@@ -1943,11 +1943,11 @@ public interface SortedSetBaseCommands {
      * @return The resulting sorted set from the intersection.
      * @example
      *     <pre>{@code
-     * KeyArrayBinary keyArray = new KeyArray(new GlideString[] {gs("mySortedSet1"), gs("mySortedSet2")});
+     * KeyArrayBinary keyArray = new KeyArrayBinary(new GlideString[] {gs("mySortedSet1"), gs("mySortedSet2")});
      * GlideString[] payload = client.zinter(keyArray).get()
      * assert payload.equals(new GlideString[] {gs("elem1"), gs("elem2"), gs("elem3")});
      *
-     * WeightedKeysBinary weightedKeys = new WeightedKeys(List.of(Pair.of(gs("mySortedSet1"), 2.0), Pair.of(gs("mySortedSet2"), 2.0)));
+     * WeightedKeysBinary weightedKeys = new WeightedKeysBinary(List.of(Pair.of(gs("mySortedSet1"), 2.0), Pair.of(gs("mySortedSet2"), 2.0)));
      * GlideString[] payload = client.zinter(weightedKeys).get()
      * assert payload.equals(new GlideString[] {gs("elem1"), gs("elem2"), gs("elem3")});
      * }</pre>
@@ -2005,7 +2005,7 @@ public interface SortedSetBaseCommands {
      * Map<GlideString, Double> payload1 = client.zinterWithScores(keyArray).get();
      * assert payload1.equals(Map.of(gs("elem1"), 1.0, gs("elem2"), 2.0, gs("elem3"), 3.0));
      *
-     * WeightedKeysBinary weightedKeys = new WeightedKeys(List.of(Pair.of(gs("mySortedSet1"), 2.0), Pair.of(gs("mySortedSet2"), 2.0)));
+     * WeightedKeysBinary weightedKeys = new WeightedKeysBinary(List.of(Pair.of(gs("mySortedSet1"), 2.0), Pair.of(gs("mySortedSet2"), 2.0)));
      * Map<GlideString, Double> payload2 = client.zinterWithScores(weightedKeys).get();
      * assert payload2.equals(Map.of(gs("elem1"), 2.0, gs("elem2"), 4.0, gs("elem3"), 6.0));
      * }</pre>
@@ -2063,7 +2063,7 @@ public interface SortedSetBaseCommands {
      * @return The resulting sorted set from the intersection.
      * @example
      *     <pre>{@code
-     * KeyArrayBinary keyArray = new KeyArray(new GlideString[] {gs("mySortedSet1"), gs("mySortedSet2")});
+     * KeyArrayBinary keyArray = new KeyArrayBinary(new GlideString[] {gs("mySortedSet1"), gs("mySortedSet2")});
      * Map<GlideString, Double> payload1 = client.zinterWithScores(keyArray, AggregateBinary.MAX).get();
      * assert payload1.equals(Map.of(gs("elem1"), 1.0, gs("elem2"), 2.0, gs("elem3"), 3.0));
      *
@@ -2103,7 +2103,7 @@ public interface SortedSetBaseCommands {
      * @example
      *     <pre>{@code
      * GlideString payload1 = client.zrandmember(gs("mySortedSet")).get();
-     * assert payload1.equals("GLIDE");
+     * assert payload1.equals(gs("GLIDE"));
      *
      * GlideString payload2 = client.zrandmember(gs("nonExistingSortedSet")).get();
      * assert payload2 == null;
@@ -2146,7 +2146,7 @@ public interface SortedSetBaseCommands {
      *     </code>.
      * @example
      *     <pre>{@code
-     * GlideString[] payload1 = client.zrandmemberWithCount("mySortedSet", -3).get();
+     * GlideString[] payload1 = client.zrandmemberWithCount(gs("mySortedSet"), -3).get();
      * assert payload1.equals(new GlideString[] {"GLIDE", "GLIDE", "JAVA"});
      *
      * GlideString[] payload2 = client.zrandmemberWithCount("nonExistingSortedSet", 3).get();

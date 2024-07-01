@@ -6,22 +6,23 @@ import static glide.TestUtilities.commonClusterClientConfig;
 import static glide.TestUtilities.getRandomString;
 import static glide.api.BaseClient.OK;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import glide.api.RedisClusterClient;
 import glide.api.models.commands.scan.ClusterScanCursor;
+import glide.api.models.commands.scan.ScanOptions;
 import glide.api.models.configuration.RedisCredentials;
 import glide.api.models.exceptions.ClosingException;
 import glide.api.models.exceptions.RequestException;
-
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.Test;
@@ -169,9 +170,9 @@ public class ClusterClientTests {
 
     @Test
     @SneakyThrows
-    public void cluster_scan_test() {
+    public void test_cluster_scan_simple() {
         RedisClusterClient client =
-            RedisClusterClient.CreateClient(commonClusterClientConfig().build()).get();
+                RedisClusterClient.CreateClient(commonClusterClientConfig().build()).get();
 
         String key = "key" + UUID.randomUUID();
         Map<String, String> expectedData = new LinkedHashMap<>();
@@ -189,11 +190,69 @@ public class ClusterClientTests {
 
             cursor = (ClusterScanCursor) response[0];
             final Object[] data = (Object[]) response[1];
-            for (int i = 0; i < data.length; i++) {
-                result.add(data[i].toString());
+            for (Object datum : data) {
+                result.add(datum.toString());
             }
         }
 
         assertEquals(expectedData.keySet(), result);
+    }
+
+    @Test
+    @SneakyThrows
+    public void test_cluster_scan_simple_with_object_type_and_pattern() {
+        RedisClusterClient client =
+                RedisClusterClient.CreateClient(commonClusterClientConfig().build()).get();
+
+        String key = "key:" + UUID.randomUUID();
+        Map<String, String> expectedData = new LinkedHashMap<>();
+        final int baseNumberOfEntries = 50000;
+        for (int i = 0; i < baseNumberOfEntries; i++) {
+            expectedData.put(key + ":" + i, "value " + i);
+        }
+
+        assertEquals(OK, client.mset(expectedData).get());
+
+        ArrayList<String> unexpectedTypeKeys = new ArrayList<>();
+        for (int i = baseNumberOfEntries; i < baseNumberOfEntries + 2; i++) {
+            unexpectedTypeKeys.add(key + ":" + i);
+        }
+
+        for (String keyStr : unexpectedTypeKeys) {
+            assertEquals(1L, client.sadd(keyStr, new String[] {"value"}).get());
+        }
+
+        Map<String, String> unexpectedPatterns = new LinkedHashMap<>();
+        for (int i = baseNumberOfEntries + 2; i < baseNumberOfEntries + 200; i++) {
+            unexpectedPatterns.put("foo:" + i, "value " + i);
+        }
+        assertEquals(OK, client.mset(unexpectedPatterns).get());
+
+        Set<String> result = new LinkedHashSet<>();
+        ClusterScanCursor cursor = ClusterScanCursor.initalCursor();
+        while (!cursor.isFinished()) {
+            final Object[] response =
+                    client
+                            .clusterScan(
+                                    cursor,
+                                    ScanOptions.builder()
+                                            .matchPattern("key:*")
+                                            .type(ScanOptions.ObjectType.STRING)
+                                            .build())
+                            .get();
+            cursor.releaseCursorHandle();
+
+            cursor = (ClusterScanCursor) response[0];
+            final Object[] data = (Object[]) response[1];
+            for (Object datum : data) {
+                result.add(datum.toString());
+            }
+        }
+
+        assertEquals(expectedData.keySet(), result);
+
+        // Ensure that no unexpected types were in the result.
+        assertFalse(new LinkedHashSet<>(result).removeAll(unexpectedTypeKeys));
+        assertFalse(new LinkedHashSet<>(result).removeAll(unexpectedPatterns.keySet()));
     }
 }

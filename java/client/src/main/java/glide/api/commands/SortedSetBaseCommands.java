@@ -636,8 +636,8 @@ public interface SortedSetBaseCommands {
      * @example
      *     <pre>{@code
      * RangeByScoreBinary query1 = new RangeByScoreBinary(new ScoreBoundaryBinary(10), new ScoreBoundaryBinary(20));
-     * String[] payload1 = client.zrange(gs("mySortedSet"), query1, true).get(); // Returns members with scores between 10 and 20.
-     * assert payload1.equals(new GlideString[] {gs('member3'), gs('member2'), gs('member1')}); // Returns all members in descending order.
+     * GlideString[] payload1 = client.zrange(gs("mySortedSet"), query1, true).get(); // Returns members with scores between 10 and 20.
+     * assert Arrays.equals(payload1, new GlideString[] {gs('member3'), gs('member2'), gs('member1')}); // Returns all members in descending order.
      *
      * RangeByScoreBinary query2 = new RangeByScoreBinary(InfScoreBoundBinary.NEGATIVE_INFINITY, new ScoreBoundaryBinary(3));
      * String[] payload2 = client.zrange(gs("mySortedSet"), query2, false).get();

@@ -7899,6 +7899,59 @@ class TestCommands:
     async def test_unwatch_with_route(self, redis_client: GlideClusterClient):
         assert await redis_client.unwatch(RandomNode()) == OK
 
+    @pytest.mark.parametrize("cluster_mode", [True, False])
+    @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
+    async def test_lpos(self, redis_client: TGlideClient):
+        min_version = "6.0.6"
+        if await check_if_server_version_lt(redis_client, min_version):
+            # TODO: change it to pytest fixture after we'll implement a sync client
+            return pytest.mark.skip(reason=f"Redis version required >= {min_version}")
+        key = f"{{key}}-1{get_random_string(5)}"
+        non_list_key = f"{{key}}-2{get_random_string(5)}"
+        mylist = ["a", "a", "b", "c", "a", "b"]
+
+        # basic case
+        await redis_client.rpush(key, mylist)
+        assert await redis_client.lpos(key, "b") == 2
+
+        # reverse traversal
+        assert await redis_client.lpos(key, "b", -2) == 2
+
+        # unlimited comparisons
+        assert await redis_client.lpos(key, "a", 1, None, 0) == 0
+
+        # limited comparisons
+        assert await redis_client.lpos(key, "c", 1, None, 2) is None
+
+        # element does not exist
+        assert await redis_client.lpos(key, "non_existing") is None
+
+        # with count
+        assert await redis_client.lpos(key, "a", 1, 0, 0) == [0, 1, 4]
+
+        # with count and rank
+        assert await redis_client.lpos(key, "a", -2, 0, 0) == [1, 0]
+
+        # key does not exist
+        assert await redis_client.lpos("non_existing", "non_existing") is None
+
+        # invalid rank value
+        with pytest.raises(RequestError):
+            await redis_client.lpos(key, "a", 0)
+
+        # invalid count
+        with pytest.raises(RequestError):
+            await redis_client.lpos(non_list_key, "a", None, -1)
+
+        # invalid max_len
+        with pytest.raises(RequestError):
+            await redis_client.lpos(non_list_key, "a", None, None, -1)
+
+        # wrong data type
+        await redis_client.set(non_list_key, "non_list_value")
+        with pytest.raises(RequestError):
+            await redis_client.lpos(non_list_key, "a")
+
 
 class TestMultiKeyCommandCrossSlot:
     @pytest.mark.parametrize("cluster_mode", [True])

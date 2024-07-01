@@ -4275,6 +4275,48 @@ class BaseTransaction:
         args = [str(numreplicas), str(timeout)]
         return self.append_command(RequestType.Wait, args)
 
+    def lpos(
+        self: TTransaction,
+        key: str,
+        element: str,
+        rank: Optional[int] = None,
+        count: Optional[int] = None,
+        max_len: Optional[int] = None,
+    ) -> TTransaction:
+        """
+        Returns the index or indexes of element(s) matching `element` in the `key` list. If no match is found,
+        None is returned.
+
+        See https://valkey.io/commands/lpos for more details.
+
+        Args:
+            key (str): The name of the list.
+            element (str): The value to search for within the list.
+            rank (Optional[int]): The rank of the match to return.
+            count (Optional[int]): The number of matches wanted. A `count` of 0 returns all the matches.
+            max_len (Optional[int]): The maximum number of comparisons to make between the element and the items
+                                     in the list. A `max_len` of 0 means unlimited amount of comparisons.
+
+        Command Response:
+            Union[int, list[int], None]: The index of the first occurrence of `element`,
+            or None if `element` is not in the list.
+            With the `count` option, a list of indices of matching elements will be returned.
+
+        Since: Redis version 6.0.6.
+        """
+        args = [key, element]
+
+        if rank is not None:
+            args.extend(["RANK", str(rank)])
+
+        if count is not None:
+            args.extend(["COUNT", str(count)])
+
+        if max_len is not None:
+            args.extend(["MAXLEN", str(max_len)])
+
+        return self.append_command(RequestType.LPos, args)
+
 
 class Transaction(BaseTransaction):
     """

@@ -91,6 +91,7 @@ async def transaction_test(
     key22 = "{{{}}}:{}".format(keyslot, get_random_string(3))  # getex
     key23 = "{{{}}}:{}".format(keyslot, get_random_string(3))  # string
     key24 = "{{{}}}:{}".format(keyslot, get_random_string(3))  # string
+    key25 = "{{{}}}:{}".format(keyslot, get_random_string(3))  # list
 
     value = datetime.now(timezone.utc).strftime("%m/%d/%Y, %H:%M:%S")
     value_bytes = value.encode()
@@ -633,6 +634,15 @@ async def transaction_test(
     args.append(OK)
     transaction.random_key()
     args.append(key.encode())
+
+    min_version = "6.0.6"
+    if not await check_if_server_version_lt(redis_client, min_version):
+        transaction.rpush(key25, ["a", "a", "b", "c", "a", "b"])
+        args.append(6)
+        transaction.lpos(key25, "a")
+        args.append(0)
+        transaction.lpos(key25, "a", 1, 0, 0)
+        args.append([0, 1, 4])
 
     min_version = "6.2.0"
     if not await check_if_server_version_lt(redis_client, min_version):

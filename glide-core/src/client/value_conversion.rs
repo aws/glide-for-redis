@@ -608,9 +608,9 @@ pub(crate) fn convert_to_expected_type(
             }
             _ => Err((ErrorKind::TypeError, "Response couldn't be converted").into()),
         },
-        // Used by XAUTOCLAIM. The command returns a list of length 2 if the Redis version is less than 7.0.0 or a list
+        // Used by XAUTOCLAIM. The command returns a list of length 2 if the server version is less than 7.0.0 or a list
         // of length 3 otherwise. It has the following response format:
-        /* Redis version < 7.0.0 example:
+        /* server version < 7.0.0 example:
         1) "0-0"
         2) 1) 1) "1-0"
               2) 1) "field1"
@@ -623,7 +623,7 @@ pub(crate) fn convert_to_expected_type(
            3) (nil)  // Entry IDs that were in the Pending Entry List but no longer in the stream get a nil value.
            4) (nil)  // These nil values will be dropped so that we can return a map value for the second response element.
 
-        Redis version >= 7.0.0 example:
+        server version >= 7.0.0 example:
         1) "0-0"
         2) 1) 1) "1-0"
               2) 1) "field1"
@@ -637,7 +637,7 @@ pub(crate) fn convert_to_expected_type(
            2) "1-3"  // third response element, which is an array of these IDs.
         */
         ExpectedReturnType::XAutoClaimReturnType => match value {
-            // Response will have 2 elements if Redis version < 7.0.0, and 3 elements otherwise.
+            // Response will have 2 elements if server version < 7.0.0, and 3 elements otherwise.
             Value::Array(mut array) if array.len() == 2 || array.len() == 3 => {
                 let mut result: Vec<Value> = Vec::with_capacity(array.len());
                 // The first element is always a stream ID as a string, so the clone is cheap.
@@ -1214,11 +1214,11 @@ mod tests {
             Some(ExpectedReturnType::Lolwut)
         ));
 
-        let redis_string : String = "\x1b[0;97;107m \x1b[0m--\x1b[0;37;47m \x1b[0m--\x1b[0;90;100m \x1b[0m--\x1b[0;30;40m \x1b[0m".into();
+        let unconverted_string : String = "\x1b[0;97;107m \x1b[0m--\x1b[0;37;47m \x1b[0m--\x1b[0;90;100m \x1b[0m--\x1b[0;30;40m \x1b[0m".into();
         let expected: String = "\u{2591}--\u{2592}--\u{2593}-- ".into();
 
         let converted_1 = convert_to_expected_type(
-            Value::BulkString(redis_string.clone().into_bytes()),
+            Value::BulkString(unconverted_string.clone().into_bytes()),
             Some(ExpectedReturnType::Lolwut),
         );
         assert_eq!(
@@ -1229,7 +1229,7 @@ mod tests {
         let converted_2 = convert_to_expected_type(
             Value::VerbatimString {
                 format: redis::VerbatimFormat::Text,
-                text: redis_string.clone(),
+                text: unconverted_string.clone(),
             },
             Some(ExpectedReturnType::Lolwut),
         );
@@ -1242,11 +1242,11 @@ mod tests {
             Value::Map(vec![
                 (
                     Value::SimpleString("node 1".into()),
-                    Value::BulkString(redis_string.clone().into_bytes()),
+                    Value::BulkString(unconverted_string.clone().into_bytes()),
                 ),
                 (
                     Value::SimpleString("node 2".into()),
-                    Value::BulkString(redis_string.clone().into_bytes()),
+                    Value::BulkString(unconverted_string.clone().into_bytes()),
                 ),
             ]),
             Some(ExpectedReturnType::Lolwut),
@@ -1266,7 +1266,7 @@ mod tests {
         );
 
         let converted_4 = convert_to_expected_type(
-            Value::SimpleString(redis_string.clone()),
+            Value::SimpleString(unconverted_string.clone()),
             Some(ExpectedReturnType::Lolwut),
         );
         assert!(converted_4.is_err());
@@ -1514,7 +1514,7 @@ mod tests {
 
     #[test]
     fn test_convert_array_to_map_with_none() {
-        let redis_map = vec![
+        let unconverted_map = vec![
             (
                 Value::BulkString(b"key1".to_vec()),
                 Value::BulkString(b"10.5".to_vec()),
@@ -1528,7 +1528,7 @@ mod tests {
             value_type: &None,
         };
         let converted_map =
-            convert_to_expected_type(Value::Map(redis_map), Some(converted_type)).unwrap();
+            convert_to_expected_type(Value::Map(unconverted_map), Some(converted_type)).unwrap();
 
         let converted_map = if let Value::Map(map) = converted_map {
             map
@@ -1960,10 +1960,9 @@ mod tests {
             Some(ExpectedReturnType::ArrayOfBools)
         ));
 
-        let redis_response = Value::Array(vec![Value::Int(0), Value::Int(1)]);
+        let response = Value::Array(vec![Value::Int(0), Value::Int(1)]);
         let converted_response =
-            convert_to_expected_type(redis_response, Some(ExpectedReturnType::ArrayOfBools))
-                .unwrap();
+            convert_to_expected_type(response, Some(ExpectedReturnType::ArrayOfBools)).unwrap();
         let expected_response = Value::Array(vec![Value::Boolean(false), Value::Boolean(true)]);
         assert_eq!(expected_response, converted_response);
     }
@@ -2036,7 +2035,7 @@ mod tests {
             Some(ExpectedReturnType::ZMPopReturnType)
         ));
 
-        let redis_response = Value::Array(vec![
+        let response = Value::Array(vec![
             Value::SimpleString("key".into()),
             Value::Array(vec![
                 Value::Array(vec![Value::SimpleString("elem1".into()), Value::Double(1.)]),
@@ -2044,8 +2043,7 @@ mod tests {
             ]),
         ]);
         let converted_response =
-            convert_to_expected_type(redis_response, Some(ExpectedReturnType::ZMPopReturnType))
-                .unwrap();
+            convert_to_expected_type(response, Some(ExpectedReturnType::ZMPopReturnType)).unwrap();
         let expected_response = Value::Array(vec![
             Value::SimpleString("key".into()),
             Value::Map(vec![
@@ -2055,13 +2053,11 @@ mod tests {
         ]);
         assert_eq!(expected_response, converted_response);
 
-        let redis_response = Value::Nil;
-        let converted_response = convert_to_expected_type(
-            redis_response.clone(),
-            Some(ExpectedReturnType::ZMPopReturnType),
-        )
-        .unwrap();
-        assert_eq!(redis_response, converted_response);
+        let response = Value::Nil;
+        let converted_response =
+            convert_to_expected_type(response.clone(), Some(ExpectedReturnType::ZMPopReturnType))
+                .unwrap();
+        assert_eq!(response, converted_response);
     }
 
     #[test]
@@ -2405,7 +2401,7 @@ mod tests {
             convert_to_expected_type(Value::Nil, Some(ExpectedReturnType::MapOfStringToDouble)),
             Ok(Value::Nil)
         );
-        let redis_map = vec![
+        let unconverted_map = vec![
             (
                 Value::BulkString(b"key1".to_vec()),
                 Value::BulkString(b"10.5".to_vec()),
@@ -2418,7 +2414,7 @@ mod tests {
         ];
 
         let converted_map = convert_to_expected_type(
-            Value::Map(redis_map),
+            Value::Map(unconverted_map),
             Some(ExpectedReturnType::MapOfStringToDouble),
         )
         .unwrap();

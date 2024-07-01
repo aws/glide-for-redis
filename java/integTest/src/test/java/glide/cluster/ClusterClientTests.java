@@ -21,6 +21,7 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.Test;
@@ -181,15 +182,16 @@ public class ClusterClientTests {
         assertEquals(OK, client.mset(expectedData).get());
 
         Set<String> result = new LinkedHashSet<>();
-        try (ClusterScanCursor cursor = client.clusterScan()) {
-            boolean hasMoreToFetch;
-            do {
-                hasMoreToFetch = cursor.next().get();
-                Object[] data = cursor.getCurrentData();
-                for (int i = 0; i < data.length; i ++) {
-                    result.add(data[i].toString());
-                }
-            } while (hasMoreToFetch);
+        ClusterScanCursor cursor = ClusterScanCursor.initalCursor();
+        while (!cursor.isFinished()) {
+            final Object[] response = client.clusterScan(cursor).get();
+            cursor.releaseCursorHandle();
+
+            cursor = (ClusterScanCursor) response[0];
+            final Object[] data = (Object[]) response[1];
+            for (int i = 0; i < data.length; i++) {
+                result.add(data[i].toString());
+            }
         }
 
         assertEquals(expectedData.keySet(), result);

@@ -1484,7 +1484,7 @@ public interface SortedSetBaseCommands {
      * Long payload1 = client.zremrangebyscore(gs("mySortedSet"), new ScoreBoundary(1, false), new ScoreBoundary(5)).get();
      * assert payload1 == 4L; // Indicates that 4 members, with scores ranging from 1 (exclusive) to 5 (inclusive), have been removed from "mySortedSet".
      *
-     * Long payload2 = client.zremrangebyscore(gs("mySortedSet"), InfScoreBound.NEGATIVE_INFINITY , new ScoreBoundary(-42)).get();
+     * Long payload2 = client.zremrangebyscore(gs("mySortedSet"), InfScoreBound.NEGATIVE_INFINITY, new ScoreBoundary(-42)).get();
      * assert payload2 == 0L; // Indicates that no elements were removed.
      * }</pre>
      */

@@ -9,7 +9,7 @@ import lombok.experimental.SuperBuilder;
 import redis_request.RedisRequestOuterClass;
 
 /**
- * Optional arguments for {@link GenericCommands#scan} and {@link GenericClusterCommands#scan}.
+ * Optional arguments for {@link GenericCommands#scan} and {@link GenericClusterCommands#clusterScan}.
  *
  * @see <a href="https://valkey.io/commands/scan/">valkey.io</a>
  */
@@ -27,19 +27,26 @@ public class ScanOptions extends BaseScanOptions {
     private final ObjectType type;
 
     public enum ObjectType {
-        STRING,
-        LIST,
-        SET,
-        ZSET,
-        HASH,
-        STREAM;
+        // TODO: Get names from Rust rather than hard-coding them.
+        STRING("String"),
+        LIST("List"),
+        SET("Set"),
+        ZSET("ZSet"),
+        HASH("Hash"),
+        STREAM("Stream");
+
+        private final String nativeName;
+
+        ObjectType(String nativeName) {
+            this.nativeName = nativeName;
+        }
     }
 
     @Override
     public String[] toArgs() {
         if (type != null) {
             return ArrayTransformUtils.concatenateArrays(
-                    super.toArgs(), new String[] {TYPE_OPTION_STRING, type.toString()});
+                    super.toArgs(), new String[] {TYPE_OPTION_STRING, type.name()});
         }
         return super.toArgs();
     }
@@ -63,7 +70,7 @@ public class ScanOptions extends BaseScanOptions {
         }
 
         if (type != null) {
-            clusterScanMessage.setObjectType(type.toString());
+            clusterScanMessage.setObjectType(type.nativeName);
         }
     }
 }

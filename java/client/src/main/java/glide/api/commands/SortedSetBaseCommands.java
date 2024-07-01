@@ -640,8 +640,8 @@ public interface SortedSetBaseCommands {
      * assert Arrays.equals(payload1, new GlideString[] {gs('member3'), gs('member2'), gs('member1')}); // Returns all members in descending order.
      *
      * RangeByScoreBinary query2 = new RangeByScoreBinary(InfScoreBoundBinary.NEGATIVE_INFINITY, new ScoreBoundaryBinary(3));
-     * String[] payload2 = client.zrange(gs("mySortedSet"), query2, false).get();
-     * assert payload2.equals(new GlideString[] {gs('member2'), gs('member3')}); // Returns members with scores within the range of negative infinity to 3, in ascending order.
+     * GlideString[] payload2 = client.zrange(gs("mySortedSet"), query2, false).get();
+     * assert Arrays.equals(payload2, new GlideString[] {gs('member2'), gs('member3')}); // Returns members with scores within the range of negative infinity to 3, in ascending order.
      * }</pre>
      */
     CompletableFuture<GlideString[]> zrange(
@@ -705,7 +705,7 @@ public interface SortedSetBaseCommands {
      *
      * RangeByScoreBinary query2 = new RangeByScoreBinary(InfScoreBoundBinary.NEGATIVE_INFINITY, new ScoreBoundaryBinary(3));
      * GlideString[] payload2 = client.zrange(gs("mySortedSet"), query2).get();
-     * assert payload2.equals(new GlideString[] {gs('member2'), gs('member3')}); // Returns members with scores within the range of negative infinity to 3, in ascending order.
+     * assert Arrays.equals(payload2, new GlideString[] {gs('member2'), gs('member3')}); // Returns members with scores within the range of negative infinity to 3, in ascending order.
      * }</pre>
      */
     CompletableFuture<GlideString[]> zrange(GlideString key, RangeQueryBinary rangeQuery);
@@ -766,7 +766,7 @@ public interface SortedSetBaseCommands {
      *
      * RangeByScoreBinary query2 = new RangeByScoreBinary(InfScoreBoundBinary.NEGATIVE_INFINITY, new ScoreBoundaryBinary(3));
      * Map<GlideString, Double> payload2 = client.zrangeWithScores(gs("mySortedSet"), query2, false).get();
-     * assert payload2.equals(Map.of(gs('member4'), -2.0, gs('member7'), 1.5)); // Returns members with with scores within the range of negative infinity to 3, with their scores.
+     * assert Maps.equals(payload2, Map.of(gs('member4'), -2.0, gs('member7'), 1.5)); // Returns members with with scores within the range of negative infinity to 3, with their scores.
      * }</pre>
      */
     CompletableFuture<Map<GlideString, Double>> zrangeWithScores(
@@ -823,7 +823,7 @@ public interface SortedSetBaseCommands {
      *
      * RangeByScoreBinary query2 = new RangeByScoreBinary(InfScoreBoundBinary.NEGATIVE_INFINITY, new ScoreBoundaryBinary(3));
      * Map<GlideString, Double> payload2 = client.zrangeWithScores(gs("mySortedSet"), query2).get();
-     * assert payload2.equals(Map.of(gs('member4'), -2.0, gs('member7'), 1.5)); // Returns members with with scores within the range of negative infinity to 3, with their scores.
+     * assert Maps.equals(payload2, Map.of(gs('member4'), -2.0, gs('member7'), 1.5)); // Returns members with with scores within the range of negative infinity to 3, with their scores.
      * }</pre>
      */
     CompletableFuture<Map<GlideString, Double>> zrangeWithScores(

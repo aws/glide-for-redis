@@ -13,8 +13,9 @@ public final class NativeClusterScanCursor implements ClusterScanCursor {
     // TODO: This should be made a constant in Rust.
     private static final String FINISHED_CURSOR_MARKER = "finished";
 
-    private String cursor;
+    private final String cursor;
     private final boolean isMarkedFinished;
+    private boolean isClosed = false;
 
     // This is for internal use only.
     public NativeClusterScanCursor(@NonNull String nativeCursor) {
@@ -34,11 +35,11 @@ public final class NativeClusterScanCursor implements ClusterScanCursor {
 
     @Override
     public void close() throws Exception {
-        if (!isMarkedFinished && cursor != null) {
+        if (!isMarkedFinished && !isClosed) {
             releaseNativeCursor(cursor);
 
-            // Mark the cursor as null to avoid double-free (if close() gets called more than once).
-            cursor = null;
+            // Mark the cursor as closed to avoid double-free (if close() gets called more than once).
+            isClosed = true;
         }
     }
 

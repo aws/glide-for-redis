@@ -2,12 +2,14 @@
 package glide.api.models.commands.scan;
 
 public interface ClusterScanCursor extends AutoCloseable {
+    ClusterScanCursor INITIAL_CURSOR_INSTANCE = new InitialCursor();
+
     String getCursor();
 
     boolean isFinished();
 
     static ClusterScanCursor initialCursor() {
-        return new InitialCursor();
+        return INITIAL_CURSOR_INSTANCE;
     }
 
     final class InitialCursor implements ClusterScanCursor {

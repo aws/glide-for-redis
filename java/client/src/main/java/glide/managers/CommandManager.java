@@ -305,9 +305,18 @@ public class CommandManager {
         RedisRequestOuterClass.ClusterScan.Builder clusterScanBuilder =
                 RedisRequestOuterClass.ClusterScan.newBuilder();
 
-        String cursorStr = cursor.getCursor();
-        if (cursorStr != null && !cursorStr.equals("0")) {
-            clusterScanBuilder.setCursor(cursor.getCursor());
+        if (cursor != ClusterScanCursor.initialCursor()) {
+            if (cursor.isFinished()) {
+                throw new IllegalArgumentException("Cluster SCAN requires an unfinished cursor.");
+            }
+
+            // Clean-up the old cursor since the caller should be done with it.
+            try {
+                cursor.close();
+                clusterScanBuilder.setCursor(cursor.getCursor());
+            } catch (Exception ex) {
+                throw new RuntimeException(ex);
+            }
         }
 
         options.populate(clusterScanBuilder);

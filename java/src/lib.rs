@@ -318,7 +318,7 @@ pub extern "system" fn Java_glide_ffi_resolvers_ScriptResolver_dropScript<'local
 }
 
 #[no_mangle]
-pub extern "system" fn Java_glide_ffi_resolvers_NativeClusterScanCursor_releaseNativeCursor<'local>(
+pub extern "system" fn Java_glide_ffi_resolvers_ClusterScanCursorResolver_releaseNativeCursor<'local>(
     mut env: JNIEnv<'local>,
     _class: JClass<'local>,
     cursor: JString,

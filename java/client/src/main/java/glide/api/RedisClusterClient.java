@@ -62,7 +62,7 @@ import glide.api.models.commands.scan.ScanOptions;
 import glide.api.models.configuration.RedisClusterClientConfiguration;
 import glide.api.models.configuration.RequestRoutingConfiguration.Route;
 import glide.api.models.configuration.RequestRoutingConfiguration.SingleNodeRoute;
-import glide.ffi.resolvers.NativeClusterScanCursor;
+import glide.ffi.resolvers.ClusterScanCursorResolver;
 import glide.managers.CommandManager;
 import glide.managers.ConnectionManager;
 import java.util.Arrays;
@@ -70,8 +70,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+
 import lombok.NonNull;
 import org.apache.commons.lang3.ArrayUtils;
+
 import response.ResponseOuterClass.Response;
 
 /**
@@ -914,18 +916,8 @@ public class RedisClusterClient extends BaseClient
     }
 
     @Override
-    public CompletableFuture<Object[]> scan(
-            @NonNull ClusterScanCursor cursor, @NonNull ScanOptions options) {
-        final CompletableFuture<Object[]> result =
-                commandManager.submitClusterScan(cursor, options, this::handleArrayResponse);
-
-        // Wrap the cursor string from the internal layer into a ClusterScanCursor before exposing to
-        // the caller.
-        return result.thenApply(
-                internalResult ->
-                        new Object[] {
-                            new NativeClusterScanCursor(internalResult[0].toString()), internalResult[1]
-                        });
+    public ClusterScanCursor clusterScan() {
+        return new NativeClusterScanCursor();
     }
 
     @Override
@@ -999,5 +991,105 @@ public class RedisClusterClient extends BaseClient
                 concatenateArrays(
                         new GlideString[] {key}, sortClusterOptions.toGlideStringArgs(), storeArguments);
         return commandManager.submitNewCommand(Sort, arguments, this::handleLongResponse);
+    }
+
+    private final class NativeClusterScanCursor implements ClusterScanCursor {
+        // TODO: This should be made a constant in Rust.
+        private static final String FINISHED_CURSOR_MARKER = "finished";
+
+        private final Object lock = new Object();
+        private String cursor;
+        private boolean isClosed = false;
+        private Object[] currentData;
+        private CompletableFuture<Object[]> currentRequest;
+
+        // This is for internal use only.
+        public NativeClusterScanCursor() {}
+
+        @Override
+        public Object[] getCurrentData() {
+            if (currentRequest == null) {
+                throw new IllegalStateException("No scan has been made yet.");
+            }
+            checkActive("A scan is running. Please wait for completion before getting data.");
+            return currentData;
+        }
+
+        @Override
+        public CompletableFuture<Boolean> next() {
+            checkClosed();
+            checkActive("A scan is running. Please wait for completion before issuing another request.");
+
+            final CompletableFuture<Object[]> futureResult =
+                commandManager.submitClusterScan(cursor, ScanOptions.builder().build(), RedisClusterClient.this::handleArrayResponse);
+
+            currentRequest = futureResult.thenApply(this::updateStateFromResponse);
+            return currentRequest.thenApply(response -> !this.isClosed);
+        }
+
+        @Override
+        public CompletableFuture<Boolean> next(@NonNull ScanOptions options) {
+            checkClosed();
+            checkActive("A scan is running. Please wait for completion before issuing another request.");
+
+            final CompletableFuture<Object[]> futureResult =
+                commandManager.submitClusterScan(cursor, options, RedisClusterClient.this::handleArrayResponse);
+
+            currentRequest = futureResult.thenApply(this::updateStateFromResponse);
+            return currentRequest.thenApply(response -> !this.isClosed);
+        }
+
+        @Override
+        public void close() {
+            checkActive("A scan is running. Please wait for completion before closing the cursor.");
+            synchronized (lock) {
+                internalClose();
+            }
+        }
+
+        @Override
+        protected void finalize() throws Throwable {
+            try {
+                // Release the native cursor
+                this.close();
+            } finally {
+                super.finalize();
+            }
+        }
+
+        private void checkClosed() {
+            synchronized (lock) {
+                if (isClosed) {
+                    throw new IllegalStateException("The cursor is already closed.");
+                }
+            }
+        }
+
+        private void checkActive(String message) {
+            if (currentRequest != null && !currentRequest.isDone()) {
+                throw new IllegalStateException(message);
+            }
+        }
+
+        private void internalClose() {
+            if (!isClosed) {
+                ClusterScanCursorResolver.releaseNativeCursor(cursor);
+
+                // Mark the cursor as closed to avoid double-free (if close() gets called more than once).
+                isClosed = true;
+            }
+        }
+
+        private Object[] updateStateFromResponse(Object[] response) {
+            synchronized (lock) {
+                final String responseCursor = response[0].toString();
+                if (responseCursor.equals(FINISHED_CURSOR_MARKER)) {
+                    internalClose();
+                }
+                this.cursor = responseCursor;
+                this.currentData = (Object[]) response[1];
+            }
+            return response;
+        }
     }
 }

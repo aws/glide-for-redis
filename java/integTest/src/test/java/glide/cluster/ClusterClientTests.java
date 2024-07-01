@@ -11,9 +11,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import glide.api.RedisClusterClient;
+import glide.api.models.commands.scan.ClusterScanCursor;
 import glide.api.models.configuration.RedisCredentials;
 import glide.api.models.exceptions.ClosingException;
 import glide.api.models.exceptions.RequestException;
+
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.Test;
@@ -157,5 +164,34 @@ public class ClusterClientTests {
         ExecutionException executionException =
                 assertThrows(ExecutionException.class, () -> client.set("foo", "bar").get());
         assertTrue(executionException.getCause() instanceof ClosingException);
+    }
+
+    @Test
+    @SneakyThrows
+    public void cluster_scan_test() {
+        RedisClusterClient client =
+            RedisClusterClient.CreateClient(commonClusterClientConfig().build()).get();
+
+        String key = "key" + UUID.randomUUID();
+        Map<String, String> expectedData = new LinkedHashMap<>();
+        for (int i = 0; i < 50000; i++) {
+            expectedData.put(key + ":" + i, "value " + i);
+        }
+
+        assertEquals(OK, client.mset(expectedData).get());
+
+        Set<String> result = new LinkedHashSet<>();
+        try (ClusterScanCursor cursor = client.clusterScan()) {
+            boolean hasMoreToFetch;
+            do {
+                hasMoreToFetch = cursor.next().get();
+                Object[] data = cursor.getCurrentData();
+                for (int i = 0; i < data.length; i ++) {
+                    result.add(data[i].toString());
+                }
+            } while (hasMoreToFetch);
+        }
+
+        assertEquals(expectedData.keySet(), result);
     }
 }

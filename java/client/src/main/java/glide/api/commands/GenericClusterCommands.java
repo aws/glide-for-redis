@@ -154,7 +154,7 @@ public interface GenericClusterCommands {
      */
     CompletableFuture<String> randomKey();
 
-    CompletableFuture<Object[]> scan(ClusterScanCursor cursor, ScanOptions options);
+    ClusterScanCursor clusterScan();
 
     /**
      * Sorts the elements in the list, set, or sorted set at <code>key</code> and returns the result.

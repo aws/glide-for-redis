@@ -1,33 +1,24 @@
 /** Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0 */
 package glide.api.models.commands.scan;
 
+import java.util.concurrent.CompletableFuture;
+
 public interface ClusterScanCursor extends AutoCloseable {
-    ClusterScanCursor INITIAL_CURSOR_INSTANCE = new InitialCursor();
+    // The caller must wait until the most recent call to next() completed.
+    Object[] getCurrentData();
 
-    String getCursor();
+    // When this future completes, this updates the current data on the cursor and the result
+    // is true if there is more data available to request.
+    //
+    // The caller must wait until the most recent call to next() completed.
+    CompletableFuture<Boolean> next();
 
-    boolean isFinished();
+    // When this future completes, this updates the current data on the cursor and the result
+    // is true if there is more data available to request.
+    //
+    // The caller must wait until the most recent call to next() completed.
+    CompletableFuture<Boolean> next(ScanOptions options);
 
-    static ClusterScanCursor initialCursor() {
-        return INITIAL_CURSOR_INSTANCE;
-    }
-
-    final class InitialCursor implements ClusterScanCursor {
-
-        private InitialCursor() {}
-
-        @Override
-        public String getCursor() {
-            return null;
-        }
-
-        @Override
-        public boolean isFinished() {
-            throw new IllegalStateException(
-                    "This operation is only valid on cursor returned by the client.");
-        }
-
-        @Override
-        public void close() throws Exception {}
-    }
+    @Override
+    void close();
 }

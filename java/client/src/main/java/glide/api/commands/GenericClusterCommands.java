@@ -11,8 +11,6 @@ import glide.api.models.commands.scan.ScanOptions;
 import glide.api.models.configuration.ReadFrom;
 import glide.api.models.configuration.RequestRoutingConfiguration.Route;
 import glide.api.models.configuration.RequestRoutingConfiguration.SingleNodeRoute;
-import lombok.NonNull;
-
 import java.util.concurrent.CompletableFuture;
 
 /**

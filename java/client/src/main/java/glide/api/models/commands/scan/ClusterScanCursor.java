@@ -4,6 +4,8 @@ package glide.api.models.commands.scan;
 public interface ClusterScanCursor extends AutoCloseable {
     String getCursor();
 
+    boolean isFinished();
+
     static ClusterScanCursor initialCursor() {
         return new InitialCursor();
     }
@@ -14,7 +16,13 @@ public interface ClusterScanCursor extends AutoCloseable {
 
         @Override
         public String getCursor() {
-            return "0";
+            return null;
+        }
+
+        @Override
+        public boolean isFinished() {
+            throw new IllegalStateException(
+                    "This operation is only valid on cursor returned by the client.");
         }
 
         @Override

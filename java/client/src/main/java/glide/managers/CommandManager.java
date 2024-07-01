@@ -2,8 +2,6 @@
 package glide.managers;
 
 import com.google.protobuf.ByteString;
-import com.google.protobuf.Message;
-
 import glide.api.models.ClusterTransaction;
 import glide.api.models.GlideString;
 import glide.api.models.Script;
@@ -171,9 +169,9 @@ public class CommandManager {
     }
 
     public <T> CompletableFuture<T> submitClusterScan(
-        ClusterScanCursor cursor,
-        ScanOptions options,
-        RedisExceptionCheckedFunction<Response, T> responseHandler) {
+            ClusterScanCursor cursor,
+            ScanOptions options,
+            RedisExceptionCheckedFunction<Response, T> responseHandler) {
 
         final RedisRequest.Builder command = prepareRedisRequest(cursor, options);
         return submitCommandToChannel(command, responseHandler);
@@ -301,9 +299,11 @@ public class CommandManager {
         return route.isPresent() ? prepareRedisRequestRoute(builder, route.get()) : builder;
     }
 
-    protected RedisRequest.Builder prepareRedisRequest(ClusterScanCursor cursor, ScanOptions options) {
+    protected RedisRequest.Builder prepareRedisRequest(
+            ClusterScanCursor cursor, ScanOptions options) {
 
-        RedisRequestOuterClass.ClusterScan.Builder clusterScanBuilder = RedisRequestOuterClass.ClusterScan.newBuilder();
+        RedisRequestOuterClass.ClusterScan.Builder clusterScanBuilder =
+                RedisRequestOuterClass.ClusterScan.newBuilder();
 
         String cursorStr = cursor.getCursor();
         if (cursorStr != null && !cursorStr.equals("0")) {

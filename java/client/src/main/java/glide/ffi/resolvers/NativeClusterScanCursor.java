@@ -10,15 +10,16 @@ public final class NativeClusterScanCursor implements ClusterScanCursor {
         NativeUtils.loadGlideLib();
     }
 
-    private String cursor;
+    // TODO: This should be made a constant in Rust.
+    private static final String FINISHED_CURSOR_MARKER = "finished";
 
-    public NativeClusterScanCursor() {
-        this("0");
-    }
+    private String cursor;
+    private final boolean isMarkedFinished;
 
     // This is for internal use only.
     public NativeClusterScanCursor(@NonNull String nativeCursor) {
         this.cursor = nativeCursor;
+        this.isMarkedFinished = nativeCursor.equals(FINISHED_CURSOR_MARKER);
     }
 
     @Override
@@ -27,12 +28,17 @@ public final class NativeClusterScanCursor implements ClusterScanCursor {
     }
 
     @Override
+    public boolean isFinished() {
+        return isMarkedFinished;
+    }
+
+    @Override
     public void close() throws Exception {
-        if (!"0".equals(cursor)) {
+        if (!isMarkedFinished && cursor != null) {
             releaseNativeCursor(cursor);
 
-            // Save the cursor as "0" now to avoid double-free (if close() gets called more than once).
-            cursor = "0";
+            // Mark the cursor as null to avoid double-free (if close() gets called more than once).
+            cursor = null;
         }
     }
 

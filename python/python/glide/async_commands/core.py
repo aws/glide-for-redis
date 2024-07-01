@@ -26,7 +26,7 @@ from glide.async_commands.bitmap import (
     _create_bitfield_args,
     _create_bitfield_read_only_args,
 )
-from glide.async_commands.command_args import Limit, ListDirection, OrderBy
+from glide.async_commands.command_args import Limit, ListDirection, ObjectType, OrderBy
 from glide.async_commands.sorted_set import (
     AggregationType,
     GeoSearchByBox,
@@ -59,7 +59,7 @@ from glide.constants import TOK, TResult
 from glide.protobuf.redis_request_pb2 import RequestType
 from glide.routes import Route
 
-from ..glide import Script
+from ..glide import ClusterScanCursor, Script
 
 
 class ConditionalChange(Enum):
@@ -360,6 +360,14 @@ class CoreCommands(Protocol):
         keys: Optional[List[Union[str, bytes]]] = None,
         args: Optional[List[Union[str, bytes]]] = None,
         route: Optional[Route] = None,
+    ) -> TResult: ...
+
+    async def _cluster_scan(
+        self,
+        cursor: ClusterScanCursor,
+        match: Optional[str] = ...,
+        count: Optional[int] = ...,
+        type: Optional[ObjectType] = ...,
     ) -> TResult: ...
 
     async def set(

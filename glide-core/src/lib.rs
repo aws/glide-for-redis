@@ -15,4 +15,5 @@ pub use socket_listener::*;
 pub mod errors;
 pub mod scripts_container;
 pub use client::ConnectionRequest;
+pub mod cluster_scan_container;
 pub mod request_type;

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Dict, List, Mapping, Optional, Union, cast
 
-from glide.async_commands.command_args import Limit, OrderBy
+from glide.async_commands.command_args import Limit, ObjectType, OrderBy
 from glide.async_commands.core import (
     CoreCommands,
     FlushMode,
@@ -15,6 +15,8 @@ from glide.async_commands.transaction import BaseTransaction, ClusterTransaction
 from glide.constants import TOK, TClusterResponse, TResult, TSingleNodeRoute
 from glide.protobuf.redis_request_pb2 import RequestType
 from glide.routes import Route
+
+from ..glide import ClusterScanCursor
 
 
 class ClusterCommands(CoreCommands):
@@ -869,4 +871,73 @@ class ClusterCommands(CoreCommands):
         return cast(
             TOK,
             await self._execute_command(RequestType.UnWatch, [], route),
+        )
+
+    async def scan(
+        self,
+        cursor: ClusterScanCursor,
+        match: Optional[str] = None,
+        count: Optional[int] = None,
+        type: Optional[ObjectType] = None,
+    ) -> List[Union[ClusterScanCursor, List[str]]]:
+        """
+        Incrementally iterates over the keys in the Cluster.
+        The method returns a list containing the next cursor and a list of keys.
+
+        This command is similar to the SCAN command, but it is designed to work in a Cluster environment.
+        For each iteration the new cursor object should be used to continue the scan.
+        Using the same cursor object for multiple iterations will result in the same keys or unexpected behavior.
+        For more information about the Cluster Scan implementation,
+        see [Cluster Scan](https://github.com/aws/glide-for-redis/wiki/General-Concepts#cluster-scan).
+
+        As the SCAN command, the method can be used to iterate over the keys in the database,
+        to return all keys the database have from the time the scan started till the scan ends.
+        The same key can be returned in multiple scans iteration.
+
+        See https://valkey.io/commands/scan/ for more details.
+
+        Args:
+            cursor (ClusterScanCursor): The cursor object that wraps the scan state.
+              To start a new scan, create a new empty ClusterScanCursor using ClusterScanCursor().
+            match (Optional[str]): A pattern to match keys against.
+            count (Optional[int]): The number of keys to return in a single iteration.
+              The actual number returned can vary and is not guaranteed to match this count exactly.
+              This parameter serves as a hint to the server on the number of steps to perform in each iteration.
+              The default value is 10.
+            type (Optional[ObjectType]): The type of object to scan for.
+
+        Returns:
+            List[Union[ClusterScanCursor, List[str]]]: A list containing the next cursor and a list of keys,
+              formatted as [ClusterScanCursor, [key1, key2, ...]].
+
+        Examples:
+            >>> # In the following example, we will iterate over the keys in the cluster.
+                await redis_client.mset({"key1": "value1", "key2": "value2", "key3": "value3"})
+                cursor = ClusterScanCursor()
+                all_keys = []
+                while not cursor.is_finished():
+                    cursor, keys = await redis_client.scan(cursor, count=10)
+                    all_keys.extend(keys)
+                print(all_keys) # ['key1', 'key2', 'key3']
+            >>> # In the following example, we will iterate over the keys in the cluster that match the pattern "*key*".
+                await redis_client.mset({"key1": "value1", "key2": "value2", "not_my_key": "value3", "something_else": "value4"})
+                cursor = ClusterScanCursor()
+                all_keys = []
+                while not cursor.is_finished():
+                    cursor, keys = await redis_client.scan(cursor, match="*key*", count=10)
+                    all_keys.extend(keys)
+                print(all_keys) # ['my_key1', 'my_key2', 'not_my_key']
+            >>> # In the following example, we will iterate over the keys in the cluster that are of type STRING.
+                await redis_client.mset({"key1": "value1", "key2": "value2", "key3": "value3"})
+                await redis_client.sadd("this_is_a_set", ["value4"])
+                cursor = ClusterScanCursor()
+                all_keys = []
+                while not cursor.is_finished():
+                    cursor, keys = await redis_client.scan(cursor, type=ObjectType.STRING)
+                    all_keys.extend(keys)
+                print(all_keys) # ['key1', 'key2', 'key3']
+        """
+        return cast(
+            List[Union[ClusterScanCursor, List[str]]],
+            await self._cluster_scan(cursor, match, count, type),
         )

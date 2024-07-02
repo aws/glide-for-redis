@@ -580,6 +580,8 @@ async def transaction_test(
     args.append({b"0-1": [[b"foo", b"bar"]]})
     transaction.xtrim(key11, TrimByMinId(threshold="0-2", exact=True))
     args.append(1)
+    transaction.xinfo_groups(key11)
+    args.append([])
 
     group_name1 = get_random_string(10)
     group_name2 = get_random_string(10)
@@ -590,6 +592,8 @@ async def transaction_test(
         key11, group_name2, "0-0", StreamGroupOptions(make_stream=True)
     )
     args.append(OK)
+    transaction.xinfo_consumers(key11, group_name1)
+    args.append([])
     transaction.xgroup_create_consumer(key11, group_name1, consumer)
     args.append(True)
     transaction.xreadgroup(

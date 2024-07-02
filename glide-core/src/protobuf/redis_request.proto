@@ -244,6 +244,8 @@ enum RequestType {
     XAutoClaim = 203;
     Wait = 208;
     XClaim = 209;
+    XInfoGroups = 210;
+    XInfoConsumers = 211;
 }
 
 message Command {

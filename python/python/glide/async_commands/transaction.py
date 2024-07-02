@@ -2534,6 +2534,65 @@ class BaseTransaction:
 
         return self.append_command(RequestType.XAutoClaim, args)
 
+    def xinfo_groups(
+        self: TTransaction,
+        key: TEncodable,
+    ) -> TTransaction:
+        """
+        Returns the list of all consumer groups and their attributes for the stream stored at `key`.
+
+        See https://valkey.io/commands/xinfo-groups for more details.
+
+        Args:
+            key (TEncodable): The key of the stream.
+
+        Command response:
+            List[Mapping[bytes, Union[bytes, int, None]]]: A list of mappings, where each mapping represents the
+                attributes of a consumer group for the stream at `key`. Each mapping contains the following info:
+                - name: the consumer group's name.
+                - consumers: the number of consumers in the group.
+                - pending: the length of the group's pending entries list (PEL), which are messages that were delivered
+                but are yet to be acknowledged.
+                - last-delivered-id: the ID of the last entry delivered to the group's consumers.
+                - entries-read: the logical "read counter" of the last entry delivered to the group's consumers. Added
+                in Redis version 7.0.0.
+                - lag: the number of entries in the stream that are still waiting to be delivered to the group's
+                consumers, or `None` when that number can't be determined. Added in Redis version 7.0.0.
+        """
+        return self.append_command(RequestType.XInfoGroups, [key])
+
+    def xinfo_consumers(
+        self: TTransaction,
+        key: TEncodable,
+        group_name: TEncodable,
+    ) -> TTransaction:
+        """
+        Returns the list of all consumers and their attributes for the given consumer group of the stream stored at
+        `key`.
+
+        See https://valkey.io/commands/xinfo-consumers for more details.
+
+        Args:
+            key (TEncodable): The key of the stream.
+            group_name (TEncodable): The consumer group name.
+
+        Command response:
+            List[Mapping[bytes, Union[bytes, int]]]: A list of mappings, where each mapping contains the attributes of a
+                consumer for the given consumer group of the stream at `key`. Each mapping contains the following info:
+                - name: the consumer's name.
+                - pending: the number of entries in the pending entries list (PEL): pending messages for the consumer,
+                which are messages that were delivered but are yet to be acknowledged.
+                - idle: if you are using Redis version < 7.2.0, denotes the number of milliseconds that have passed
+                since the consumer's last successful interaction (Examples: XREADGROUP that actually read some entries
+                into the PEL, XCLAIM/XAUTOCLAIM that actually claimed some entries). Otherwise, denotes the number of
+                milliseconds that have passed since the consumer's last attempted interaction (Examples: XREADGROUP,
+                XCLAIM, XAUTOCLAIM).
+                - inactive: the number of milliseconds that have passed since the consumer's last successful interaction
+                (Examples: XREADGROUP that actually read some entries into the PEL, XCLAIM/XAUTOCLAIM that actually
+                claimed some entries). Added in Redis version 7.2.0.
+        """
+        return self.append_command(RequestType.XInfoConsumers, [key, group_name])
+
     def geoadd(
         self: TTransaction,
         key: TEncodable,

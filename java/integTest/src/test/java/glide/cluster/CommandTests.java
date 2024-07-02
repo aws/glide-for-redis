@@ -2199,6 +2199,28 @@ public class CommandTests {
 
     @Test
     @SneakyThrows
+    public void randomKeyBinary() {
+        GlideString key1 = gs("{key}" + UUID.randomUUID());
+        GlideString key2 = gs("{key}" + UUID.randomUUID());
+
+        assertEquals(OK, clusterClient.set(key1, gs("a")).get());
+        assertEquals(OK, clusterClient.set(key2, gs("b")).get());
+
+        GlideString randomKey = clusterClient.randomKeyBinary().get();
+        assertEquals(1L, clusterClient.exists(new GlideString[] {randomKey}).get());
+
+        GlideString randomKeyPrimaries = clusterClient.randomKey(ALL_PRIMARIES).get();
+        assertEquals(1L, clusterClient.exists(new GlideString[] {randomKeyPrimaries}).get());
+
+        // no keys in database
+        assertEquals(OK, clusterClient.flushall(SYNC).get());
+
+        // no keys in database returns null
+        assertNull(clusterClient.randomKey().get());
+    }
+
+    @Test
+    @SneakyThrows
     public void sort() {
         String key1 = "{key}-1" + UUID.randomUUID();
         String key2 = "{key}-2" + UUID.randomUUID();

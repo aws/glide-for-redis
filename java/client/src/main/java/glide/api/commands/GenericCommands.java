@@ -198,6 +198,22 @@ public interface GenericCommands {
     CompletableFuture<String> randomKey();
 
     /**
+     * Returns a random key from currently selected database.
+     *
+     * @see <a href="https://redis.io/docs/latest/commands/randomkey/">redis.io</a> for details.
+     * @return A random <code>key</code> from the database.
+     * @example
+     *     <pre>{@code
+     * String value = client.set("key", "value").get();
+     * String value_1 = client.set("key1", "value_1").get();
+     * String key = client.randomKeyBinary().get();
+     * System.out.println("The random key is: " + key);
+     * // The value of key is either "key" or "key1"
+     * }</pre>
+     */
+    CompletableFuture<GlideString> randomKeyBinary();
+
+    /**
      * Sorts the elements in the list, set, or sorted set at <code>key</code> and returns the result.
      * The <code>sort</code> command can be used to sort elements based on different criteria and
      * apply transformations on sorted elements.<br>

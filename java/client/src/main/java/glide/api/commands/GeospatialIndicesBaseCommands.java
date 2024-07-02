@@ -6,6 +6,7 @@ import glide.api.models.commands.geospatial.GeoAddOptions;
 import glide.api.models.commands.geospatial.GeoSearchOptions;
 import glide.api.models.commands.geospatial.GeoSearchOrigin.CoordOrigin;
 import glide.api.models.commands.geospatial.GeoSearchOrigin.MemberOrigin;
+import glide.api.models.commands.geospatial.GeoSearchOrigin.MemberOriginBinary;
 import glide.api.models.commands.geospatial.GeoSearchOrigin.SearchOrigin;
 import glide.api.models.commands.geospatial.GeoSearchResultOptions;
 import glide.api.models.commands.geospatial.GeoSearchShape;
@@ -299,7 +300,7 @@ public interface GeospatialIndicesBaseCommands {
      *                client
      *                        .geosearch(
      *                                "a1",
-     *                                new GeoSearchOrigin("Palermo"),
+     *                                new GeoSearchOrigin.MemberOrigin("Palermo"),
      *                                new GeoSearchShape(200, GeoUnit.KILOMETERS))
      *                        .get();
      * assert expected.equals(result);
@@ -307,6 +308,45 @@ public interface GeospatialIndicesBaseCommands {
      */
     CompletableFuture<String[]> geosearch(
             String key, SearchOrigin searchFrom, GeoSearchShape searchBy);
+
+    /**
+     * Returns the members of a sorted set populated with geospatial information using {@link
+     * #geoadd(String, Map)}, which are within the borders of the area specified by a given shape.
+     *
+     * @since Valkey 6.2.0 and above.
+     * @see <a href="https://valkey.io/commands/geosearch">valkey.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param searchFrom The query's center point options, could be one of:
+     *     <ul>
+     *       <li>{@link MemberOriginBinary} to use the position of the given existing member in the
+     *           sorted set.
+     *       <li>{@link CoordOrigin} to use the given longitude and latitude coordinates.
+     *     </ul>
+     *
+     * @param searchBy The query's shape options:
+     *     <ul>
+     *       <li>{@link GeoSearchShape#GeoSearchShape(double, GeoUnit)} to search inside circular area
+     *           according to given radius.
+     *       <li>{@link GeoSearchShape#GeoSearchShape(double, double, GeoUnit)} to search inside an
+     *           axis-aligned rectangle, determined by height and width.
+     *     </ul>
+     *
+     * @return An <code>array</code> of matched member names.
+     * @example
+     *     <pre>{@code
+     * Object[] expected = new GlideString[] {gs("Catania"), gs("Palermo")};
+     * Object[] result =
+     *                client
+     *                        .geosearch(
+     *                                gs("a1"),
+     *                                new GeoSearchOrigin.MemberOriginBinary(gs("Palermo")),
+     *                                new GeoSearchShape(200, GeoUnit.KILOMETERS))
+     *                        .get();
+     * assert expected.equals(result);
+     * }</pre>
+     */
+    CompletableFuture<GlideString[]> geosearch(
+            GlideString key, SearchOrigin searchFrom, GeoSearchShape searchBy);
 
     /**
      * Returns the members of a sorted set populated with geospatial information using {@link
@@ -349,6 +389,51 @@ public interface GeospatialIndicesBaseCommands {
      */
     CompletableFuture<String[]> geosearch(
             String key,
+            SearchOrigin searchFrom,
+            GeoSearchShape searchBy,
+            GeoSearchResultOptions resultOptions);
+
+    /**
+     * Returns the members of a sorted set populated with geospatial information using {@link
+     * #geoadd(String, Map)}, which are within the borders of the area specified by a given shape.
+     *
+     * @since Valkey 6.2.0 and above.
+     * @see <a href="https://valkey.io/commands/geosearch">valkey.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param searchFrom The query's center point options, could be one of:
+     *     <ul>
+     *       <li>{@link MemberOriginBinary} to use the position of the given existing member in the
+     *           sorted set.
+     *       <li>{@link CoordOrigin} to use the given longitude and latitude coordinates.
+     *     </ul>
+     *
+     * @param searchBy The query's shape options:
+     *     <ul>
+     *       <li>{@link GeoSearchShape#GeoSearchShape(double, GeoUnit)} to search inside circular area
+     *           according to given radius.
+     *       <li>{@link GeoSearchShape#GeoSearchShape(double, double, GeoUnit)} to search inside an
+     *           axis-aligned rectangle, determined by height and width.
+     *     </ul>
+     *
+     * @param resultOptions Optional inputs for sorting/limiting the results. See - {@link
+     *     GeoSearchResultOptions}
+     * @return An <code>array</code> of matched member names.
+     * @example
+     *     <pre>{@code
+     * Object[] expected = new GlideString[] {gs("Catania"), gs("Palermo")};
+     * Object[] result =
+     *                client
+     *                        .geosearch(
+     *                                gs("a1"),
+     *                                new GeoSearchOrigin.MemberOriginBinary(gs("Palermo")),
+     *                                new GeoSearchShape(200, GeoUnit.KILOMETERS),
+     *                                SortOrder.ASC)
+     *                        .get();
+     * assert expected.equals(result);
+     * }</pre>
+     */
+    CompletableFuture<GlideString[]> geosearch(
+            GlideString key,
             SearchOrigin searchFrom,
             GeoSearchShape searchBy,
             GeoSearchResultOptions resultOptions);
@@ -434,6 +519,78 @@ public interface GeospatialIndicesBaseCommands {
      * @param key The key of the sorted set.
      * @param searchFrom The query's center point options, could be one of:
      *     <ul>
+     *       <li>{@link MemberOriginBinary} to use the position of the given existing member in the
+     *           sorted set.
+     *       <li>{@link CoordOrigin} to use the given longitude and latitude coordinates.
+     *     </ul>
+     *
+     * @param searchBy The query's shape options:
+     *     <ul>
+     *       <li>{@link GeoSearchShape#GeoSearchShape(double, GeoUnit)} to search inside circular area
+     *           according to given radius.
+     *       <li>{@link GeoSearchShape#GeoSearchShape(double, double, GeoUnit)} to search inside an
+     *           axis-aligned rectangle, determined by height and width.
+     *     </ul>
+     *
+     * @param options The optional inputs to request additional information.
+     * @return An array of arrays where each sub-array represents a single item in the following
+     *     order:
+     *     <ul>
+     *       <li>The member (location) name.
+     *       <li>The distance from the center as a <code>Double</code>, in the same unit specified for
+     *           <code>searchBy</code>.
+     *       <li>The geohash of the location as a <code>Long</code>.
+     *       <li>The coordinates as a two item <code>array</code> of <code>Double</code>.
+     *     </ul>
+     *
+     * @example
+     *     <pre>{@code
+     * Object[] expected =
+     *            new Object[] {
+     *                new Object[] {
+     *                     // name
+     *                    gs("Palermo"),
+     *                    new Object[] {
+     *                        // distance, hash and coordinates
+     *                        0.0, 3479099956230698L, new Object[] {13.361389338970184, 38.1155563954963}
+     *                    }
+     *                },
+     *                new Object[] {
+     *                    gs("Catania"),
+     *                    new Object[] {
+     *                        166.2742, 3479447370796909L, new Object[] {15.087267458438873, 37.50266842333162}
+     *                    }
+     *                }
+     *            };
+     * Object[] result =
+     *                client
+     *                        .geosearch(
+     *                                gs("a1"),
+     *                                new GeoSearchOrigin.MemberOriginBinary(gs("Palermo")),
+     *                                new GeoSearchShape(200, GeoUnit.KILOMETERS),
+     *                                new GeoSearchOptions.GeoSearchOptionsBuilder()
+     *                                             .withcoord()
+     *                                             .withdist()
+     *                                             .withhash()
+     *                                             .count(3)
+     *                                             .build(),
+     *                                SortOrder.ASC)
+     *                        .get();
+     * // The result contains the data in the same format as expected.
+     * }</pre>
+     */
+    CompletableFuture<Object[]> geosearch(
+            GlideString key, SearchOrigin searchFrom, GeoSearchShape searchBy, GeoSearchOptions options);
+
+    /**
+     * Returns the members of a sorted set populated with geospatial information using {@link
+     * #geoadd(String, Map)}, which are within the borders of the area specified by a given shape.
+     *
+     * @since Valkey 6.2.0 and above.
+     * @see <a href="https://valkey.io/commands/geosearch">valkey.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param searchFrom The query's center point options, could be one of:
+     *     <ul>
      *       <li>{@link MemberOrigin} to use the position of the given existing member in the sorted
      *           set.
      *       <li>{@link CoordOrigin} to use the given longitude and latitude coordinates.
@@ -505,6 +662,85 @@ public interface GeospatialIndicesBaseCommands {
             GeoSearchResultOptions resultOptions);
 
     /**
+     * Returns the members of a sorted set populated with geospatial information using {@link
+     * #geoadd(String, Map)}, which are within the borders of the area specified by a given shape.
+     *
+     * @since Valkey 6.2.0 and above.
+     * @see <a href="https://valkey.io/commands/geosearch">valkey.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param searchFrom The query's center point options, could be one of:
+     *     <ul>
+     *       <li>{@link MemberOriginBinary} to use the position of the given existing member in the
+     *           sorted set.
+     *       <li>{@link CoordOrigin} to use the given longitude and latitude coordinates.
+     *     </ul>
+     *
+     * @param searchBy The query's shape options:
+     *     <ul>
+     *       <li>{@link GeoSearchShape#GeoSearchShape(double, GeoUnit)} to search inside circular area
+     *           according to given radius.
+     *       <li>{@link GeoSearchShape#GeoSearchShape(double, double, GeoUnit)} to search inside an
+     *           axis-aligned rectangle, determined by height and width.
+     *     </ul>
+     *
+     * @param options The optional inputs to request additional information. See - {@link
+     *     GeoSearchOptions}
+     * @param resultOptions Optional inputs for sorting/limiting the results. See - {@link
+     *     GeoSearchResultOptions}
+     * @return An array of arrays where each sub-array represents a single item in the following
+     *     order:
+     *     <ul>
+     *       <li>The member (location) name.
+     *       <li>The distance from the center as a <code>Double</code>, in the same unit specified for
+     *           <code>searchBy</code>.
+     *       <li>The geohash of the location as a <code>Long</code>.
+     *       <li>The coordinates as a two item <code>array</code> of <code>Double</code>.
+     *     </ul>
+     *
+     * @example
+     *     <pre>{@code
+     * Object[] expected =
+     *            new Object[] {
+     *                new Object[] {
+     *                     // name
+     *                    gs("Palermo"),
+     *                    new Object[] {
+     *                        // distance, hash and coordinates
+     *                        0.0, 3479099956230698L, new Object[] {13.361389338970184, 38.1155563954963}
+     *                    }
+     *                },
+     *                new Object[] {
+     *                    gs("Catania"),
+     *                    new Object[] {
+     *                        166.2742, 3479447370796909L, new Object[] {15.087267458438873, 37.50266842333162}
+     *                    }
+     *                }
+     *            };
+     * Object[] result =
+     *                client
+     *                        .geosearch(
+     *                                gs("a1"),
+     *                                new GeoSearchOrigin.MemberOriginBinary(gs("Palermo")),
+     *                                new GeoSearchShape(200, GeoUnit.KILOMETERS),
+     *                                new GeoSearchOptions.GeoSearchOptionsBuilder()
+     *                                             .withcoord()
+     *                                             .withdist()
+     *                                             .withhash()
+     *                                             .count(3)
+     *                                             .build(),
+     *                                SortOrder.ASC)
+     *                        .get();
+     * // The result contains the data in the same format as expected.
+     * }</pre>
+     */
+    CompletableFuture<Object[]> geosearch(
+            GlideString key,
+            SearchOrigin searchFrom,
+            GeoSearchShape searchBy,
+            GeoSearchOptions options,
+            GeoSearchResultOptions resultOptions);
+
+    /**
      * Searches for members in a sorted set stored at <code>source</code> representing geospatial data
      * within a circular or rectangular area and stores the result in <code>destination</code>. If
      * <code>destination</code> already exists, it is overwritten. Otherwise, a new sorted set will be
@@ -553,6 +789,53 @@ public interface GeospatialIndicesBaseCommands {
      * within a circular or rectangular area and stores the result in <code>destination</code>. If
      * <code>destination</code> already exists, it is overwritten. Otherwise, a new sorted set will be
      * created. To get the result directly, see `{@link #geosearch(String, SearchOrigin,
+     * GeoSearchShape)}.
+     *
+     * @since Valkey 6.2.0 and above.
+     * @apiNote When in cluster mode, <code>source</code> and <code>destination</code> must map to the
+     *     same hash slot.
+     * @see <a href="https://valkey.io/commands/geosearch">valkey.io</a> for more details.
+     * @param destination The key of the destination sorted set.
+     * @param source The key of the source sorted set.
+     * @param searchFrom The query's center point options, could be one of:
+     *     <ul>
+     *       <li>{@link MemberOriginBinary} to use the position of the given existing member in the
+     *           sorted set.
+     *       <li>{@link CoordOrigin} to use the given longitude and latitude coordinates.
+     *     </ul>
+     *
+     * @param searchBy The query's shape options:
+     *     <ul>
+     *       <li>{@link GeoSearchShape#GeoSearchShape(double, GeoUnit)} to search inside circular area
+     *           according to given radius.
+     *       <li>{@link GeoSearchShape#GeoSearchShape(double, double, GeoUnit)} to search inside an
+     *           axis-aligned rectangle, determined by height and width.
+     *     </ul>
+     *
+     * @return The number of elements in the resulting set.
+     * @example
+     *     <pre>{@code
+     * Long result = client
+     *                     .geosearchstore(
+     *                             destinationKey,
+     *                             sourceKey,
+     *                             new CoordOrigin(new GeospatialData(15, 37)),
+     *                             new GeoSearchShape(400, 400, GeoUnit.KILOMETERS))
+     *                     .get();
+     * assert result == 4L;
+     * }</pre>
+     */
+    CompletableFuture<Long> geosearchstore(
+            GlideString destination,
+            GlideString source,
+            SearchOrigin searchFrom,
+            GeoSearchShape searchBy);
+
+    /**
+     * Searches for members in a sorted set stored at <code>source</code> representing geospatial data
+     * within a circular or rectangular area and stores the result in <code>destination</code>. If
+     * <code>destination</code> already exists, it is overwritten. Otherwise, a new sorted set will be
+     * created. To get the result directly, see `{@link #geosearch(String, SearchOrigin,
      * GeoSearchShape, GeoSearchResultOptions)}.
      *
      * @since Valkey 6.2.0 and above.
@@ -595,6 +878,57 @@ public interface GeospatialIndicesBaseCommands {
     CompletableFuture<Long> geosearchstore(
             String destination,
             String source,
+            SearchOrigin searchFrom,
+            GeoSearchShape searchBy,
+            GeoSearchResultOptions resultOptions);
+
+    /**
+     * Searches for members in a sorted set stored at <code>source</code> representing geospatial data
+     * within a circular or rectangular area and stores the result in <code>destination</code>. If
+     * <code>destination</code> already exists, it is overwritten. Otherwise, a new sorted set will be
+     * created. To get the result directly, see `{@link #geosearch(String, SearchOrigin,
+     * GeoSearchShape, GeoSearchResultOptions)}.
+     *
+     * @since Valkey 6.2.0 and above.
+     * @apiNote When in cluster mode, <code>source</code> and <code>destination</code> must map to the
+     *     same hash slot.
+     * @see <a href="https://valkey.io/commands/geosearch">valkey.io</a> for more details.
+     * @param destination The key of the destination sorted set.
+     * @param source The key of the source sorted set.
+     * @param searchFrom The query's center point options, could be one of:
+     *     <ul>
+     *       <li>{@link MemberOriginBinary} to use the position of the given existing member in the
+     *           sorted set.
+     *       <li>{@link CoordOrigin} to use the given longitude and latitude coordinates.
+     *     </ul>
+     *
+     * @param searchBy The query's shape options:
+     *     <ul>
+     *       <li>{@link GeoSearchShape#GeoSearchShape(double, GeoUnit)} to search inside circular area
+     *           according to given radius.
+     *       <li>{@link GeoSearchShape#GeoSearchShape(double, double, GeoUnit)} to search inside an
+     *           axis-aligned rectangle, determined by height and width.
+     *     </ul>
+     *
+     * @param resultOptions Optional inputs for sorting/limiting the results. See - {@link
+     *     GeoSearchResultOptions}
+     * @return The number of elements in the resulting set.
+     * @example
+     *     <pre>{@code
+     * Long result = client
+     *                     .geosearchstore(
+     *                             destinationKey,
+     *                             sourceKey,
+     *                             new CoordOrigin(new GeospatialData(15, 37)),
+     *                             new GeoSearchShape(400, 400, GeoUnit.KILOMETERS),
+     *                             new GeoSearchResultOptions(2, true))
+     *                     .get();
+     * assert result == 2L;
+     * }</pre>
+     */
+    CompletableFuture<Long> geosearchstore(
+            GlideString destination,
+            GlideString source,
             SearchOrigin searchFrom,
             GeoSearchShape searchBy,
             GeoSearchResultOptions resultOptions);
@@ -654,6 +988,56 @@ public interface GeospatialIndicesBaseCommands {
      * within a circular or rectangular area and stores the result in <code>destination</code>. If
      * <code>destination</code> already exists, it is overwritten. Otherwise, a new sorted set will be
      * created. To get the result directly, see `{@link #geosearch(String, SearchOrigin,
+     * GeoSearchShape, GeoSearchOptions)}.
+     *
+     * @since Valkey 6.2.0 and above.
+     * @apiNote When in cluster mode, <code>source</code> and <code>destination</code> must map to the
+     *     same hash slot.
+     * @see <a href="https://valkey.io/commands/geosearch">valkey.io</a> for more details.
+     * @param destination The key of the destination sorted set.
+     * @param source The key of the source sorted set.
+     * @param searchFrom The query's center point options, could be one of:
+     *     <ul>
+     *       <li>{@link MemberOriginBinary} to use the position of the given existing member in the
+     *           sorted set.
+     *       <li>{@link CoordOrigin} to use the given longitude and latitude coordinates.
+     *     </ul>
+     *
+     * @param searchBy The query's shape options:
+     *     <ul>
+     *       <li>{@link GeoSearchShape#GeoSearchShape(double, GeoUnit)} to search inside circular area
+     *           according to given radius.
+     *       <li>{@link GeoSearchShape#GeoSearchShape(double, double, GeoUnit)} to search inside an
+     *           axis-aligned rectangle, determined by height and width.
+     *     </ul>
+     *
+     * @param options The optional inputs to request additional information.
+     * @return The number of elements in the resulting set.
+     * @example
+     *     <pre>{@code
+     * Long result = client
+     *                     .geosearchstore(
+     *                             destinationKey,
+     *                             sourceKey,
+     *                             new CoordOrigin(new GeospatialData(15, 37)),
+     *                             new GeoSearchShape(400, 400, GeoUnit.KILOMETERS),
+     *                             GeoSearchStoreOptions.builder().storedist().build())
+     *                     .get();
+     * assert result == 4L;
+     * }</pre>
+     */
+    CompletableFuture<Long> geosearchstore(
+            GlideString destination,
+            GlideString source,
+            SearchOrigin searchFrom,
+            GeoSearchShape searchBy,
+            GeoSearchStoreOptions options);
+
+    /**
+     * Searches for members in a sorted set stored at <code>source</code> representing geospatial data
+     * within a circular or rectangular area and stores the result in <code>destination</code>. If
+     * <code>destination</code> already exists, it is overwritten. Otherwise, a new sorted set will be
+     * created. To get the result directly, see `{@link #geosearch(String, SearchOrigin,
      * GeoSearchShape, GeoSearchOptions, GeoSearchResultOptions)}.
      *
      * @since Valkey 6.2.0 and above.
@@ -698,6 +1082,60 @@ public interface GeospatialIndicesBaseCommands {
     CompletableFuture<Long> geosearchstore(
             String destination,
             String source,
+            SearchOrigin searchFrom,
+            GeoSearchShape searchBy,
+            GeoSearchStoreOptions options,
+            GeoSearchResultOptions resultOptions);
+
+    /**
+     * Searches for members in a sorted set stored at <code>source</code> representing geospatial data
+     * within a circular or rectangular area and stores the result in <code>destination</code>. If
+     * <code>destination</code> already exists, it is overwritten. Otherwise, a new sorted set will be
+     * created. To get the result directly, see `{@link #geosearch(String, SearchOrigin,
+     * GeoSearchShape, GeoSearchOptions, GeoSearchResultOptions)}.
+     *
+     * @since Valkey 6.2.0 and above.
+     * @apiNote When in cluster mode, <code>source</code> and <code>destination</code> must map to the
+     *     same hash slot.
+     * @see <a href="https://valkey.io/commands/geosearch">valkey.io</a> for more details.
+     * @param destination The key of the destination sorted set.
+     * @param source The key of the source sorted set.
+     * @param searchFrom The query's center point options, could be one of:
+     *     <ul>
+     *       <li>{@link MemberOrigin} to use the position of the given existing member in the sorted
+     *           set.
+     *       <li>{@link CoordOrigin} to use the given longitude and latitude coordinates.
+     *     </ul>
+     *
+     * @param searchBy The query's shape options:
+     *     <ul>
+     *       <li>{@link GeoSearchShape#GeoSearchShape(double, GeoUnit)} to search inside circular area
+     *           according to given radius.
+     *       <li>{@link GeoSearchShape#GeoSearchShape(double, double, GeoUnit)} to search inside an
+     *           axis-aligned rectangle, determined by height and width.
+     *     </ul>
+     *
+     * @param options The optional inputs to request additional information.
+     * @param resultOptions Optional inputs for sorting/limiting the results. See - {@link
+     *     GeoSearchResultOptions}
+     * @return The number of elements in the resulting set.
+     * @example
+     *     <pre>{@code
+     * Long result = client
+     *                     .geosearchstore(
+     *                             destinationKey,
+     *                             sourceKey,
+     *                             new CoordOrigin(new GeospatialData(15, 37)),
+     *                             new GeoSearchShape(400, 400, GeoUnit.KILOMETERS),
+     *                             GeoSearchStoreOptions.builder().storedist().build()
+     *                             new GeoSearchResultOptions(2, true))
+     *                     .get();
+     * assert result == 2L;
+     * }</pre>
+     */
+    CompletableFuture<Long> geosearchstore(
+            GlideString destination,
+            GlideString source,
             SearchOrigin searchFrom,
             GeoSearchShape searchBy,
             GeoSearchStoreOptions options,

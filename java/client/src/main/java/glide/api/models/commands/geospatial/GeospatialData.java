@@ -1,6 +1,9 @@
 /** Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0 */
 package glide.api.models.commands.geospatial;
 
+import static glide.api.models.GlideString.gs;
+
+import glide.api.models.GlideString;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
@@ -30,5 +33,14 @@ public final class GeospatialData {
      */
     public String[] toArgs() {
         return new String[] {Double.toString(longitude), Double.toString(latitude)};
+    }
+
+    /**
+     * Converts GeospatialData into a GlideString[].
+     *
+     * @return GlideString[] An array containing the longtitue and the latitue of the position.
+     */
+    public GlideString[] toGlideStringArgs() {
+        return new GlideString[] {gs(Double.toString(longitude)), gs(Double.toString(latitude))};
     }
 }

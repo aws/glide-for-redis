@@ -2,7 +2,9 @@
 package glide.api.models.commands.geospatial;
 
 import glide.api.commands.GeospatialIndicesBaseCommands;
+import glide.api.models.GlideString;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import lombok.Builder;
 
@@ -70,6 +72,15 @@ public final class GeoSearchOptions {
         }
 
         return arguments.toArray(new String[0]);
+    }
+
+    /**
+     * Converts GeoSearchOptions into a String[].
+     *
+     * @return GlideString[]
+     */
+    public GlideString[] toGlideStringArgs() {
+        return Arrays.stream(toArgs()).map(GlideString::gs).toArray(GlideString[]::new);
     }
 
     public static class GeoSearchOptionsBuilder {

@@ -2,8 +2,10 @@
 package glide.api.models.commands.geospatial;
 
 import glide.api.commands.GeospatialIndicesBaseCommands;
+import glide.api.models.GlideString;
 import glide.api.models.commands.SortOrder;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -102,5 +104,14 @@ public class GeoSearchResultOptions {
         }
 
         return arguments.toArray(new String[0]);
+    }
+
+    /**
+     * Converts GeoSearchResultOptions into a GlideString[].
+     *
+     * @return GlideString[]
+     */
+    public GlideString[] toGlideStringArgs() {
+        return Arrays.stream(toArgs()).map(GlideString::gs).toArray(GlideString[]::new);
     }
 }

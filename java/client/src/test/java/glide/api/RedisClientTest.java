@@ -11374,6 +11374,77 @@ public class RedisClientTest {
                         new String[] {"place4", "place3"}));
     }
 
+    private static List<Arguments> getGeoSearchArgumentsBinary() {
+        return List.of(
+                Arguments.of(
+                        "geosearch_from_member_no_options",
+                        new GeoSearchOrigin.MemberOriginBinary(gs("member")),
+                        new GeoSearchShape(1L, GeoUnit.KILOMETERS),
+                        null,
+                        new GlideString[] {
+                            gs("GeoSearchTestKey"),
+                            gs(FROMMEMBER_VALKEY_API),
+                            gs("member"),
+                            gs("BYRADIUS"),
+                            gs("1.0"),
+                            gs("km")
+                        },
+                        new GlideString[] {gs("place1"), gs("place2")}),
+                Arguments.of(
+                        "geosearch_from_member_ASC",
+                        new GeoSearchOrigin.MemberOrigin("member"),
+                        new GeoSearchShape(1L, 1L, GeoUnit.KILOMETERS),
+                        new GeoSearchResultOptions(SortOrder.ASC),
+                        new GlideString[] {
+                            gs("GeoSearchTestKey"),
+                            gs(FROMMEMBER_VALKEY_API),
+                            gs("member"),
+                            gs("BYBOX"),
+                            gs("1.0"),
+                            gs("1.0"),
+                            gs("km"),
+                            gs("ASC")
+                        },
+                        new GlideString[] {gs("place2"), gs("place1")}),
+                Arguments.of(
+                        "geosearch_from_lonlat_with_count",
+                        new GeoSearchOrigin.CoordOrigin(new GeospatialData(1.0, 1.0)),
+                        new GeoSearchShape(1L, GeoUnit.KILOMETERS),
+                        new GeoSearchResultOptions(2),
+                        new GlideString[] {
+                            gs("GeoSearchTestKey"),
+                            gs(FROMLONLAT_VALKEY_API),
+                            gs("1.0"),
+                            gs("1.0"),
+                            gs("BYRADIUS"),
+                            gs("1.0"),
+                            gs("km"),
+                            gs(COUNT_REDIS_API),
+                            gs("2")
+                        },
+                        new GlideString[] {gs("place3"), gs("place4")}),
+                Arguments.of(
+                        "geosearch_from_lonlat_with_count_any_DESC",
+                        new GeoSearchOrigin.CoordOrigin(new GeospatialData(1.0, 1.0)),
+                        new GeoSearchShape(1L, 1L, GeoUnit.KILOMETERS),
+                        new GeoSearchResultOptions(SortOrder.DESC, 2, true),
+                        new GlideString[] {
+                            gs("GeoSearchTestKey"),
+                            gs(FROMLONLAT_VALKEY_API),
+                            gs("1.0"),
+                            gs("1.0"),
+                            gs("BYBOX"),
+                            gs("1.0"),
+                            gs("1.0"),
+                            gs("km"),
+                            gs(COUNT_REDIS_API),
+                            gs("2"),
+                            gs("ANY"),
+                            gs("DESC")
+                        },
+                        new GlideString[] {gs("place4"), gs("place3")}));
+    }
+
     @SneakyThrows
     @ParameterizedTest(name = "{1}")
     @MethodSource("getGeoSearchArguments")
@@ -11398,6 +11469,36 @@ public class RedisClientTest {
                         ? service.geosearch("GeoSearchTestKey", origin, shape)
                         : service.geosearch("GeoSearchTestKey", origin, shape, resultOptions);
         String[] payload = response.get();
+
+        // Verify
+        assertEquals(testResponse, response);
+        assertArrayEquals(expected, payload);
+    }
+
+    @SneakyThrows
+    @ParameterizedTest(name = "{1}")
+    @MethodSource("getGeoSearchArgumentsBinary")
+    public void geosearch_binary_returns_success(
+            String testName,
+            GeoSearchOrigin.SearchOrigin origin,
+            GeoSearchShape shape,
+            GeoSearchResultOptions resultOptions,
+            GlideString[] args,
+            GlideString[] expected) {
+        // setup
+        CompletableFuture<GlideString[]> testResponse = new CompletableFuture<>();
+        testResponse.complete(expected);
+
+        // match on protobuf request
+        when(commandManager.<GlideString[]>submitNewCommand(eq(GeoSearch), eq(args), any()))
+                .thenReturn(testResponse);
+
+        // Exercise
+        CompletableFuture<GlideString[]> response =
+                resultOptions == null
+                        ? service.geosearch(gs("GeoSearchTestKey"), origin, shape)
+                        : service.geosearch(gs("GeoSearchTestKey"), origin, shape, resultOptions);
+        GlideString[] payload = response.get();
 
         // Verify
         assertEquals(testResponse, response);
@@ -11469,6 +11570,71 @@ public class RedisClientTest {
                         }));
     }
 
+    private static List<Arguments> getGeoSearchWithOptionsArgumentsBinary() {
+        return List.of(
+                Arguments.of(
+                        "geosearch_from_member_with_options",
+                        new GeoSearchOrigin.MemberOriginBinary(gs("member")),
+                        new GeoSearchShape(1L, GeoUnit.KILOMETERS),
+                        GeoSearchOptions.builder().withcoord().withdist().withhash().build(),
+                        null,
+                        new GlideString[] {
+                            gs("GeoSearchTestKey"),
+                            gs(FROMMEMBER_VALKEY_API),
+                            gs("member"),
+                            gs("BYRADIUS"),
+                            gs("1.0"),
+                            gs("km"),
+                            gs("WITHDIST"),
+                            gs("WITHCOORD"),
+                            gs("WITHHASH")
+                        },
+                        new Object[] {
+                            new Object[] {
+                                gs("Catania"),
+                                new Object[] {
+                                    56.4413, 3479447370796909L, new Object[] {15.087267458438873, 37.50266842333162}
+                                }
+                            },
+                            new Object[] {
+                                gs("Palermo"),
+                                new Object[] {
+                                    190.4424, 3479099956230698L, new Object[] {13.361389338970184, 38.1155563954963}
+                                }
+                            }
+                        }),
+                Arguments.of(
+                        "geosearch_from_member_with_options_and_SORT_and_COUNT_ANY",
+                        new GeoSearchOrigin.MemberOriginBinary(gs("member")),
+                        new GeoSearchShape(1L, 1L, GeoUnit.KILOMETERS),
+                        GeoSearchOptions.builder().withcoord().withdist().withhash().build(),
+                        new GeoSearchResultOptions(SortOrder.ASC, 2, true),
+                        new GlideString[] {
+                            gs("GeoSearchTestKey"),
+                            gs(FROMMEMBER_VALKEY_API),
+                            gs("member"),
+                            gs("BYBOX"),
+                            gs("1.0"),
+                            gs("1.0"),
+                            gs("km"),
+                            gs("WITHDIST"),
+                            gs("WITHCOORD"),
+                            gs("WITHHASH"),
+                            gs("COUNT"),
+                            gs("2"),
+                            gs("ANY"),
+                            gs("ASC")
+                        },
+                        new Object[] {
+                            new Object[] {
+                                gs("Catania"),
+                                new Object[] {
+                                    56.4413, 3479447370796909L, new Object[] {15.087267458438873, 37.50266842333162}
+                                }
+                            }
+                        }));
+    }
+
     @SneakyThrows
     @ParameterizedTest(name = "{2}")
     @MethodSource("getGeoSearchWithOptionsArguments")
@@ -11493,6 +11659,37 @@ public class RedisClientTest {
                 resultOptions == null
                         ? service.geosearch("GeoSearchTestKey", origin, shape, options)
                         : service.geosearch("GeoSearchTestKey", origin, shape, options, resultOptions);
+        Object[] payload = response.get();
+
+        // Verify
+        assertEquals(testResponse, response);
+        assertArrayEquals(expected, payload);
+    }
+
+    @SneakyThrows
+    @ParameterizedTest(name = "{2}")
+    @MethodSource("getGeoSearchWithOptionsArgumentsBinary")
+    public void geosearch_with_options_binary_returns_success(
+            String testName,
+            GeoSearchOrigin.SearchOrigin origin,
+            GeoSearchShape shape,
+            GeoSearchOptions options,
+            GeoSearchResultOptions resultOptions,
+            GlideString[] args,
+            Object[] expected) {
+        // setup
+        CompletableFuture<Object[]> testResponse = new CompletableFuture<>();
+        testResponse.complete(expected);
+
+        // match on protobuf request
+        when(commandManager.<Object[]>submitNewCommand(eq(GeoSearch), eq(args), any()))
+                .thenReturn(testResponse);
+
+        // Exercise
+        CompletableFuture<Object[]> response =
+                resultOptions == null
+                        ? service.geosearch(gs("GeoSearchTestKey"), origin, shape, options)
+                        : service.geosearch(gs("GeoSearchTestKey"), origin, shape, options, resultOptions);
         Object[] payload = response.get();
 
         // Verify
@@ -11575,6 +11772,81 @@ public class RedisClientTest {
                         4L));
     }
 
+    private static List<Arguments> getGeoSearchStoreArgumentsBinary() {
+        return List.of(
+                Arguments.of(
+                        "geosearchstore_from_member_no_options",
+                        new GeoSearchOrigin.MemberOriginBinary(gs("member")),
+                        new GeoSearchShape(1L, GeoUnit.KILOMETERS),
+                        null,
+                        new GlideString[] {
+                            gs("testDestination"),
+                            gs("testSource"),
+                            gs(FROMMEMBER_VALKEY_API),
+                            gs("member"),
+                            gs("BYRADIUS"),
+                            gs("1.0"),
+                            gs("km")
+                        },
+                        1L),
+                Arguments.of(
+                        "geosearchstore_from_member_ASC",
+                        new GeoSearchOrigin.MemberOriginBinary(gs("member")),
+                        new GeoSearchShape(1L, 1L, GeoUnit.KILOMETERS),
+                        new GeoSearchResultOptions(SortOrder.ASC),
+                        new GlideString[] {
+                            gs("testDestination"),
+                            gs("testSource"),
+                            gs(FROMMEMBER_VALKEY_API),
+                            gs("member"),
+                            gs("BYBOX"),
+                            gs("1.0"),
+                            gs("1.0"),
+                            gs("km"),
+                            gs("ASC")
+                        },
+                        2L),
+                Arguments.of(
+                        "geosearchstore_from_lonlat_with_count",
+                        new GeoSearchOrigin.CoordOrigin(new GeospatialData(1.0, 1.0)),
+                        new GeoSearchShape(1L, GeoUnit.KILOMETERS),
+                        new GeoSearchResultOptions(2),
+                        new GlideString[] {
+                            gs("testDestination"),
+                            gs("testSource"),
+                            gs(FROMLONLAT_VALKEY_API),
+                            gs("1.0"),
+                            gs("1.0"),
+                            gs("BYRADIUS"),
+                            gs("1.0"),
+                            gs("km"),
+                            gs(COUNT_REDIS_API),
+                            gs("2")
+                        },
+                        3L),
+                Arguments.of(
+                        "geosearchstore_from_lonlat_with_count_any_DESC",
+                        new GeoSearchOrigin.CoordOrigin(new GeospatialData(1.0, 1.0)),
+                        new GeoSearchShape(1L, 1L, GeoUnit.KILOMETERS),
+                        new GeoSearchResultOptions(SortOrder.DESC, 2, true),
+                        new GlideString[] {
+                            gs("testDestination"),
+                            gs("testSource"),
+                            gs(FROMLONLAT_VALKEY_API),
+                            gs("1.0"),
+                            gs("1.0"),
+                            gs("BYBOX"),
+                            gs("1.0"),
+                            gs("1.0"),
+                            gs("km"),
+                            gs(COUNT_REDIS_API),
+                            gs("2"),
+                            gs("ANY"),
+                            gs("DESC")
+                        },
+                        4L));
+    }
+
     @SneakyThrows
     @ParameterizedTest(name = "{3}")
     @MethodSource("getGeoSearchStoreArguments")
@@ -11598,6 +11870,37 @@ public class RedisClientTest {
                 resultOptions == null
                         ? service.geosearchstore("testDestination", "testSource", origin, shape)
                         : service.geosearchstore("testDestination", "testSource", origin, shape, resultOptions);
+        Long payload = response.get();
+
+        // Verify
+        assertEquals(testResponse, response);
+        assertEquals(expected, payload);
+    }
+
+    @SneakyThrows
+    @ParameterizedTest(name = "{3}")
+    @MethodSource("getGeoSearchStoreArgumentsBinary")
+    public void geosearchstore_binary_returns_success(
+            String testName,
+            GeoSearchOrigin.SearchOrigin origin,
+            GeoSearchShape shape,
+            GeoSearchResultOptions resultOptions,
+            GlideString[] args,
+            Long expected) {
+        // setup
+        CompletableFuture<Long> testResponse = new CompletableFuture<>();
+        testResponse.complete(expected);
+
+        // match on protobuf request
+        when(commandManager.<Long>submitNewCommand(eq(GeoSearchStore), eq(args), any()))
+                .thenReturn(testResponse);
+
+        // Exercise
+        CompletableFuture<Long> response =
+                resultOptions == null
+                        ? service.geosearchstore(gs("testDestination"), gs("testSource"), origin, shape)
+                        : service.geosearchstore(
+                                gs("testDestination"), gs("testSource"), origin, shape, resultOptions);
         Long payload = response.get();
 
         // Verify
@@ -11647,6 +11950,48 @@ public class RedisClientTest {
                         2L));
     }
 
+    private static List<Arguments> getGeoSearchStoreWithOptionsArgumentsBinary() {
+        return List.of(
+                Arguments.of(
+                        "geosearchstore_from_member_with_options",
+                        new GeoSearchOrigin.MemberOriginBinary(gs("member")),
+                        new GeoSearchShape(1L, GeoUnit.KILOMETERS),
+                        GeoSearchStoreOptions.builder().build(),
+                        null,
+                        new GlideString[] {
+                            gs("testDestination"),
+                            gs("testSource"),
+                            gs(FROMMEMBER_VALKEY_API),
+                            gs("member"),
+                            gs("BYRADIUS"),
+                            gs("1.0"),
+                            gs("km")
+                        },
+                        1L),
+                Arguments.of(
+                        "geosearchstore_from_member_with_options_and_SORT_and_COUNT_ANY",
+                        new GeoSearchOrigin.MemberOriginBinary(gs("member")),
+                        new GeoSearchShape(1L, 1L, GeoUnit.KILOMETERS),
+                        GeoSearchStoreOptions.builder().storedist().build(),
+                        new GeoSearchResultOptions(SortOrder.ASC, 2, true),
+                        new GlideString[] {
+                            gs("testDestination"),
+                            gs("testSource"),
+                            gs(FROMMEMBER_VALKEY_API),
+                            gs("member"),
+                            gs("BYBOX"),
+                            gs("1.0"),
+                            gs("1.0"),
+                            gs("km"),
+                            gs("STOREDIST"),
+                            gs("COUNT"),
+                            gs("2"),
+                            gs("ANY"),
+                            gs("ASC")
+                        },
+                        2L));
+    }
+
     @SneakyThrows
     @ParameterizedTest(name = "{4}")
     @MethodSource("getGeoSearchStoreWithOptionsArguments")
@@ -11672,6 +12017,39 @@ public class RedisClientTest {
                         ? service.geosearchstore("testDestination", "testSource", origin, shape, options)
                         : service.geosearchstore(
                                 "testDestination", "testSource", origin, shape, options, resultOptions);
+        Long payload = response.get();
+
+        // Verify
+        assertEquals(testResponse, response);
+        assertEquals(expected, payload);
+    }
+
+    @SneakyThrows
+    @ParameterizedTest(name = "{4}")
+    @MethodSource("getGeoSearchStoreWithOptionsArgumentsBinary")
+    public void geosearchstore_with_options_binary_returns_success(
+            String testName,
+            GeoSearchOrigin.SearchOrigin origin,
+            GeoSearchShape shape,
+            GeoSearchStoreOptions options,
+            GeoSearchResultOptions resultOptions,
+            GlideString[] args,
+            Long expected) {
+        // setup
+        CompletableFuture<Long> testResponse = new CompletableFuture<>();
+        testResponse.complete(expected);
+
+        // match on protobuf request
+        when(commandManager.<Long>submitNewCommand(eq(GeoSearchStore), eq(args), any()))
+                .thenReturn(testResponse);
+
+        // Exercise
+        CompletableFuture<Long> response =
+                resultOptions == null
+                        ? service.geosearchstore(
+                                gs("testDestination"), gs("testSource"), origin, shape, options)
+                        : service.geosearchstore(
+                                gs("testDestination"), gs("testSource"), origin, shape, options, resultOptions);
         Long payload = response.get();
 
         // Verify

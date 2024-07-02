@@ -1,7 +1,10 @@
 /** Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0 */
 package glide.api.models.commands.geospatial;
 
+import static glide.api.models.GlideString.gs;
+
 import glide.api.commands.GeospatialIndicesBaseCommands;
+import glide.api.models.GlideString;
 import lombok.Builder;
 
 /**
@@ -35,6 +38,19 @@ public final class GeoSearchStoreOptions {
         }
 
         return new String[] {};
+    }
+
+    /**
+     * Converts GeoSearchStoreOptions into a String[].
+     *
+     * @return GlideString[]
+     */
+    public GlideString[] toGlideStringArgs() {
+        if (storeDist) {
+            return new GlideString[] {gs(GEOSEARCHSTORE_VALKEY_API)};
+        }
+
+        return new GlideString[] {};
     }
 
     public static class GeoSearchStoreOptionsBuilder {

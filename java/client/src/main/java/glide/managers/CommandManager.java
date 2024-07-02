@@ -48,6 +48,19 @@ public class CommandManager {
     private final ChannelHandler channel;
 
     /**
+     * Internal interface for exposing implementation details about a ClusterScanCursor. This is an
+     * interface so that it can be mocked in tests.
+     */
+    public interface ClusterScanCursorDetail extends ClusterScanCursor {
+        /**
+         * Returns the handle String representing the cursor.
+         *
+         * @return the handle String representing the cursor.
+         */
+        String getCursorHandle();
+    }
+
+    /**
      * Build a command and send.
      *
      * @param requestType Redis command type
@@ -307,7 +320,11 @@ public class CommandManager {
                 RedisRequestOuterClass.ClusterScan.newBuilder();
 
         if (cursor != ClusterScanCursor.INITIAL_CURSOR_INSTANCE) {
-            clusterScanBuilder.setCursor(cursor.getCursorHandle());
+            if (cursor instanceof ClusterScanCursorDetail) {
+                clusterScanBuilder.setCursor(((ClusterScanCursorDetail) cursor).getCursorHandle());
+            } else {
+                throw new IllegalArgumentException("Illegal cursor submitted.");
+            }
         }
 
         if (options.getMatchPattern() != null) {

@@ -35,13 +35,6 @@ import glide.api.commands.GenericClusterCommands;
  */
 public interface ClusterScanCursor {
     /**
-     * Returns the handle String representing the cursor.
-     *
-     * @return the handle String representing the cursor.
-     */
-    String getCursorHandle();
-
-    /**
      * Indicates if this cursor is the last set of data available.
      *
      * <p>If this method returns false, this cursor instance should get passed to {@link
@@ -68,11 +61,6 @@ public interface ClusterScanCursor {
      */
     ClusterScanCursor INITIAL_CURSOR_INSTANCE =
             new ClusterScanCursor() {
-                @Override
-                public String getCursorHandle() {
-                    return null;
-                }
-
                 @Override
                 public boolean isFinished() {
                     // The initial cursor can always request more data.

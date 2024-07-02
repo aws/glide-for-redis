@@ -1002,7 +1002,7 @@ public class RedisClusterClient extends BaseClient
         return commandManager.submitNewCommand(Sort, arguments, this::handleLongResponse);
     }
 
-    private static final class NativeClusterScanCursor implements ClusterScanCursor {
+    private static final class NativeClusterScanCursor implements CommandManager.ClusterScanCursorDetail {
         // TODO: This should be made a constant in Rust.
         private static final String FINISHED_CURSOR_MARKER = "finished";
 

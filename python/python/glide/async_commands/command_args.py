@@ -63,3 +63,39 @@ class ListDirection(Enum):
     """
     RIGHT: Represents the option that elements should be popped from or added to the right side of a list.
     """
+
+
+class ObjectType(Enum):
+    """
+    Enumeration representing the data types supported by the database.
+    """
+
+    STRING = "String"
+    """
+    Represents a string data type.
+    """
+
+    LIST = "List"
+    """
+    Represents a list data type.
+    """
+
+    SET = "Set"
+    """
+    Represents a set data type.
+    """
+
+    ZSET = "ZSet"
+    """
+    Represents a sorted set data type.
+    """
+
+    HASH = "Hash"
+    """
+    Represents a hash data type.    
+    """
+
+    STREAM = "Stream"
+    """
+    Represents a stream data type.
+    """

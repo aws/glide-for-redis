@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Dict, List, Mapping, Optional, Union, cast
+from typing import Any, Dict, List, Mapping, Optional, Set, Union, cast
 
-from glide.async_commands.command_args import Limit, OrderBy
+from glide.async_commands.command_args import Limit, ObjectType, OrderBy
 from glide.async_commands.core import (
     CoreCommands,
     FlushMode,
@@ -12,9 +12,18 @@ from glide.async_commands.core import (
     _build_sort_args,
 )
 from glide.async_commands.transaction import BaseTransaction, ClusterTransaction
-from glide.constants import TOK, TClusterResponse, TEncodable, TResult, TSingleNodeRoute
+from glide.constants import (
+    TOK,
+    TClusterResponse,
+    TEncodable,
+    TFunctionListResponse,
+    TResult,
+    TSingleNodeRoute,
+)
 from glide.protobuf.redis_request_pb2 import RequestType
 from glide.routes import Route
+
+from ..glide import ClusterScanCursor
 
 
 class ClusterCommands(CoreCommands):
@@ -333,7 +342,7 @@ class ClusterCommands(CoreCommands):
         """
         Loads a library to Redis.
 
-        See https://valkey.io/docs/latest/commands/function-load/ for more details.
+        See https://valkey.io/commands/function-load/ for more details.
 
         Args:
             library_code (TEncodable): The source code that implements the library.
@@ -361,13 +370,63 @@ class ClusterCommands(CoreCommands):
             ),
         )
 
+    async def function_list(
+        self,
+        library_name_pattern: Optional[TEncodable] = None,
+        with_code: bool = False,
+        route: Optional[Route] = None,
+    ) -> TClusterResponse[TFunctionListResponse]:
+        """
+        Returns information about the functions and libraries.
+
+        See https://valkey.io/commands/function-list/ for more details.
+
+        Args:
+            library_name_pattern (Optional[TEncodable]):  A wildcard pattern for matching library names.
+            with_code (bool): Specifies whether to request the library code from the server or not.
+            route (Optional[Route]): The command will be routed to a random node, unless `route` is provided,
+                in which case the client will route the command to the nodes defined by `route`.
+
+        Returns:
+            TClusterResponse[TFunctionListResponse]: Info
+            about all or selected libraries and their functions.
+
+        Examples:
+            >>> response = await client.function_list("myLib?_backup", True)
+                [{
+                    b"library_name": b"myLib5_backup",
+                    b"engine": b"LUA",
+                    b"functions": [{
+                        b"name": b"myfunc",
+                        b"description": None,
+                        b"flags": {b"no-writes"},
+                    }],
+                    b"library_code": b"#!lua name=mylib \n redis.register_function('myfunc', function(keys, args) return args[1] end)"
+                }]
+
+        Since: Redis 7.0.0.
+        """
+        args = []
+        if library_name_pattern is not None:
+            args.extend(["LIBRARYNAME", library_name_pattern])
+        if with_code:
+            args.append("WITHCODE")
+        return cast(
+            TClusterResponse[TFunctionListResponse],
+            await self._execute_command(
+                RequestType.FunctionList,
+                args,
+                route,
+            ),
+        )
+
     async def function_flush(
         self, mode: Optional[FlushMode] = None, route: Optional[Route] = None
     ) -> TOK:
         """
         Deletes all function libraries.
 
-        See https://valkey.io/docs/latest/commands/function-flush/ for more details.
+        See https://valkey.io/commands/function-flush/ for more details.
 
         Args:
             mode (Optional[FlushMode]): The flushing mode, could be either `SYNC` or `ASYNC`.
@@ -398,7 +457,7 @@ class ClusterCommands(CoreCommands):
         """
         Deletes a library and all its functions.
 
-        See https://valkey.io/docs/latest/commands/function-delete/ for more details.
+        See https://valkey.io/commands/function-delete/ for more details.
 
         Args:
             library_code (TEncodable): The library name to delete
@@ -887,4 +946,73 @@ class ClusterCommands(CoreCommands):
         return cast(
             TOK,
             await self._execute_command(RequestType.UnWatch, [], route),
+        )
+
+    async def scan(
+        self,
+        cursor: ClusterScanCursor,
+        match: Optional[TEncodable] = None,
+        count: Optional[int] = None,
+        type: Optional[ObjectType] = None,
+    ) -> List[Union[ClusterScanCursor, List[bytes]]]:
+        """
+        Incrementally iterates over the keys in the Cluster.
+        The method returns a list containing the next cursor and a list of keys.
+
+        This command is similar to the SCAN command, but it is designed to work in a Cluster environment.
+        For each iteration the new cursor object should be used to continue the scan.
+        Using the same cursor object for multiple iterations will result in the same keys or unexpected behavior.
+        For more information about the Cluster Scan implementation,
+        see [Cluster Scan](https://github.com/aws/glide-for-redis/wiki/General-Concepts#cluster-scan).
+
+        As the SCAN command, the method can be used to iterate over the keys in the database,
+        to return all keys the database have from the time the scan started till the scan ends.
+        The same key can be returned in multiple scans iteration.
+
+        See https://valkey.io/commands/scan/ for more details.
+
+        Args:
+            cursor (ClusterScanCursor): The cursor object that wraps the scan state.
+              To start a new scan, create a new empty ClusterScanCursor using ClusterScanCursor().
+            match (Optional[TEncodable]): A pattern to match keys against.
+            count (Optional[int]): The number of keys to return in a single iteration.
+              The actual number returned can vary and is not guaranteed to match this count exactly.
+              This parameter serves as a hint to the server on the number of steps to perform in each iteration.
+              The default value is 10.
+            type (Optional[ObjectType]): The type of object to scan for.
+
+        Returns:
+            List[Union[ClusterScanCursor, List[TEncodable]]]: A list containing the next cursor and a list of keys,
+              formatted as [ClusterScanCursor, [key1, key2, ...]].
+
+        Examples:
+            >>> # In the following example, we will iterate over the keys in the cluster.
+                await redis_client.mset({b'key1': b'value1', b'key2': b'value2', b'key3': b'value3'})
+                cursor = ClusterScanCursor()
+                all_keys = []
+                while not cursor.is_finished():
+                    cursor, keys = await redis_client.scan(cursor, count=10)
+                    all_keys.extend(keys)
+                print(all_keys) # [b'key1', b'key2', b'key3']
+            >>> # In the following example, we will iterate over the keys in the cluster that match the pattern "*key*".
+                await redis_client.mset({b"key1": b"value1", b"key2": b"value2", b"not_my_key": b"value3", b"something_else": b"value4"})
+                cursor = ClusterScanCursor()
+                all_keys = []
+                while not cursor.is_finished():
+                    cursor, keys = await redis_client.scan(cursor, match=b"*key*", count=10)
+                    all_keys.extend(keys)
+                print(all_keys) # [b'my_key1', b'my_key2', b'not_my_key']
+            >>> # In the following example, we will iterate over the keys in the cluster that are of type STRING.
+                await redis_client.mset({b'key1': b'value1', b'key2': b'value2', b'key3': b'value3'})
+                await redis_client.sadd(b"this_is_a_set", [b"value4"])
+                cursor = ClusterScanCursor()
+                all_keys = []
+                while not cursor.is_finished():
+                    cursor, keys = await redis_client.scan(cursor, type=ObjectType.STRING)
+                    all_keys.extend(keys)
+                print(all_keys) # [b'key1', b'key2', b'key3']
+        """
+        return cast(
+            List[Union[ClusterScanCursor, List[bytes]]],
+            await self._cluster_scan(cursor, match, count, type),
         )

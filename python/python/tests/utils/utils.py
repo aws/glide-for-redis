@@ -4,7 +4,7 @@ import string
 from typing import Any, Dict, List, Mapping, Optional, Set, TypeVar, Union, cast
 
 from glide.async_commands.core import InfoSection
-from glide.constants import TResult
+from glide.constants import TClusterResponse, TFunctionListResponse, TResult
 from glide.glide_client import TGlideClient
 from packaging import version
 
@@ -225,3 +225,47 @@ def generate_lua_lib_code(
             code += ", flags = { 'no-writes' }"
         code += " }\n"
     return code
+
+
+def check_function_list_response(
+    response: TClusterResponse[TFunctionListResponse],
+    lib_name: str,
+    function_descriptions: Mapping[str, Optional[bytes]],
+    function_flags: Mapping[str, Set[bytes]],
+    lib_code: Optional[str] = None,
+):
+    """
+    Validate whether `FUNCTION LIST` response contains required info.
+
+    Args:
+        response (List[Mapping[bytes, Any]]): The response from redis.
+        libName (bytes): Expected library name.
+        functionDescriptions (Mapping[bytes, Optional[bytes]]): Expected function descriptions. Key - function name, value -
+             description.
+        functionFlags (Mapping[bytes, Set[bytes]]): Expected function flags. Key - function name, value - flags set.
+        libCode (Optional[bytes]): Expected library to check if given.
+    """
+    response = cast(TFunctionListResponse, response)
+    assert len(response) > 0
+    has_lib = False
+    for lib in response:
+        has_lib = lib.get(b"library_name") == lib_name.encode()
+        if has_lib:
+            functions: List[Mapping[bytes, Any]] = cast(
+                List[Mapping[bytes, Any]], lib.get(b"functions")
+            )
+            assert len(functions) == len(function_descriptions)
+            for function in functions:
+                function_name: bytes = cast(bytes, function.get(b"name"))
+                assert function.get(b"description") == function_descriptions.get(
+                    function_name.decode("utf-8")
+                )
+                assert function.get(b"flags") == function_flags.get(
+                    function_name.decode("utf-8")
+                )
+
+                if lib_code:
+                    assert lib.get(b"library_code") == lib_code.encode()
+            break
+
+    assert has_lib is True

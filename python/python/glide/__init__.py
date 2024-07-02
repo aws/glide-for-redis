@@ -97,7 +97,7 @@ from glide.routes import (
     SlotType,
 )
 
-from .glide import Script
+from .glide import ClusterScanCursor, Script
 
 __all__ = [
     # Client
@@ -175,6 +175,7 @@ __all__ = [
     "TrimByMaxLen",
     "TrimByMinId",
     "UpdateOptions",
+    "ClusterScanCursor"
     # Logger
     "Logger",
     "LogLevel",

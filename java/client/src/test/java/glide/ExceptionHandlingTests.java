@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mockStatic;
 import static redis_request.RedisRequestOuterClass.RequestType.CustomCommand;
 import static response.ResponseOuterClass.RequestErrorType.Disconnect;
 import static response.ResponseOuterClass.RequestErrorType.ExecAbort;
@@ -13,6 +14,7 @@ import static response.ResponseOuterClass.RequestErrorType.Timeout;
 import static response.ResponseOuterClass.RequestErrorType.Unspecified;
 
 import connection_request.ConnectionRequestOuterClass;
+import glide.api.logging.Logger;
 import glide.api.models.configuration.RedisClientConfiguration;
 import glide.api.models.exceptions.ClosingException;
 import glide.api.models.exceptions.ConnectionException;
@@ -34,24 +36,34 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Stream;
 import lombok.SneakyThrows;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.MockedStatic;
 import redis_request.RedisRequestOuterClass.RedisRequest;
 import response.ResponseOuterClass.RequestError;
 import response.ResponseOuterClass.RequestErrorType;
 import response.ResponseOuterClass.Response;
 
 public class ExceptionHandlingTests {
+    private MockedStatic<Logger> mockedLogger;
+
     @BeforeEach
     public void init() {
+        mockedLogger = mockStatic(Logger.class);
         var threadPoolResource = ThreadPoolResourceAllocator.getOrCreate(() -> null);
         if (threadPoolResource != null) {
             threadPoolResource.getEventLoopGroup().shutdownGracefully();
             ThreadPoolResourceAllocator.getOrCreate(() -> null);
         }
+    }
+
+    @AfterEach
+    public void teardown() {
+        mockedLogger.close();
     }
 
     /**

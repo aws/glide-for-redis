@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import connection_request.ConnectionRequestOuterClass.ConnectionRequest;
 import connection_request.ConnectionRequestOuterClass.NodeAddress;
 import glide.api.RedisClient;
+import glide.api.logging.Logger;
 import glide.api.models.exceptions.ClosingException;
 import glide.connectors.handlers.CallbackDispatcher;
 import glide.connectors.handlers.ChannelHandler;
@@ -37,6 +38,8 @@ public class ConnectionWithGlideMockTests extends RustCoreLibMockTestBase {
     @BeforeEach
     @SneakyThrows
     public void createTestClient() {
+        // TODO: Add DISABLED level to logger-core
+        Logger.setLoggerConfig(Logger.Level.DISABLED);
         channelHandler =
                 new ChannelHandler(
                         new CallbackDispatcher(null),

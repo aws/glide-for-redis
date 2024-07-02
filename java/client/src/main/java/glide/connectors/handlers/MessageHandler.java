@@ -1,6 +1,7 @@
 /** Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0 */
 package glide.connectors.handlers;
 
+import glide.api.logging.Logger;
 import glide.api.models.PubSubMessage;
 import glide.api.models.configuration.BaseSubscriptionConfiguration.MessageCallback;
 import glide.api.models.exceptions.RedisException;
@@ -39,8 +40,10 @@ public class MessageHandler {
     public void handle(Response response) {
         Object data = responseResolver.apply(response);
         if (!(data instanceof Map)) {
-            // TODO log thru logger https://github.com/aws/glide-for-redis/pull/1422
-            System.err.println("Received invalid push: empty or in incorrect format.");
+            Logger.log(
+                    Logger.Level.WARN,
+                    "invalid push",
+                    "Received invalid push: empty or in incorrect format.");
             throw new RedisException("Received invalid push: empty or in incorrect format.");
         }
         @SuppressWarnings("unchecked")
@@ -50,11 +53,10 @@ public class MessageHandler {
 
         switch (pushType) {
             case Disconnection:
-                // TODO log thru logger https://github.com/aws/glide-for-redis/pull/1422
-                // ClientLogger.log(
-                //    LogLevel.WARN,
-                //    "disconnect notification",
-                //    "Transport disconnected, messages might be lost",
+                Logger.log(
+                        Logger.Level.WARN,
+                        "disconnect notification",
+                        "Transport disconnected, messages might be lost");
                 break;
             case PMessage:
                 handle(new PubSubMessage((String) values[2], (String) values[1], (String) values[0]));
@@ -70,21 +72,22 @@ public class MessageHandler {
             case PUnsubscribe:
             case SUnsubscribe:
                 // ignore for now
-                // TODO log thru logger https://github.com/aws/glide-for-redis/pull/1422
-                System.out.printf(
-                        "Received push notification of type '%s': %s\n",
-                        pushType,
-                        Arrays.stream(values)
-                                .map(v -> v instanceof Number ? v.toString() : String.format("'%s'", v))
-                                .collect(Collectors.joining(" ")));
+                Logger.log(
+                        Logger.Level.INFO,
+                        "subscribe/unsubscribe notification",
+                        () ->
+                                String.format(
+                                        "Received push notification of type '%s': %s",
+                                        pushType,
+                                        Arrays.stream(values)
+                                                .map(v -> v instanceof Number ? v.toString() : String.format("'%s'", v))
+                                                .collect(Collectors.joining(" "))));
                 break;
             default:
-                // TODO log thru logger https://github.com/aws/glide-for-redis/pull/1422
-                System.err.printf("Received push with unsupported type: %s.\n", pushType);
-                // ClientLogger.log(
-                //    LogLevel.WARN,
-                //    "unknown notification",
-                //    f"Unknown notification message: '{message_kind}'",
+                Logger.log(
+                        Logger.Level.WARN,
+                        "unknown notification",
+                        () -> String.format("Unknown notification message: '%s'", pushType));
         }
     }
 

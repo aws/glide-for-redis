@@ -244,6 +244,7 @@ enum RequestType {
     XAutoClaim = 203;
     Wait = 208;
     XClaim = 209;
+    Scan = 210;
 }
 
 message Command {
@@ -268,6 +269,13 @@ message Transaction {
     repeated Command commands = 1;
 }
 
+message ClusterScan {
+    string cursor = 1;
+    optional string match_pattern = 2;
+    optional int64 count = 3;
+    optional string object_type = 4;
+}
+
 message RedisRequest {
     uint32 callback_idx = 1;
 
@@ -275,6 +283,7 @@ message RedisRequest {
         Command single_command = 2;
         Transaction transaction = 3;
         ScriptInvocation script_invocation = 4;
+        ClusterScan cluster_scan = 5;
     }
-    Routes route = 5;
+    Routes route = 6;
 }

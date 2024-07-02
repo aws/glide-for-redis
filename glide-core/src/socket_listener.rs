@@ -3,10 +3,12 @@
  */
 use super::rotating_buffer::RotatingBuffer;
 use crate::client::Client;
+use crate::cluster_scan_container::get_cluster_scan_cursor;
 use crate::connection_request::ConnectionRequest;
 use crate::errors::{error_message, error_type, RequestErrorType};
 use crate::redis_request::{
-    command, redis_request, Command, RedisRequest, Routes, ScriptInvocation, SlotTypes, Transaction,
+    command, redis_request, ClusterScan, Command, RedisRequest, Routes, ScriptInvocation,
+    SlotTypes, Transaction,
 };
 use crate::response;
 use crate::response::Response;
@@ -20,8 +22,7 @@ use redis::cluster_routing::{
     MultipleNodeRoutingInfo, Route, RoutingInfo, SingleNodeRoutingInfo, SlotAddr,
 };
 use redis::cluster_routing::{ResponsePolicy, Routable};
-use redis::RedisError;
-use redis::{Cmd, PushInfo, Value};
+use redis::{Cmd, PushInfo, RedisError, ScanStateRC, Value};
 use std::cell::Cell;
 use std::rc::Rc;
 use std::{env, str};
@@ -45,6 +46,13 @@ const SOCKET_FILE_NAME: &str = "glide-socket";
 /// The maximum length of a request's arguments to be passed as a vector of
 /// strings instead of a pointer
 pub const MAX_REQUEST_ARGS_LENGTH: usize = 2_i32.pow(12) as usize; // TODO: find the right number
+
+pub const STRING: &str = "string";
+pub const LIST: &str = "list";
+pub const SET: &str = "set";
+pub const ZSET: &str = "zset";
+pub const HASH: &str = "hash";
+pub const STREAM: &str = "stream";
 
 /// struct containing all objects needed to bind to a socket and clean it.
 struct SocketListener {
@@ -201,13 +209,13 @@ async fn write_result(
                 None
             }
         }
-        Err(ClienUsageError::Internal(error_message)) => {
+        Err(ClientUsageError::Internal(error_message)) => {
             log_error("internal error", &error_message);
             Some(response::response::Value::ClosingError(
                 error_message.into(),
             ))
         }
-        Err(ClienUsageError::User(error_message)) => {
+        Err(ClientUsageError::User(error_message)) => {
             log_error("user error", &error_message);
             let request_error = response::RequestError {
                 type_: response::RequestErrorType::Unspecified.into(),
@@ -216,7 +224,7 @@ async fn write_result(
             };
             Some(response::response::Value::RequestError(request_error))
         }
-        Err(ClienUsageError::Redis(err)) => {
+        Err(ClientUsageError::Redis(err)) => {
             let error_message = error_message(&err);
             log_warn("received error", error_message.as_str());
             log_debug("received error", format!("for callback {}", callback_index));
@@ -264,9 +272,9 @@ fn get_command(request: &Command) -> Option<Cmd> {
     request_type.get_command()
 }
 
-fn get_redis_command(command: &Command) -> Result<Cmd, ClienUsageError> {
+fn get_redis_command(command: &Command) -> Result<Cmd, ClientUsageError> {
     let Some(mut cmd) = get_command(command) else {
-        return Err(ClienUsageError::Internal(format!(
+        return Err(ClientUsageError::Internal(format!(
             "Received invalid request type: {:?}",
             command.request_type
         )));
@@ -285,14 +293,14 @@ fn get_redis_command(command: &Command) -> Result<Cmd, ClienUsageError> {
             }
         }
         None => {
-            return Err(ClienUsageError::Internal(
+            return Err(ClientUsageError::Internal(
                 "Failed to get request arguments, no arguments are set".to_string(),
             ));
         }
     };
 
     if cmd.args_iter().next().is_none() {
-        return Err(ClienUsageError::User(
+        return Err(ClientUsageError::User(
             "Received command without a command name or arguments".into(),
         ));
     }
@@ -307,6 +315,50 @@ async fn send_command(
 ) -> ClientUsageResult<Value> {
     client
         .send_command(&cmd, routing)
+        .await
+        .map_err(|err| err.into())
+}
+
+// Parse the cluster scan command parameters from protobuf and send the command to redis-rs.
+async fn cluster_scan(cluster_scan: ClusterScan, mut client: Client) -> ClientUsageResult<Value> {
+    // Since we don't send the cluster scan as a usual command, but through a special function in redis-rs library,
+    // we need to handle the command separately.
+    // Specifically, we need to handle the cursor, which is not the cursor returned from the server,
+    // but the ID of the ScanStateRC, stored in the cluster scan container.
+    // We need to get the ref from the table or create a new one if the cursor is empty.
+    let cursor: String = cluster_scan.cursor.into();
+    let cluster_scan_cursor = if cursor.is_empty() {
+        ScanStateRC::new()
+    } else {
+        get_cluster_scan_cursor(cursor)?
+    };
+
+    let match_pattern_string = cluster_scan
+        .match_pattern
+        .map(|pattern| pattern.to_string());
+    let match_pattern = match_pattern_string.as_deref();
+    let count = cluster_scan.count.map(|count| count as usize);
+
+    let object_type = match cluster_scan.object_type {
+        Some(char_object_type) => match char_object_type.to_string().to_lowercase().as_str() {
+            STRING => Some(redis::ObjectType::String),
+            LIST => Some(redis::ObjectType::List),
+            SET => Some(redis::ObjectType::Set),
+            ZSET => Some(redis::ObjectType::ZSet),
+            HASH => Some(redis::ObjectType::Hash),
+            STREAM => Some(redis::ObjectType::Stream),
+            _ => {
+                return Err(ClientUsageError::Internal(format!(
+                    "Received invalid object type: {:?}",
+                    char_object_type
+                )))
+            }
+        },
+        None => None,
+    };
+
+    client
+        .cluster_scan(&cluster_scan_cursor, &match_pattern, count, object_type)
         .await
         .map_err(|err| err.into())
 }
@@ -349,7 +401,7 @@ fn get_slot_addr(slot_type: &protobuf::EnumOrUnknown<SlotTypes>) -> ClientUsageR
             SlotTypes::Primary => SlotAddr::Master,
             SlotTypes::Replica => SlotAddr::ReplicaRequired,
         })
-        .map_err(|id| ClienUsageError::Internal(format!("Received unexpected slot id type {id}")))
+        .map_err(|id| ClientUsageError::Internal(format!("Received unexpected slot id type {id}")))
 }
 
 fn get_route(
@@ -369,7 +421,7 @@ fn get_route(
     match route {
         Value::SimpleRoutes(simple_route) => {
             let simple_route = simple_route.enum_value().map_err(|id| {
-                ClienUsageError::Internal(format!("Received unexpected simple route type {id}"))
+                ClientUsageError::Internal(format!("Received unexpected simple route type {id}"))
             })?;
             match simple_route {
                 crate::redis_request::SimpleRoutes::AllNodes => Ok(Some(RoutingInfo::MultiNode((
@@ -418,6 +470,9 @@ fn handle_request(request: RedisRequest, client: Client, writer: Rc<Writer>) {
     task::spawn_local(async move {
         let result = match request.command {
             Some(action) => match action {
+                redis_request::Command::ClusterScan(cluster_scan_command) => {
+                    cluster_scan(cluster_scan_command, client).await
+                }
                 redis_request::Command::SingleCommand(command) => {
                     match get_redis_command(&command) {
                         Ok(cmd) => match get_route(request.route.0, Some(&cmd)) {
@@ -448,7 +503,7 @@ fn handle_request(request: RedisRequest, client: Client, writer: Rc<Writer>) {
                         request.callback_idx
                     ),
                 );
-                Err(ClienUsageError::Internal(
+                Err(ClientUsageError::Internal(
                     "Received empty request".to_string(),
                 ))
             }
@@ -766,7 +821,7 @@ enum ClientCreationError {
 
 /// Enum describing errors received during client usage.
 #[derive(Debug, Error)]
-enum ClienUsageError {
+enum ClientUsageError {
     #[error("Redis error: {0}")]
     Redis(#[from] RedisError),
     /// An error that stems from wrong behavior of the client.
@@ -777,7 +832,7 @@ enum ClienUsageError {
     User(String),
 }
 
-type ClientUsageResult<T> = Result<T, ClienUsageError>;
+type ClientUsageResult<T> = Result<T, ClientUsageError>;
 
 /// Defines errors caused the connection to close.
 #[derive(Debug, Clone)]

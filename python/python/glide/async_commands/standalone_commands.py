@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Dict, List, Mapping, Optional, cast
+from typing import Any, Dict, List, Mapping, Optional, Set, Union, cast
 
-from glide.async_commands.command_args import Limit, OrderBy
+from glide.async_commands.command_args import Limit, ObjectType, OrderBy
 from glide.async_commands.core import (
     CoreCommands,
     FlushMode,
@@ -12,7 +12,7 @@ from glide.async_commands.core import (
     _build_sort_args,
 )
 from glide.async_commands.transaction import BaseTransaction, Transaction
-from glide.constants import OK, TOK, TEncodable, TResult
+from glide.constants import OK, TOK, TEncodable, TFunctionListResponse, TResult
 from glide.protobuf.redis_request_pb2 import RequestType
 
 
@@ -240,7 +240,7 @@ class StandaloneCommands(CoreCommands):
         """
         Loads a library to Redis.
 
-        See https://valkey.io/docs/latest/commands/function-load/ for more details.
+        See https://valkey.io/commands/function-load/ for more details.
 
         Args:
             library_code (TEncodable): The source code that implements the library.
@@ -265,11 +265,55 @@ class StandaloneCommands(CoreCommands):
             ),
         )
 
+    async def function_list(
+        self, library_name_pattern: Optional[TEncodable] = None, with_code: bool = False
+    ) -> TFunctionListResponse:
+        """
+        Returns information about the functions and libraries.
+
+        See https://valkey.io/commands/function-list/ for more details.
+
+        Args:
+            library_name_pattern (Optional[TEncodable]):  A wildcard pattern for matching library names.
+            with_code (bool): Specifies whether to request the library code from the server or not.
+
+        Returns:
+            TFunctionListResponse: Info about all or
+                selected libraries and their functions.
+
+        Examples:
+            >>> response = await client.function_list("myLib?_backup", True)
+                [{
+                    b"library_name": b"myLib5_backup",
+                    b"engine": b"LUA",
+                    b"functions": [{
+                        b"name": b"myfunc",
+                        b"description": None,
+                        b"flags": {b"no-writes"},
+                    }],
+                    b"library_code": b"#!lua name=mylib \n redis.register_function('myfunc', function(keys, args) return args[1] end)"
+                }]
+
+        Since: Redis 7.0.0.
+        """
+        args = []
+        if library_name_pattern is not None:
+            args.extend(["LIBRARYNAME", library_name_pattern])
+        if with_code:
+            args.append("WITHCODE")
+        return cast(
+            TFunctionListResponse,
+            await self._execute_command(
+                RequestType.FunctionList,
+                args,
+            ),
+        )
+
     async def function_flush(self, mode: Optional[FlushMode] = None) -> TOK:
         """
         Deletes all function libraries.
 
-        See https://valkey.io/docs/latest/commands/function-flush/ for more details.
+        See https://valkey.io/commands/function-flush/ for more details.
 
         Args:
             mode (Optional[FlushMode]): The flushing mode, could be either `SYNC` or `ASYNC`.
@@ -295,7 +339,7 @@ class StandaloneCommands(CoreCommands):
         """
         Deletes a library and all its functions.
 
-        See https://valkey.io/docs/latest/commands/function-delete/ for more details.
+        See https://valkey.io/commands/function-delete/ for more details.
 
         Args:
             library_code (TEncodable): The library name to delete
@@ -720,4 +764,69 @@ class StandaloneCommands(CoreCommands):
         return cast(
             TOK,
             await self._execute_command(RequestType.UnWatch, []),
+        )
+
+    async def scan(
+        self,
+        cursor: TEncodable,
+        match: Optional[TEncodable] = None,
+        count: Optional[int] = None,
+        type: Optional[ObjectType] = None,
+    ) -> List[Union[bytes, List[bytes]]]:
+        """
+        Incrementally iterate over a collection of keys.
+        SCAN is a cursor based iterator. This means that at every call of the command,
+        the server returns an updated cursor that the user needs to use as the cursor argument in the next call.
+        An iteration starts when the cursor is set to "0", and terminates when the cursor returned by the server is "0".
+
+        A full iteration always retrieves all the elements that were present
+        in the collection from the start to the end of a full iteration.
+        Elements that were not constantly present in the collection during a full iteration, may be returned or not.
+
+        See https://valkey.io/commands/scan for more details.
+
+        Args:
+            cursor (TResult): The cursor used for iteration. For the first iteration, the cursor should be set to "0".
+              Using a non-zero cursor in the first iteration,
+              or an invalid cursor at any iteration, will lead to undefined results.
+              Using the same cursor in multiple iterations will, in case nothing changed between the iterations,
+                return the same elements multiple times.
+                If the the db has changed, it may result an undefined behavior.
+            match (Optional[TResult]): A pattern to match keys against.
+            count (Optional[int]): The number of keys to return per iteration.
+                The number of keys returned per iteration is not guaranteed to be the same as the count argument.
+                the argument is used as a hint for the server to know how many "steps" it can use to retrieve the keys.
+                The default value is 10.
+            type (ObjectType): The type of object to scan for.
+
+        Returns:
+            List[Union[bytes, List[bytes]]]: A List containing the next cursor value and a list of keys,
+                formatted as [cursor, [key1, key2, ...]]
+
+        Examples:
+        >>> result = await client.scan(b'0')
+            print(result) #[b'17', [b'key1', b'key2', b'key3', b'key4', b'key5', b'set1', b'set2', b'set3']]
+            first_cursor_result = result[0]
+            result = await client.scan(first_cursor_result)
+            print(result) #[b'349', [b'key4', b'key5', b'set1', b'hash1', b'zset1', b'list1', b'list2',
+                                    b'list3', b'zset2', b'zset3', b'zset4', b'zset5', b'zset6']]
+            result = await client.scan(result[0])
+            print(result) #[b'0', [b'key6', b'key7']]
+
+        >>> result = await client.scan(first_cursor_result, match=b'key*', count=2)
+            print(result) #[b'6', [b'key4', b'key5']]
+
+        >>> result = await client.scan("0", type=ObjectType.Set)
+            print(result) #[b'362', [b'set1', b'set2', b'set3']]
+        """
+        args = [cursor]
+        if match:
+            args.extend(["MATCH", match])
+        if count:
+            args.extend(["COUNT", str(count)])
+        if type:
+            args.extend(["TYPE", type.value])
+        return cast(
+            List[Union[bytes, List[bytes]]],
+            await self._execute_command(RequestType.Scan, args),
         )

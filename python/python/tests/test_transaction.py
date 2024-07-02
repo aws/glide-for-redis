@@ -109,6 +109,39 @@ async def transaction_test(
         args.append(lib_name.encode())
         transaction.function_load(code, True)
         args.append(lib_name.encode())
+        transaction.function_list(lib_name)
+        args.append(
+            [
+                {
+                    b"library_name": lib_name.encode(),
+                    b"engine": b"LUA",
+                    b"functions": [
+                        {
+                            b"name": func_name.encode(),
+                            b"description": None,
+                            b"flags": {b"no-writes"},
+                        }
+                    ],
+                }
+            ]
+        )
+        transaction.function_list(lib_name, True)
+        args.append(
+            [
+                {
+                    b"library_name": lib_name.encode(),
+                    b"engine": b"LUA",
+                    b"functions": [
+                        {
+                            b"name": func_name.encode(),
+                            b"description": None,
+                            b"flags": {b"no-writes"},
+                        }
+                    ],
+                    b"library_code": code.encode(),
+                }
+            ]
+        )
         transaction.fcall(func_name, [], arguments=["one", "two"])
         args.append(b"one")
         transaction.fcall(func_name, [key], arguments=["one", "two"])

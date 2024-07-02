@@ -9,6 +9,7 @@ pub enum FFIError {
     Jni(JNIError),
     Uds(String),
     Utf8(FromUtf8Error),
+    Logger(String),
 }
 
 impl From<jni::errors::Error> for FFIError {
@@ -29,6 +30,7 @@ impl std::fmt::Display for FFIError {
             FFIError::Jni(err) => write!(f, "{}", err),
             FFIError::Uds(err) => write!(f, "{}", err),
             FFIError::Utf8(err) => write!(f, "{}", err),
+            FFIError::Logger(err) => write!(f, "{}", err),
         }
     }
 }

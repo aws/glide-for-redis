@@ -26,10 +26,14 @@ impl RotatingBuffer {
         let mut results: Vec<T> = vec![];
         let mut prev_position = 0;
         let buffer_len = buffer.len();
+        //println!("------------- get_requests() buffer_len == {:?}", buffer_len);
         while prev_position < buffer_len {
             if let Some((request_len, bytes_read)) = u32::decode_var(&buffer[prev_position..]) {
+                //println!("------------- get_requests() request_len == {:?}", request_len);
                 let start_pos = prev_position + bytes_read;
                 if (start_pos + request_len as usize) > buffer_len {
+                    // how its even possible?
+                    //println!("------------- get_requests() start_pos + request_len  == {:?}", start_pos + request_len as usize);
                     break;
                 } else {
                     match T::parse_from_tokio_bytes(
@@ -51,6 +55,11 @@ impl RotatingBuffer {
         }
 
         if prev_position != buffer.len() {
+            // save back the unconsumed bytes
+            println!(
+                "------------- get_requests() saving from {:?}",
+                prev_position
+            );
             self.backing_buffer
                 .extend_from_slice(&buffer[prev_position..]);
         }

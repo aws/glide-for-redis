@@ -153,11 +153,11 @@ jobs:
                   github-token: ${{ secrets.GITHUB_TOKEN }}
                   engine-version: "7.2.5"
 
-            - name: Test compatibility with pytest
+            - name: Test with pytest
               working-directory: ./python
               run: |
                   source .env/bin/activate
-                  pytest --asyncio-mode=auto -m smoke_test
+                  pytest --asyncio-mode=auto
 
     build-amazonlinux-latest:
         runs-on: ubuntu-latest

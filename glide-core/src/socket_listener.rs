@@ -110,9 +110,16 @@ impl UnixStreamListener {
                     return ReadSocketClosed.into();
                 }
                 Ok(_) => {
-                    return match self.rotating_buffer.get_requests() {
-                        Ok(requests) => ReceivedValues(requests),
-                        Err(err) => UnhandledError(err.into()).into(),
+                    match self.rotating_buffer.get_requests() {
+                        Ok(requests) => {
+                            //println!("------------- requests.size() == {:?}", requests.len());
+                            if !requests.is_empty() {
+                                // continue to read from socket
+                                return ReceivedValues(requests);
+                            }
+                            continue;
+                        }
+                        Err(err) => return UnhandledError(err.into()).into(),
                     };
                 }
                 Err(ref e)

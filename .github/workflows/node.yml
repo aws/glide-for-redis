@@ -140,9 +140,23 @@ jobs:
                   github-token: ${{ secrets.GITHUB_TOKEN }}
                   engine-version: "7.2.5"
 
-            - name: Test compatibility
-              run: npm test -- -t "set and get flow works"
+            - name: test
+              run: npm test
               working-directory: ./node
+
+            - name: test hybrid node modules - commonjs
+              run: |
+                npm install --package-lock-only
+                npm ci 
+                npm run build-and-test
+              working-directory: ./node/hybrid-node-tests/commonjs-test
+            
+            - name: test hybrid node modules - ecma
+              run: |
+                npm install --package-lock-only
+                npm ci
+                npm run build-and-test
+              working-directory: ./node/hybrid-node-tests/ecmascript-test
 
     build-amazonlinux-latest:
         runs-on: ubuntu-latest

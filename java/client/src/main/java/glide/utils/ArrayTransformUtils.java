@@ -171,6 +171,23 @@ public class ArrayTransformUtils {
     }
 
     /**
+     * Maps a Map of Arrays with value type T[] to value of U[].
+     *
+     * @param mapOfArrays Map of Array values to cast.
+     * @param clazz The class of the array values to cast to.
+     * @return A Map of arrays of type U[], containing the key/values from the input Map.
+     * @param <T> The target type which the elements are cast.
+     */
+    public static <T> Map<GlideString, T[]> castBinaryStringMapOfArrays(
+            Map<GlideString, Object[]> mapOfArrays, Class<T> clazz) {
+        if (mapOfArrays == null) {
+            return null;
+        }
+        return mapOfArrays.entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> castArray(e.getValue(), clazz)));
+    }
+
+    /**
      * Maps a Map of Object[][] with value type T[][] to value of U[][].
      *
      * @param mapOfArrays Map of 2D Array values to cast.

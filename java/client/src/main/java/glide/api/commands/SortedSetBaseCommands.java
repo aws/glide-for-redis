@@ -283,6 +283,27 @@ public interface SortedSetBaseCommands {
     CompletableFuture<Map<String, Double>> zpopmin(String key, long count);
 
     /**
+     * Removes and returns up to <code>count</code> members with the lowest scores from the sorted set
+     * stored at the specified <code>key</code>.
+     *
+     * @see <a href="https://redis.io/commands/zpopmin/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param count Specifies the quantity of members to pop.<br>
+     *     If <code>count</code> is higher than the sorted set's cardinality, returns all members and
+     *     their scores, ordered from lowest to highest.
+     * @return A map of the removed members and their scores, ordered from the one with the lowest
+     *     score to the one with the highest.<br>
+     *     If <code>key</code> doesn't exist, it will be treated as an empty sorted set and the
+     *     command returns an empty <code>Map</code>.
+     * @example
+     *     <pre>{@code
+     * Map<GlideString, Double> payload = client.zpopmax(gs("mySortedSet"), 2).get();
+     * assert payload.equals(Map.of(gs('member3'), 7.5, gs('member2'), 8.0)); // Indicates that gs('member3') with a score of 7.5 and gs('member2') with a score of 8.0 have been removed from the sorted set.
+     * }</pre>
+     */
+    CompletableFuture<Map<GlideString, Double>> zpopmin(GlideString key, long count);
+
+    /**
      * Removes and returns the member with the lowest score from the sorted set stored at the
      * specified <code>key</code>.
      *
@@ -298,6 +319,23 @@ public interface SortedSetBaseCommands {
      * }</pre>
      */
     CompletableFuture<Map<String, Double>> zpopmin(String key);
+
+    /**
+     * Removes and returns the member with the lowest score from the sorted set stored at the
+     * specified <code>key</code>.
+     *
+     * @see <a href="https://redis.io/commands/zpopmin/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @return A map containing the removed member and its corresponding score.<br>
+     *     If <code>key</code> doesn't exist, it will be treated as an empty sorted set and the
+     *     command returns an empty <code>Map</code>.
+     * @example
+     *     <pre>{@code
+     * Map<GlideString, Double> payload = client.zpopmin(gs("mySortedSet")).get();
+     * assert payload.equals(Map.of(gs('member1'), 5.0)); // Indicates that gs('member1') with a score of 5.0 has been removed from the sorted set.
+     * }</pre>
+     */
+    CompletableFuture<Map<GlideString, Double>> zpopmin(GlideString key);
 
     /**
      * Blocks the connection until it removes and returns a member with the lowest score from the
@@ -330,6 +368,36 @@ public interface SortedSetBaseCommands {
     CompletableFuture<Object[]> bzpopmin(String[] keys, double timeout);
 
     /**
+     * Blocks the connection until it removes and returns a member with the lowest score from the
+     * first non-empty sorted set, with the given <code>keys</code> being checked in the order they
+     * are provided.<br>
+     * <code>BZPOPMIN</code> is the blocking variant of {@link #zpopmin(String)}.<br>
+     *
+     * @apiNote
+     *     <ul>
+     *       <li>When in cluster mode, all <code>keys</code> must map to the same hash slot.
+     *       <li><code>BZPOPMIN</code> is a client blocking command, see <a
+     *           href="https://github.com/aws/glide-for-redis/wiki/General-Concepts#blocking-commands">Blocking
+     *           Commands</a> for more details and best practices.
+     *     </ul>
+     *
+     * @see <a href="https://redis.io/commands/bzpopmin/">redis.io</a> for more details.
+     * @param keys The keys of the sorted sets.
+     * @param timeout The number of seconds to wait for a blocking operation to complete. A value of
+     *     <code>0</code> will block indefinitely.
+     * @return An <code>array</code> containing the key where the member was popped out, the member
+     *     itself, and the member score.<br>
+     *     If no member could be popped and the <code>timeout</code> expired, returns <code>null
+     *     </code>.
+     * @example
+     *     <pre>{@code
+     * Object[] data = client.bzpopmin(new GlideString[] {gs("zset1"), gs("zset2")}, 0.5).get();
+     * System.out.printf("Popped '%s' with score %d from sorted set '%s'%n", data[1], data[2], data[0]);
+     * }</pre>
+     */
+    CompletableFuture<Object[]> bzpopmin(GlideString[] keys, double timeout);
+
+    /**
      * Removes and returns up to <code>count</code> members with the highest scores from the sorted
      * set stored at the specified <code>key</code>.
      *
@@ -351,6 +419,27 @@ public interface SortedSetBaseCommands {
     CompletableFuture<Map<String, Double>> zpopmax(String key, long count);
 
     /**
+     * Removes and returns up to <code>count</code> members with the highest scores from the sorted
+     * set stored at the specified <code>key</code>.
+     *
+     * @see <a href="https://redis.io/commands/zpopmax/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param count Specifies the quantity of members to pop.<br>
+     *     If <code>count</code> is higher than the sorted set's cardinality, returns all members and
+     *     their scores, ordered from highest to lowest.
+     * @return A map of the removed members and their scores, ordered from the one with the highest
+     *     score to the one with the lowest.<br>
+     *     If <code>key</code> doesn't exist, it will be treated as an empty sorted set and the
+     *     command returns an empty <code>Map</code>.
+     * @example
+     *     <pre>{@code
+     * Map<GlideString, Double> payload = client.zpopmax(gs("mySortedSet"), 2).get();
+     * assert payload.equals(Map.of(gs('member2'), 8.0, gs('member3'), 7.5)); // Indicates that gs('member2') with a score of 8.0 and gs('member3') with a score of 7.5 have been removed from the sorted set.
+     * }</pre>
+     */
+    CompletableFuture<Map<GlideString, Double>> zpopmax(GlideString key, long count);
+
+    /**
      * Removes and returns the member with the highest score from the sorted set stored at the
      * specified <code>key</code>.
      *
@@ -366,6 +455,23 @@ public interface SortedSetBaseCommands {
      * }</pre>
      */
     CompletableFuture<Map<String, Double>> zpopmax(String key);
+
+    /**
+     * Removes and returns the member with the highest score from the sorted set stored at the
+     * specified <code>key</code>.
+     *
+     * @see <a href="https://redis.io/commands/zpopmax/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @return A map containing the removed member and its corresponding score.<br>
+     *     If <code>key</code> doesn't exist, it will be treated as an empty sorted set and the
+     *     command returns an empty <code>Map</code>.
+     * @example
+     *     <pre>{@code
+     * Map<GlideString, Double> payload = client.zpopmax(gs("mySortedSet")).get();
+     * assert payload.equals(Map.of(gs('member1'), 10.0)); // Indicates that gs('member1') with a score of 10.0 has been removed from the sorted set.
+     * }</pre>
+     */
+    CompletableFuture<Map<GlideString, Double>> zpopmax(GlideString key);
 
     /**
      * Blocks the connection until it removes and returns a member with the highest score from the
@@ -396,6 +502,36 @@ public interface SortedSetBaseCommands {
      * }</pre>
      */
     CompletableFuture<Object[]> bzpopmax(String[] keys, double timeout);
+
+    /**
+     * Blocks the connection until it removes and returns a member with the highest score from the
+     * first non-empty sorted set, with the given <code>keys</code> being checked in the order they
+     * are provided.<br>
+     * <code>BZPOPMAX</code> is the blocking variant of {@link #zpopmax(String)}.<br>
+     *
+     * @apiNote
+     *     <ul>
+     *       <li>When in cluster mode, all <code>keys</code> must map to the same hash slot.
+     *       <li><code>BZPOPMAX</code> is a client blocking command, see <a
+     *           href="https://github.com/aws/glide-for-redis/wiki/General-Concepts#blocking-commands">Blocking
+     *           Commands</a> for more details and best practices.
+     *     </ul>
+     *
+     * @see <a href="https://redis.io/commands/bzpopmax/">redis.io</a> for more details.
+     * @param keys The keys of the sorted sets.
+     * @param timeout The number of seconds to wait for a blocking operation to complete. A value of
+     *     <code>0</code> will block indefinitely.
+     * @return An <code>array</code> containing the key where the member was popped out, the member
+     *     itself, and the member score.<br>
+     *     If no member could be popped and the <code>timeout</code> expired, returns <code>null
+     *     </code>.
+     * @example
+     *     <pre>{@code
+     * Object[] data = client.bzpopmax(new GlideString[] {gs("zset1"), gs("zset2")}, 0.5).get();
+     * System.out.printf("Popped '%s' with score %d from sorted set '%s'%n", data[1], data[2], data[0]);
+     * }</pre>
+     */
+    CompletableFuture<Object[]> bzpopmax(GlideString[] keys, double timeout);
 
     /**
      * Returns the score of <code>member</code> in the sorted set stored at <code>key</code>.
@@ -1142,6 +1278,29 @@ public interface SortedSetBaseCommands {
     CompletableFuture<Object[]> zmpop(String[] keys, ScoreFilter modifier);
 
     /**
+     * Pops a member-score pair from the first non-empty sorted set, with the given <code>keys</code>
+     * being checked in the order they are provided.
+     *
+     * @apiNote When in cluster mode, all <code>keys</code> must map to the same hash slot.
+     * @since Redis 7.0 and above.
+     * @see <a href="https://redis.io/commands/zmpop/">redis.io</a> for more details.
+     * @param keys The keys of the sorted sets.
+     * @param modifier The element pop criteria - either {@link ScoreFilter#MIN} or {@link
+     *     ScoreFilter#MAX} to pop the member with the lowest/highest score accordingly.
+     * @return A two-element <code>array</code> containing the key name of the set from which the
+     *     element was popped, and a member-score <code>Map</code> of the popped element.<br>
+     *     If no member could be popped, returns <code>null</code>.
+     * @example
+     *     <pre>{@code
+     * Object[] result = client.zmpop(new GlideString[] { gs("zSet1"), gs("zSet2") }, MAX).get();
+     * Map<GlideString, Double> data = (Map<GlideString, Double>)result[1];
+     * GlideString element = data.keySet().toArray(GlideString[]::new)[0];
+     * System.out.printf("Popped '%s' with score %d from '%s'%n", element, data.get(element), result[0]);
+     * }</pre>
+     */
+    CompletableFuture<Object[]> zmpop(GlideString[] keys, ScoreFilter modifier);
+
+    /**
      * Pops multiple member-score pairs from the first non-empty sorted set, with the given <code>keys
      * </code> being checked in the order they are provided.
      *
@@ -1165,6 +1324,31 @@ public interface SortedSetBaseCommands {
      * }</pre>
      */
     CompletableFuture<Object[]> zmpop(String[] keys, ScoreFilter modifier, long count);
+
+    /**
+     * Pops multiple member-score pairs from the first non-empty sorted set, with the given <code>keys
+     * </code> being checked in the order they are provided.
+     *
+     * @apiNote When in cluster mode, all <code>keys</code> must map to the same hash slot.
+     * @since Redis 7.0 and above.
+     * @see <a href="https://redis.io/commands/zmpop/">redis.io</a> for more details.
+     * @param keys The keys of the sorted sets.
+     * @param modifier The element pop criteria - either {@link ScoreFilter#MIN} or {@link
+     *     ScoreFilter#MAX} to pop members with the lowest/highest scores accordingly.
+     * @param count The number of elements to pop.
+     * @return A two-element <code>array</code> containing the key name of the set from which elements
+     *     were popped, and a member-score <code>Map</code> of the popped elements.<br>
+     *     If no member could be popped, returns <code>null</code>.
+     * @example
+     *     <pre>{@code
+     * Object[] result = client.zmpop(new GlideString[] { gs("zSet1"), gs("zSet2") }, MAX, 2).get();
+     * Map<GlideString, Double> data = (Map<GlideString, Double>)result[1];
+     * for (Map.Entry<GlideString, Double> entry : data.entrySet()) {
+     *     System.out.printf("Popped '%s' with score %d from '%s'%n", entry.getKey(), entry.getValue(), result[0]);
+     * }
+     * }</pre>
+     */
+    CompletableFuture<Object[]> zmpop(GlideString[] keys, ScoreFilter modifier, long count);
 
     /**
      * Blocks the connection until it pops and returns a member-score pair from the first non-empty
@@ -1198,6 +1382,39 @@ public interface SortedSetBaseCommands {
      * }</pre>
      */
     CompletableFuture<Object[]> bzmpop(String[] keys, ScoreFilter modifier, double timeout);
+
+    /**
+     * Blocks the connection until it pops and returns a member-score pair from the first non-empty
+     * sorted set, with the given <code>keys</code> being checked in the order they are provided.<br>
+     * <code>BZMPOP</code> is the blocking variant of {@link #zmpop(String[], ScoreFilter)}.
+     *
+     * @apiNote
+     *     <ol>
+     *       <li>When in cluster mode, all <code>keys</code> must map to the same hash slot.
+     *       <li><code>BZMPOP</code> is a client blocking command, see <a
+     *           href="https://github.com/aws/glide-for-redis/wiki/General-Concepts#blocking-commands">Blocking
+     *           Commands</a> for more details and best practices.
+     *     </ol>
+     *
+     * @since Redis 7.0 and above.
+     * @see <a href="https://redis.io/commands/bzmpop/">redis.io</a> for more details.
+     * @param keys The keys of the sorted sets.
+     * @param modifier The element pop criteria - either {@link ScoreFilter#MIN} or {@link
+     *     ScoreFilter#MAX} to pop members with the lowest/highest scores accordingly.
+     * @param timeout The number of seconds to wait for a blocking operation to complete. A value of
+     *     <code>0</code> will block indefinitely.
+     * @return A two-element <code>array</code> containing the key name of the set from which an
+     *     element was popped, and a member-score <code>Map</code> of the popped elements.<br>
+     *     If no member could be popped and the timeout expired, returns <code>null</code>.
+     * @example
+     *     <pre>{@code
+     * Object[] result = client.bzmpop(new GlideString[] { gs("zSet1"), gs("zSet2") }, MAX, 0.1).get();
+     * Map<GlideString, Double> data = (Map<GlideString, Double>)result[1];
+     * GlideString element = data.keySet().toArray(GlideString[]::new)[0];
+     * System.out.printf("Popped '%s' with score %d from '%s'%n", element, data.get(element), result[0]);
+     * }</pre>
+     */
+    CompletableFuture<Object[]> bzmpop(GlideString[] keys, ScoreFilter modifier, double timeout);
 
     /**
      * Blocks the connection until it pops and returns multiple member-score pairs from the first
@@ -1235,6 +1452,43 @@ public interface SortedSetBaseCommands {
      */
     CompletableFuture<Object[]> bzmpop(
             String[] keys, ScoreFilter modifier, double timeout, long count);
+
+    /**
+     * Blocks the connection until it pops and returns multiple member-score pairs from the first
+     * non-empty sorted set, with the given <code>keys</code> being checked in the order they are
+     * provided.<br>
+     * <code>BZMPOP</code> is the blocking variant of {@link #zmpop(String[], ScoreFilter, long)}.
+     *
+     * @apiNote
+     *     <ol>
+     *       <li>When in cluster mode, all <code>keys</code> must map to the same hash slot.
+     *       <li><code>BZMPOP</code> is a client blocking command, see <a
+     *           href="https://github.com/aws/glide-for-redis/wiki/General-Concepts#blocking-commands">Blocking
+     *           Commands</a> for more details and best practices.
+     *     </ol>
+     *
+     * @since Redis 7.0 and above.
+     * @see <a href="https://redis.io/commands/bzmpop/">redis.io</a> for more details.
+     * @param keys The keys of the sorted sets.
+     * @param modifier The element pop criteria - either {@link ScoreFilter#MIN} or {@link
+     *     ScoreFilter#MAX} to pop members with the lowest/highest scores accordingly.
+     * @param timeout The number of seconds to wait for a blocking operation to complete. A value of
+     *     <code>0</code> will block indefinitely.
+     * @param count The number of elements to pop.
+     * @return A two-element <code>array</code> containing the key name of the set from which elements
+     *     were popped, and a member-score <code>Map</code> of the popped elements.<br>
+     *     If no members could be popped and the timeout expired, returns <code>null</code>.
+     * @example
+     *     <pre>{@code
+     * Object[] result = client.bzmpop(new GlideString[] { gs("zSet1"), gs("zSet2") }, MAX, 0.1, 2).get();
+     * Map<GlideString, Double> data = (Map<GlideString, Double>)result[1];
+     * for (Map.Entry<GlideString, Double> entry : data.entrySet()) {
+     *     System.out.printf("Popped '%s' with score %d from '%s'%n", entry.getKey(), entry.getValue(), result[0]);
+     * }
+     * }</pre>
+     */
+    CompletableFuture<Object[]> bzmpop(
+            GlideString[] keys, ScoreFilter modifier, double timeout, long count);
 
     /**
      * Returns the union of members from sorted sets specified by the given <code>keys</code>.<br>

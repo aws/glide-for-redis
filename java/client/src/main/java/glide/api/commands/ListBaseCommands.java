@@ -81,6 +81,25 @@ public interface ListBaseCommands {
     CompletableFuture<String> lpop(String key);
 
     /**
+     * Removes and returns the first elements of the list stored at <code>key</code>. The command pops
+     * a single element from the beginning of the list.
+     *
+     * @see <a href="https://redis.io/commands/lpop/">redis.io</a> for details.
+     * @param key The key of the list.
+     * @return The value of the first element.<br>
+     *     If <code>key</code> does not exist, null will be returned.
+     * @example
+     *     <pre>{@code
+     * GlideString value1 = client.lpop(gs("my_list")).get();
+     * assert value1.equals(gs("value1"));
+     *
+     * GlideString value2 = client.lpop(gs("non_exiting_key")).get();
+     * assert value2.equals(null);
+     * }</pre>
+     */
+    CompletableFuture<GlideString> lpop(GlideString key);
+
+    /**
      * Returns the index of the first occurrence of <code>element</code> inside the list specified by
      * <code>key</code>. If no match is found, <code>null</code> is returned.
      *
@@ -293,6 +312,26 @@ public interface ListBaseCommands {
      * }</pre>
      */
     CompletableFuture<String[]> lpopCount(String key, long count);
+
+    /**
+     * Removes and returns up to <code>count</code> elements of the list stored at <code>key</code>,
+     * depending on the list's length.
+     *
+     * @see <a href="https://redis.io/commands/lpop/">redis.io</a> for details.
+     * @param key The key of the list.
+     * @param count The count of the elements to pop from the list.
+     * @return An array of the popped elements will be returned depending on the list's length.<br>
+     *     If <code>key</code> does not exist, null will be returned.
+     * @example
+     *     <pre>{@code
+     * GlideString[] values1 = client.lpopCount(gs("my_list"), 2).get();
+     * assert values1.equals(new GlideString[] {gs("value1"), gs("value2")});
+     *
+     * GlideString[] values2 = client.lpopCount(gs("non_exiting_key") , 7).get();
+     * assert values2.equals(null);
+     * }</pre>
+     */
+    CompletableFuture<GlideString[]> lpopCount(GlideString key, long count);
 
     /**
      * Returns the specified elements of the list stored at <code>key</code>.<br>
@@ -600,6 +639,25 @@ public interface ListBaseCommands {
     CompletableFuture<String> rpop(String key);
 
     /**
+     * Removes and returns the last elements of the list stored at <code>key</code>.<br>
+     * The command pops a single element from the end of the list.
+     *
+     * @see <a href="https://redis.io/commands/rpop/">redis.io</a> for details.
+     * @param key The key of the list.
+     * @return The value of the last element.<br>
+     *     If <code>key</code> does not exist, <code>null</code> will be returned.
+     * @example
+     *     <pre>{@code
+     * GlideString value1 = client.rpop(gs("my_list")).get();
+     * assert value1.equals(gs("value1"));
+     *
+     * GlideString value2 = client.rpop(gs("non_exiting_key")).get();
+     * assert value2.equals(null);
+     * }</pre>
+     */
+    CompletableFuture<GlideString> rpop(GlideString key);
+
+    /**
      * Removes and returns up to <code>count</code> elements from the list stored at <code>key</code>,
      * depending on the list's length.
      *
@@ -618,6 +676,26 @@ public interface ListBaseCommands {
      * }</pre>
      */
     CompletableFuture<String[]> rpopCount(String key, long count);
+
+    /**
+     * Removes and returns up to <code>count</code> elements from the list stored at <code>key</code>,
+     * depending on the list's length.
+     *
+     * @see <a href="https://redis.io/commands/rpop/">redis.io</a> for details.
+     * @param key The key of the list.
+     * @param count The count of the elements to pop from the list.
+     * @return An array of popped elements will be returned depending on the list's length.<br>
+     *     If <code>key</code> does not exist, <code>null</code> will be returned.
+     * @example
+     *     <pre>{@code
+     * GlideString[] values1 = client.rpopCount(gs("my_list"), 2).get();
+     * assert Arrays.equals(values1, new GlideString[] {gs("value1"), gs("value2")});
+     *
+     * GlideString[] values2 = client.rpopCount(gs("non_exiting_key"), 7).get();
+     * assert values2.equals(null);
+     * }</pre>
+     */
+    CompletableFuture<GlideString[]> rpopCount(GlideString key, long count);
 
     /**
      * Inserts <code>element</code> in the list at <code>key</code> either before or after the <code>
@@ -694,6 +772,36 @@ public interface ListBaseCommands {
     CompletableFuture<String[]> blpop(String[] keys, double timeout);
 
     /**
+     * Pops an element from the head of the first list that is non-empty, with the given <code>keys
+     * </code> being checked in the order that they are given.<br>
+     * Blocks the connection when there are no elements to pop from any of the given lists.
+     *
+     * @apiNote
+     *     <ul>
+     *       <li>When in cluster mode, all <code>keys</code> must map to the same hash slot.
+     *       <li><code>BLPOP</code> is a client blocking command, see <a
+     *           href="https://github.com/aws/glide-for-redis/wiki/General-Concepts#blocking-commands">Blocking
+     *           Commands</a> for more details and best practices.
+     *     </ul>
+     *
+     * @see <a href="https://redis.io/commands/blpop/">redis.io</a> for details.
+     * @param keys The <code>keys</code> of the lists to pop from.
+     * @param timeout The number of seconds to wait for a blocking operation to complete. A value of
+     *     <code>0</code> will block indefinitely.
+     * @return A two-element <code>array</code> containing the <code>key</code> from which the element
+     *     was popped and the <code>value</code> of the popped element, formatted as <code>
+     *     [key, value]</code>. If no element could be popped and the timeout expired, returns </code>
+     *     null</code>.
+     * @example
+     *     <pre>{@code
+     * GlideString[] response = client.blpop([gs("list1"), gs("list2")], 0.5).get();
+     * assert response[0].equals(gs("list1"));
+     * assert response[1].equals(gs("element"));
+     * }</pre>
+     */
+    CompletableFuture<GlideString[]> blpop(GlideString[] keys, double timeout);
+
+    /**
      * Pops an element from the tail of the first list that is non-empty, with the given <code>keys
      * </code> being checked in the order that they are given.<br>
      * Blocks the connection when there are no elements to pop from any of the given lists.
@@ -722,6 +830,36 @@ public interface ListBaseCommands {
      * }</pre>
      */
     CompletableFuture<String[]> brpop(String[] keys, double timeout);
+
+    /**
+     * Pops an element from the tail of the first list that is non-empty, with the given <code>keys
+     * </code> being checked in the order that they are given.<br>
+     * Blocks the connection when there are no elements to pop from any of the given lists.
+     *
+     * @apiNote
+     *     <ul>
+     *       <li>When in cluster mode, all <code>keys</code> must map to the same hash slot.
+     *       <li><code>BRPOP</code> is a client blocking command, see <a
+     *           href="https://github.com/aws/glide-for-redis/wiki/General-Concepts#blocking-commands">Blocking
+     *           Commands</a> for more details and best practices.
+     *     </ul>
+     *
+     * @see <a href="https://redis.io/commands/brpop/">redis.io</a> for details.
+     * @param keys The <code>keys</code> of the lists to pop from.
+     * @param timeout The number of seconds to wait for a blocking operation to complete. A value of
+     *     <code>0</code> will block indefinitely.
+     * @return A two-element <code>array</code> containing the <code>key</code> from which the element
+     *     was popped and the <code>value</code> of the popped element, formatted as <code>
+     *     [key, value]</code>. If no element could be popped and the timeout expired, returns </code>
+     *     null</code>.
+     * @example
+     *     <pre>{@code
+     * GlideString[] response = client.brpop([gs("list1"), gs("list2")], 0.5).get();
+     * assert response[0].equals(gs("list1"));
+     * assert response[1].equals(gs("element"));
+     * }</pre>
+     */
+    CompletableFuture<GlideString[]> brpop(GlideString[] keys, double timeout);
 
     /**
      * Inserts all the specified values at the tail of the list stored at <code>key</code>, only if
@@ -815,6 +953,29 @@ public interface ListBaseCommands {
             String[] keys, ListDirection direction, long count);
 
     /**
+     * Pops one or more elements from the first non-empty list from the provided <code>keys
+     * </code>.
+     *
+     * @since Redis 7.0 and above.
+     * @apiNote When in cluster mode, all <code>keys</code> must map to the same hash slot.
+     * @see <a href="https://valkey.io/commands/lmpop/">valkey.io</a> for details.
+     * @param keys An array of keys to lists.
+     * @param direction The direction based on which elements are popped from - see {@link
+     *     ListDirection}.
+     * @param count The maximum number of popped elements.
+     * @return A <code>Map</code> of <code>key</code> name mapped array of popped elements.
+     * @example
+     *     <pre>{@code
+     * client.lpush(gs("testKey"), new GlideString[] {gs("one"), gs("two"), gs("three")}).get();
+     * Map<GlideString, GlideString[]> result = client.lmpop(new GlideString[] {gs("testKey")}, PopDirection.LEFT, 1L).get();
+     * GlideString[] resultValue = result.get(gs("testKey"));
+     * assertArrayEquals(new GlideString[] {gs("three")}, resultValue);
+     * }</pre>
+     */
+    CompletableFuture<Map<GlideString, GlideString[]>> lmpop(
+            GlideString[] keys, ListDirection direction, long count);
+
+    /**
      * Pops one element from the first non-empty list from the provided <code>keys</code>.
      *
      * @since Redis 7.0 and above.
@@ -833,6 +994,27 @@ public interface ListBaseCommands {
      * }</pre>
      */
     CompletableFuture<Map<String, String[]>> lmpop(String[] keys, ListDirection direction);
+
+    /**
+     * Pops one element from the first non-empty list from the provided <code>keys</code>.
+     *
+     * @since Redis 7.0 and above.
+     * @apiNote When in cluster mode, all <code>keys</code> must map to the same hash slot.
+     * @see <a href="https://valkey.io/commands/lmpop/">valkey.io</a> for details.
+     * @param keys An array of keys to lists.
+     * @param direction The direction based on which elements are popped from - see {@link
+     *     ListDirection}.
+     * @return A <code>Map</code> of <code>key</code> name mapped array of the popped element.
+     * @example
+     *     <pre>{@code
+     * client.lpush(gs("testKey"), new GlideString[] {gs("one"), gs("two"), gs("three")}).get();
+     * Map<GlideString, GlideString[]> result = client.lmpop(new GlideString[] {gs("testKey")}, PopDirection.LEFT).get();
+     * GlideString[] resultValue = result.get(gs("testKey"));
+     * assertArrayEquals(new GlideString[] {gs("three")}, resultValue);
+     * }</pre>
+     */
+    CompletableFuture<Map<GlideString, GlideString[]>> lmpop(
+            GlideString[] keys, ListDirection direction);
 
     /**
      * Blocks the connection until it pops one or more elements from the first non-empty list from the
@@ -869,6 +1051,40 @@ public interface ListBaseCommands {
             String[] keys, ListDirection direction, long count, double timeout);
 
     /**
+     * Blocks the connection until it pops one or more elements from the first non-empty list from the
+     * provided <code>keys</code> <code>BLMPOP</code> is the blocking variant of {@link
+     * #lmpop(String[], ListDirection, long)}.
+     *
+     * @apiNote
+     *     <ol>
+     *       <li>When in cluster mode, all <code>keys</code> must map to the same hash slot.
+     *       <li><code>BLMPOP</code> is a client blocking command, see <a
+     *           href="https://github.com/aws/glide-for-redis/wiki/General-Concepts#blocking-commands">Blocking
+     *           Commands</a> for more details and best practices.
+     *     </ol>
+     *
+     * @since Redis 7.0 and above.
+     * @see <a href="https://valkey.io/commands/blmpop/">valkey.io</a> for details.
+     * @param keys An array of keys to lists.
+     * @param direction The direction based on which elements are popped from - see {@link
+     *     ListDirection}.
+     * @param count The maximum number of popped elements.
+     * @param timeout The number of seconds to wait for a blocking operation to complete. A value of
+     *     <code>0</code> will block indefinitely.
+     * @return A <code>Map</code> of <code>key</code> name mapped array of popped elements.<br>
+     *     If no member could be popped and the timeout expired, returns <code>null</code>.
+     * @example
+     *     <pre>{@code
+     * client.lpush(gs("testKey"), new GlideString[] {gs("one"), gs("two"), gs("three")}).get();
+     * Map<GlideString, GlideString[]> result = client.blmpop(new GlideString[] {gs("testKey")}, PopDirection.LEFT, 1L, 0.1).get();
+     * GlideString[] resultValue = result.get(gs("testKey"));
+     * assertArrayEquals(new GlideString[] {gs("three")}, resultValue);
+     * }</pre>
+     */
+    CompletableFuture<Map<GlideString, GlideString[]>> blmpop(
+            GlideString[] keys, ListDirection direction, long count, double timeout);
+
+    /**
      * Blocks the connection until it pops one element from the first non-empty list from the provided
      * <code>keys</code> <code>BLMPOP</code> is the blocking variant of {@link #lmpop(String[],
      * ListDirection)}.
@@ -900,6 +1116,39 @@ public interface ListBaseCommands {
      */
     CompletableFuture<Map<String, String[]>> blmpop(
             String[] keys, ListDirection direction, double timeout);
+
+    /**
+     * Blocks the connection until it pops one element from the first non-empty list from the provided
+     * <code>keys</code> <code>BLMPOP</code> is the blocking variant of {@link #lmpop(String[],
+     * ListDirection)}.
+     *
+     * @apiNote
+     *     <ol>
+     *       <li>When in cluster mode, all <code>keys</code> must map to the same hash slot.
+     *       <li><code>BLMPOP</code> is a client blocking command, see <a
+     *           href="https://github.com/aws/glide-for-redis/wiki/General-Concepts#blocking-commands">Blocking
+     *           Commands</a> for more details and best practices.
+     *     </ol>
+     *
+     * @since Redis 7.0 and above.
+     * @see <a href="https://valkey.io/commands/lmpop/">valkey.io</a> for details.
+     * @param keys An array of keys to lists.
+     * @param direction The direction based on which elements are popped from - see {@link
+     *     ListDirection}.
+     * @param timeout The number of seconds to wait for a blocking operation to complete. A value of
+     *     <code>0</code> will block indefinitely.
+     * @return A <code>Map</code> of <code>key</code> name mapped array of the popped element.<br>
+     *     If no member could be popped and the timeout expired, returns <code>null</code>.
+     * @example
+     *     <pre>{@code
+     * client.lpush(gs("testKey"), new GlideString[] {gs("one"), gs("two"), gs("three")}).get();
+     * Map<GlideString, GlideString[]> result = client.blmpop(new GlideString[] {gs("testKey")}, PopDirection.LEFT, 0.1).get();
+     * GlideString[] resultValue = result.get(gs("testKey"));
+     * assertArrayEquals(new GlideString[] {gs("three")}, resultValue);
+     * }</pre>
+     */
+    CompletableFuture<Map<GlideString, GlideString[]>> blmpop(
+            GlideString[] keys, ListDirection direction, double timeout);
 
     /**
      * Sets the list element at <code>index</code> to <code>element</code>.<br>

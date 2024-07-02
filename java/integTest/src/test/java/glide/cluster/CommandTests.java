@@ -813,7 +813,15 @@ public class CommandTests {
                 Arguments.of(
                         "zintercard", "7.0.0", clusterClient.zintercard(new String[] {"abc", "zxy", "lkn"})),
                 Arguments.of("brpop", null, clusterClient.brpop(new String[] {"abc", "zxy", "lkn"}, .1)),
+                Arguments.of(
+                        "brpop binary",
+                        null,
+                        clusterClient.brpop(new GlideString[] {gs("abc"), gs("zxy"), gs("lkn")}, .1)),
                 Arguments.of("blpop", null, clusterClient.blpop(new String[] {"abc", "zxy", "lkn"}, .1)),
+                Arguments.of(
+                        "blpop binary",
+                        null,
+                        clusterClient.blpop(new GlideString[] {gs("abc"), gs("zxy"), gs("lkn")}, .1)),
                 Arguments.of("pfcount", null, clusterClient.pfcount(new String[] {"abc", "zxy", "lkn"})),
                 Arguments.of(
                         "pfcount binary",
@@ -827,15 +835,35 @@ public class CommandTests {
                 Arguments.of(
                         "bzpopmax", "5.0.0", clusterClient.bzpopmax(new String[] {"abc", "zxy", "lkn"}, .1)),
                 Arguments.of(
+                        "bzpopmax binary",
+                        "5.0.0",
+                        clusterClient.bzpopmax(new GlideString[] {gs("abc"), gs("zxy"), gs("lkn")}, .1)),
+                Arguments.of(
                         "bzpopmin", "5.0.0", clusterClient.bzpopmin(new String[] {"abc", "zxy", "lkn"}, .1)),
+                Arguments.of(
+                        "bzpopmin binary",
+                        "5.0.0",
+                        clusterClient.bzpopmin(new GlideString[] {gs("abc"), gs("zxy"), gs("lkn")}, .1)),
                 Arguments.of(
                         "zmpop", "7.0.0", clusterClient.zmpop(new String[] {"abc", "zxy", "lkn"}, MAX)),
                 Arguments.of(
+                        "zmpop binary",
+                        "7.0.0",
+                        clusterClient.zmpop(new GlideString[] {gs("abc"), gs("zxy"), gs("lkn")}, MAX)),
+                Arguments.of(
                         "bzmpop", "7.0.0", clusterClient.bzmpop(new String[] {"abc", "zxy", "lkn"}, MAX, .1)),
+                Arguments.of(
+                        "bzmpop binary",
+                        "7.0.0",
+                        clusterClient.bzmpop(new GlideString[] {gs("abc"), gs("zxy"), gs("lkn")}, MAX, .1)),
                 Arguments.of(
                         "lmpop",
                         "7.0.0",
                         clusterClient.lmpop(new String[] {"abc", "def"}, ListDirection.LEFT, 1L)),
+                Arguments.of(
+                        "lmpop binary",
+                        "7.0.0",
+                        clusterClient.lmpop(new GlideString[] {gs("abc"), gs("def")}, ListDirection.LEFT, 1L)),
                 Arguments.of(
                         "bitop",
                         null,
@@ -844,6 +872,11 @@ public class CommandTests {
                         "blmpop",
                         "7.0.0",
                         clusterClient.blmpop(new String[] {"abc", "def"}, ListDirection.LEFT, 1L, 0.1)),
+                Arguments.of(
+                        "blmpop binary",
+                        "7.0.0",
+                        clusterClient.blmpop(
+                                new GlideString[] {gs("abc"), gs("def")}, ListDirection.LEFT, 1L, 0.1)),
                 Arguments.of(
                         "lmove",
                         "6.2.0",

@@ -4,6 +4,7 @@ plugins {
     id 'java-library'
     id 'maven-publish'
     id 'signing'
+    id ("com.github.spotbugs") version "6.0.18"
 }
 
 repositories {
@@ -233,4 +234,23 @@ jar {
     archiveBaseName = "glide-for-redis"
     // placeholder will be renamed by platform+arch on the release workflow java-cd.yml
     archiveClassifier = "placeholder"
+}
+
+spotbugsMain {
+    reports {
+        html {
+            required = true
+            outputLocation = file("$buildDir/reports/spotbugs/main/spotbugs.html")
+            stylesheet = 'fancy-hist.xsl'
+        }
+        xml {
+            required = true
+            outputLocation = file("$buildDir/reports/spotbugs/main/spotbugs.xml")
+        }
+    }
+}
+
+spotbugs {
+    ignoreFailures = true
+    showStackTraces = true
 }

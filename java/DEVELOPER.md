@@ -116,20 +116,37 @@ cargo clippy --all-features --all-targets -- -D warnings
 cargo fmt --manifest-path ./Cargo.toml --all
 ```
 
-#### Language-specific Linters
+#### Language-specific Linters and Static Code Analysis
 
 **Java:**
+For Java, we use Spotless and SpotBugs.
 
-#### Running the linters
-
-For Java, the only linter we use is Spotless.
-    Spotless
+1. Spotless
 
     ```bash
     # Run from the `java` folder
     ./gradlew :spotlessCheck # run first to see if there are any linting changes to make
     ./gradlew :spotlessApply # to apply these changes
     ```
+
+2. SpotBugs
+
+   To run SpotBugs and generate reports:
+
+    ```bash
+    # Run from the `java` folder
+    ./gradlew spotbugsMain
+    ```
+
+   This command will generate HTML and XML reports in the `build/reports/spotbugs/` directory.
+
+   To view the SpotBugs findings:
+    - Open the HTML report located at `build/reports/spotbugs/main/spotbugs.html` in a web browser.
+    - If you are using IntellJ Idea - open `build/reports/spotbugs/main/spotbugs.xml` in SpotBugs plugin as it will provide better experience.
+
+   Ensure any new findings are addressed and fixed before committing and pushing your changes.
+
+   _Note: The `spotbugs` task is currently configured to not fail the build on findings._
 
 ### Troubleshooting
 
@@ -261,3 +278,4 @@ In this project, only the function name and signature name is necessary. lib.rs 
 
 -   [spotless-gradle](https://plugins.jetbrains.com/plugin/18321-spotless-gradle) - Spotless Gradle plugin for IntelliJ.
 -   [lombok](https://plugins.jetbrains.com/plugin/6317-lombok) - Lombok plugin for IntelliJ.
+-   [SpotBugs](https://plugins.jetbrains.com/plugin/14014-spotbugs) - SpotBugs plugin for IntelliJ.

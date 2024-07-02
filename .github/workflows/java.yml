@@ -29,17 +29,17 @@ concurrency:
 
 jobs:
     load-engine-matrix:
-      runs-on: ubuntu-latest
-      outputs:
-        matrix: ${{ steps.load-engine-matrix.outputs.matrix }}
-      steps:
-          - name: Checkout
-            uses: actions/checkout@v4
+        runs-on: ubuntu-latest
+        outputs:
+            matrix: ${{ steps.load-engine-matrix.outputs.matrix }}
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
 
-          - name: Load the engine matrix
-            id: load-engine-matrix
-            shell: bash
-            run: echo "matrix=$(jq -c . < .github/json_matrices/engine-matrix.json)" >> $GITHUB_OUTPUT
+            - name: Load the engine matrix
+              id: load-engine-matrix
+              shell: bash
+              run: echo "matrix=$(jq -c . < .github/json_matrices/engine-matrix.json)" >> $GITHUB_OUTPUT
 
     build-and-test-java-client:
         needs: load-engine-matrix
@@ -53,16 +53,16 @@ jobs:
                     - 17
                 engine: ${{ fromJson(needs.load-engine-matrix.outputs.matrix) }}
                 host:
-                  - {
-                    OS: ubuntu,
-                    RUNNER: ubuntu-latest,
-                    TARGET: x86_64-unknown-linux-gnu
-                  }
-                  - {
-                    OS: macos,
-                    RUNNER: macos-latest,
-                    TARGET: aarch64-apple-darwin
-                  }
+                    - {
+                        OS: ubuntu,
+                        RUNNER: ubuntu-latest,
+                        TARGET: x86_64-unknown-linux-gnu
+                    }
+                    - {
+                        OS: macos,
+                        RUNNER: macos-latest,
+                        TARGET: aarch64-apple-darwin
+                    }
 
         runs-on: ${{ matrix.host.RUNNER }}
 
@@ -103,7 +103,7 @@ jobs:
               with:
                   language-flag: -java
 
-            - name: Upload test reports
+            - name: Upload test & spotbugs reports
               if: always()
               continue-on-error: true
               uses: actions/upload-artifact@v4
@@ -114,6 +114,7 @@ jobs:
                       java/integTest/build/reports/**
                       utils/clusters/**
                       benchmarks/results/**
+                      java/client/build/reports/spotbugs/**
 
     build-amazonlinux-latest:
         if: github.repository_owner == 'aws'
@@ -170,7 +171,7 @@ jobs:
               working-directory: java
               run: ./gradlew --continue build
 
-            - name: Upload test reports
+            - name: Upload test & spotbugs reports
               if: always()
               continue-on-error: true
               uses: actions/upload-artifact@v4
@@ -179,6 +180,7 @@ jobs:
                   path: |
                       java/client/build/reports/**
                       java/integTest/build/reports/**
+                      java/client/build/reports/spotbugs/**
 
     lint-rust:
         timeout-minutes: 15

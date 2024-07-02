@@ -579,7 +579,7 @@ public class RangeOptions {
                 new GlideString[] {destination, source}, createZRangeBaseArgsBinary(rangeQuery, reverse));
     }
 
-    private static String[] createZRangeBaseArgs(RangeQuery rangeQuery, boolean reverse) {
+    public static String[] createZRangeBaseArgs(RangeQuery rangeQuery, boolean reverse) {
         String[] arguments = new String[] {rangeQuery.getStart(), rangeQuery.getEnd()};
 
         if (rangeQuery instanceof RangeByScore) {
@@ -606,7 +606,7 @@ public class RangeOptions {
         return arguments;
     }
 
-    private static GlideString[] createZRangeBaseArgsBinary(
+    public static GlideString[] createZRangeBaseArgsBinary(
             RangeQueryBinary rangeQuery, boolean reverse) {
         GlideString[] arguments = new GlideString[] {rangeQuery.getStart(), rangeQuery.getEnd()};
 

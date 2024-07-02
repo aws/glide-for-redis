@@ -139,30 +139,6 @@ public abstract class WeightAggregateOptions {
     }
 
     /**
-     * Basic interface. Please use one of the following implementations:
-     *
-     * <ul>
-     *   <li>{@link KeyArray}
-     *   <li>{@link WeightedKeys}
-     * </ul>
-     */
-    public interface KeysOrWeightedKeysBinary {
-        /** Convert to command arguments according to the Redis API. */
-        GlideString[] toArgs();
-    }
-
-    /** Represents the keys of the sorted sets involved in the aggregation operation. */
-    @RequiredArgsConstructor
-    public static class KeyArrayBinary implements KeysOrWeightedKeysBinary {
-        private final GlideString[] keys;
-
-        @Override
-        public GlideString[] toArgs() {
-            return concatenateArrays(new GlideString[] {GlideString.of(keys.length)}, keys);
-        }
-    }
-
-    /**
      * Represents the mapping of sorted set keys to their score weights. Each weight is used to boost
      * the scores of elements in the corresponding sorted set by multiplying them before their scores
      * are aggregated.

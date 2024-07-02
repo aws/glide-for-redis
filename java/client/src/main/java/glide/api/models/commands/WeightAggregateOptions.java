@@ -157,7 +157,7 @@ public abstract class WeightAggregateOptions {
                 keys.add(entry.getLeft());
                 weights.add(entry.getRight());
             }
-          
+
             argumentsList.add(gs(Integer.toString(keys.size())));
             argumentsList.addAll(keys);
             argumentsList.add(gs(WEIGHTS_REDIS_API));

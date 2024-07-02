@@ -25,7 +25,7 @@ from glide.protobuf.redis_request_pb2 import RequestType
 
 class JsonGetOptions:
     """
-    Represents options for formatting JSON data, to be used in  the [JSON.GET](https://redis.io/commands/json.get/) command.
+    Represents options for formatting JSON data, to be used in  the [JSON.GET](https://valkey.io/commands/json.get/) command.
 
     Args:
         indent (Optional[str]): Sets an indentation string for nested levels. Defaults to None.
@@ -64,7 +64,7 @@ async def set(
     """
     Sets the JSON value at the specified `path` stored at `key`.
 
-    See https://redis.io/commands/json.set/ for more details.
+    See https://valkey.io/commands/json.set/ for more details.
 
     Args:
         client (TGlideClient): The Redis client to execute the command.
@@ -103,7 +103,7 @@ async def get(
     """
     Retrieves the JSON value at the specified `paths` stored at `key`.
 
-    See https://redis.io/commands/json.get/ for more details.
+    See https://valkey.io/commands/json.get/ for more details.
 
     Args:
         client (TGlideClient): The Redis client to execute the command.
@@ -147,7 +147,7 @@ async def delete(
     """
     Deletes the JSON value at the specified `path` within the JSON document stored at `key`.
 
-    See https://redis.io/commands/json.del/ for more details.
+    See https://valkey.io/commands/json.del/ for more details.
 
     Args:
         client (TGlideClient): The Redis client to execute the command.
@@ -184,7 +184,7 @@ async def forget(
     """
     Deletes the JSON value at the specified `path` within the JSON document stored at `key`.
 
-    See https://redis.io/commands/json.forget/ for more details.
+    See https://valkey.io/commands/json.forget/ for more details.
 
     Args:
         client (TGlideClient): The Redis client to execute the command.
@@ -222,7 +222,7 @@ async def toggle(
     """
     Toggles a Boolean value stored at the specified `path` within the JSON document stored at `key`.
 
-    See https://redis.io/commands/json.toggle/ for more details.
+    See https://valkey.io/commands/json.toggle/ for more details.
 
     Args:
         client (TGlideClient): The Redis client to execute the command.

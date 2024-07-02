@@ -25,7 +25,7 @@ pub(crate) enum ExpectedReturnType<'a> {
     Lolwut,
     ArrayOfStringAndArrays,
     ArrayOfArraysOfDoubleOrNull,
-    ArrayOfMaps(&'a ExpectedReturnType<'a>),
+    ArrayOfMaps(&'a Option<ExpectedReturnType<'a>>),
     StringOrSet,
     ArrayOfPairs,
     ArrayOfMemberScorePairs,
@@ -493,7 +493,7 @@ pub(crate) fn convert_to_expected_type(
             Value::Array(ref array) if array.is_empty() || matches!(array[0], Value::Map(_)) => {
                 Ok(value)
             }
-            Value::Array(array) => convert_array_of_flat_maps(array, Some(*type_of_map_values)),
+            Value::Array(array) => convert_array_of_flat_maps(array, *type_of_map_values),
             // cluster (multi-node) response - go recursive
             Value::Map(map) => convert_map_entries(
                 map,
@@ -943,6 +943,7 @@ pub(crate) fn expected_type_for_cmd(cmd: &Cmd) -> Option<ExpectedReturnType> {
                 Some(ExpectedReturnType::XAutoClaimReturnType)
             }
         }
+        b"XINFO GROUPS" | b"XINFO CONSUMERS" => Some(ExpectedReturnType::ArrayOfMaps(&None)),
         b"XRANGE" | b"XREVRANGE" => Some(ExpectedReturnType::Map {
             key_type: &Some(ExpectedReturnType::BulkString),
             value_type: &Some(ExpectedReturnType::ArrayOfPairs),
@@ -1008,9 +1009,9 @@ pub(crate) fn expected_type_for_cmd(cmd: &Cmd) -> Option<ExpectedReturnType> {
             }
         }
         b"LOLWUT" => Some(ExpectedReturnType::Lolwut),
-        b"FUNCTION LIST" => Some(ExpectedReturnType::ArrayOfMaps(
-            &ExpectedReturnType::ArrayOfMaps(&ExpectedReturnType::StringOrSet),
-        )),
+        b"FUNCTION LIST" => Some(ExpectedReturnType::ArrayOfMaps(&Some(
+            ExpectedReturnType::ArrayOfMaps(&Some(ExpectedReturnType::StringOrSet)),
+        ))),
         b"FUNCTION STATS" => Some(ExpectedReturnType::FunctionStatsReturnType),
         b"GEOSEARCH" => {
             if cmd.position(b"WITHDIST").is_some()
@@ -1050,6 +1051,127 @@ pub(crate) fn get_value_type<'a>(value: &Value) -> &'a str {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn convert_xinfo_groups_xinfo_consumers() {
+        assert!(matches!(
+            expected_type_for_cmd(redis::cmd("XINFO").arg("GROUPS").arg("key")),
+            Some(ExpectedReturnType::ArrayOfMaps(&None))
+        ));
+
+        assert!(matches!(
+            expected_type_for_cmd(redis::cmd("XINFO").arg("CONSUMERS").arg("key").arg("group")),
+            Some(ExpectedReturnType::ArrayOfMaps(&None))
+        ));
+
+        // The format of the XINFO GROUPS and XINFO CONSUMERS responses are essentially the same, so we only need to
+        // test one of them here.
+        let groups_resp2_response = Value::Array(vec![
+            Value::Array(vec![
+                Value::BulkString("name".to_string().into_bytes()),
+                Value::BulkString("mygroup".to_string().into_bytes()),
+                Value::BulkString("consumers".to_string().into_bytes()),
+                Value::Int(2),
+                Value::BulkString("pending".to_string().into_bytes()),
+                Value::Int(2),
+                Value::BulkString("last-delivered-id".to_string().into_bytes()),
+                Value::BulkString("1638126030001-0".to_string().into_bytes()),
+                Value::BulkString("entries-read".to_string().into_bytes()),
+                Value::Int(2),
+                Value::BulkString("lag".to_string().into_bytes()),
+                Value::Int(0),
+            ]),
+            Value::Array(vec![
+                Value::BulkString("name".to_string().into_bytes()),
+                Value::BulkString("some-other-group".to_string().into_bytes()),
+                Value::BulkString("consumers".to_string().into_bytes()),
+                Value::Int(1),
+                Value::BulkString("pending".to_string().into_bytes()),
+                Value::Int(0),
+                Value::BulkString("last-delivered-id".to_string().into_bytes()),
+                Value::BulkString("1638126028070-0".to_string().into_bytes()),
+                Value::BulkString("entries-read".to_string().into_bytes()),
+                Value::Int(1),
+                Value::BulkString("lag".to_string().into_bytes()),
+                Value::Int(1),
+            ]),
+        ]);
+
+        let groups_resp3_response = Value::Array(vec![
+            Value::Map(vec![
+                (
+                    Value::BulkString("name".to_string().into_bytes()),
+                    Value::BulkString("mygroup".to_string().into_bytes()),
+                ),
+                (
+                    Value::BulkString("consumers".to_string().into_bytes()),
+                    Value::Int(2),
+                ),
+                (
+                    Value::BulkString("pending".to_string().into_bytes()),
+                    Value::Int(2),
+                ),
+                (
+                    Value::BulkString("last-delivered-id".to_string().into_bytes()),
+                    Value::BulkString("1638126030001-0".to_string().into_bytes()),
+                ),
+                (
+                    Value::BulkString("entries-read".to_string().into_bytes()),
+                    Value::Int(2),
+                ),
+                (
+                    Value::BulkString("lag".to_string().into_bytes()),
+                    Value::Int(0),
+                ),
+            ]),
+            Value::Map(vec![
+                (
+                    Value::BulkString("name".to_string().into_bytes()),
+                    Value::BulkString("some-other-group".to_string().into_bytes()),
+                ),
+                (
+                    Value::BulkString("consumers".to_string().into_bytes()),
+                    Value::Int(1),
+                ),
+                (
+                    Value::BulkString("pending".to_string().into_bytes()),
+                    Value::Int(0),
+                ),
+                (
+                    Value::BulkString("last-delivered-id".to_string().into_bytes()),
+                    Value::BulkString("1638126028070-0".to_string().into_bytes()),
+                ),
+                (
+                    Value::BulkString("entries-read".to_string().into_bytes()),
+                    Value::Int(1),
+                ),
+                (
+                    Value::BulkString("lag".to_string().into_bytes()),
+                    Value::Int(1),
+                ),
+            ]),
+        ]);
+
+        // We want the RESP2 response to be converted into RESP3 format.
+        assert_eq!(
+            convert_to_expected_type(
+                groups_resp2_response.clone(),
+                Some(ExpectedReturnType::ArrayOfMaps(&None))
+            )
+            .unwrap(),
+            groups_resp3_response.clone()
+        );
+
+        // RESP3 responses are already in the correct format and should not be converted.
+        assert_eq!(
+            convert_to_expected_type(
+                groups_resp3_response.clone(),
+                Some(ExpectedReturnType::ArrayOfMaps(&None))
+            )
+            .unwrap(),
+            groups_resp3_response.clone()
+        );
+    }
 
     #[test]
     fn convert_function_list() {

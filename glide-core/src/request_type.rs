@@ -214,6 +214,8 @@ pub enum RequestType {
     XAutoClaim = 203,
     Wait = 208,
     XClaim = 209,
+    XInfoGroups = 210,
+    XInfoConsumers = 211,
 }
 
 fn get_two_word_command(first: &str, second: &str) -> Cmd {
@@ -429,6 +431,8 @@ impl From<::protobuf::EnumOrUnknown<ProtobufRequestType>> for RequestType {
             ProtobufRequestType::ZScan => RequestType::ZScan,
             ProtobufRequestType::HScan => RequestType::HScan,
             ProtobufRequestType::XAutoClaim => RequestType::XAutoClaim,
+            ProtobufRequestType::XInfoGroups => RequestType::XInfoGroups,
+            ProtobufRequestType::XInfoConsumers => RequestType::XInfoConsumers,
             ProtobufRequestType::Wait => RequestType::Wait,
             ProtobufRequestType::XClaim => RequestType::XClaim,
         }
@@ -644,6 +648,8 @@ impl RequestType {
             RequestType::ZScan => Some(cmd("ZSCAN")),
             RequestType::HScan => Some(cmd("HSCAN")),
             RequestType::XAutoClaim => Some(cmd("XAUTOCLAIM")),
+            RequestType::XInfoGroups => Some(get_two_word_command("XINFO", "GROUPS")),
+            RequestType::XInfoConsumers => Some(get_two_word_command("XINFO", "CONSUMERS")),
             RequestType::Wait => Some(cmd("WAIT")),
             RequestType::XClaim => Some(cmd("XCLAIM")),
         }

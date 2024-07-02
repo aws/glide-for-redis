@@ -514,6 +514,22 @@ public interface HashBaseCommands {
     CompletableFuture<String> hrandfield(String key);
 
     /**
+     * Returns a random field name from the hash value stored at <code>key</code>.
+     *
+     * @since Redis 6.2 and above.
+     * @see <a href="https://redis.io/commands/hrandfield/">redis.io</a> for details.
+     * @param key The key of the hash.
+     * @return A random field name from the hash stored at <code>key</code>, or <code>null</code> when
+     *     the key does not exist.
+     * @example
+     *     <pre>{@code
+     * GlideString field = client.hrandfield(gs("my_hash")).get();
+     * System.out.printf("A random field from the hash is '%s'", field);
+     * }</pre>
+     */
+    CompletableFuture<GlideString> hrandfield(GlideString key);
+
+    /**
      * Retrieves up to <code>count</code> random field names from the hash value stored at <code>key
      * </code>.
      *
@@ -532,6 +548,26 @@ public interface HashBaseCommands {
      * }</pre>
      */
     CompletableFuture<String[]> hrandfieldWithCount(String key, long count);
+
+    /**
+     * Retrieves up to <code>count</code> random field names from the hash value stored at <code>key
+     * </code>.
+     *
+     * @since Redis 6.2 and above.
+     * @see <a href="https://redis.io/commands/hrandfield/">redis.io</a> for details.
+     * @param key The key of the hash.
+     * @param count The number of field names to return.<br>
+     *     If <code>count</code> is positive, returns unique elements.<br>
+     *     If negative, allows for duplicates.
+     * @return An <code>array</code> of random field names from the hash stored at <code>key</code>,
+     *     or an <code>empty array</code> when the key does not exist.
+     * @example
+     *     <pre>{@code
+     * GlideString[] fields = client.hrandfieldWithCount(gs("my_hash"), 10).get();
+     * System.out.printf("Random fields from the hash are '%s'", GlideString.join(", ", fields));
+     * }</pre>
+     */
+    CompletableFuture<GlideString[]> hrandfieldWithCount(GlideString key, long count);
 
     /**
      * Retrieves up to <code>count</code> random field names along with their values from the hash
@@ -554,6 +590,28 @@ public interface HashBaseCommands {
      * }</pre>
      */
     CompletableFuture<String[][]> hrandfieldWithCountWithValues(String key, long count);
+
+    /*
+     * Retrieves up to <code>count</code> random field names along with their values from the hash
+     * value stored at <code>key</code>.
+     *
+     * @since Redis 6.2 and above.
+     * @see <a href="https://redis.io/commands/hrandfield/">redis.io</a> for details.
+     * @param key The key of the hash.
+     * @param count The number of field names to return.<br>
+     *     If <code>count</code> is positive, returns unique elements.<br>
+     *     If negative, allows for duplicates.
+     * @return A 2D <code>array</code> of <code>[fieldName, value]</code> <code>arrays</code>, where
+     *     <code>fieldName</code> is a random field name from the hash and <code>value</code> is the
+     *     associated value of the field name.<br>
+     *     If the hash does not exist or is empty, the response will be an empty <code>array</code>.
+     * @example
+     *     <pre>{@code
+     * GlideString[][] fields = client.hrandfieldWithCountWithValues(gs("my_hash"), 1).get();
+     * System.out.printf("A random field from the hash is '%s' and the value is '%s'", fields[0][0], fields[0][1]);
+     * }</pre>
+     */
+    CompletableFuture<GlideString[][]> hrandfieldWithCountWithValues(GlideString key, long count);
 
     /**
      * Iterates fields of Hash types and their associated values.

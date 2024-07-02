@@ -551,6 +551,10 @@ public abstract class BaseClient
         return handleRedisResponse(Object[].class, EnumSet.of(ResponseFlags.ENCODING_UTF8), response);
     }
 
+    protected Object[] handleArrayResponseBinary(Response response) throws RedisException {
+        return handleRedisResponse(Object[].class, EnumSet.noneOf(ResponseFlags.class), response);
+    }
+
     protected Object[] handleArrayOrNullResponse(Response response) throws RedisException {
         return handleRedisResponse(
                 Object[].class,
@@ -1134,11 +1138,26 @@ public abstract class BaseClient
     }
 
     @Override
+    public CompletableFuture<GlideString> hrandfield(@NonNull GlideString key) {
+        return commandManager.submitNewCommand(
+                HRandField, new GlideString[] {key}, this::handleGlideStringOrNullResponse);
+    }
+
+    @Override
     public CompletableFuture<String[]> hrandfieldWithCount(@NonNull String key, long count) {
         return commandManager.submitNewCommand(
                 HRandField,
                 new String[] {key, Long.toString(count)},
                 response -> castArray(handleArrayResponse(response), String.class));
+    }
+
+    @Override
+    public CompletableFuture<GlideString[]> hrandfieldWithCount(
+            @NonNull GlideString key, long count) {
+        return commandManager.submitNewCommand(
+                HRandField,
+                new GlideString[] {key, GlideString.of(count)},
+                response -> castArray(handleArrayResponseBinary(response), GlideString.class));
     }
 
     @Override
@@ -1148,6 +1167,15 @@ public abstract class BaseClient
                 HRandField,
                 new String[] {key, Long.toString(count), WITH_VALUES_REDIS_API},
                 response -> castArrayofArrays(handleArrayResponse(response), String.class));
+    }
+
+    @Override
+    public CompletableFuture<GlideString[][]> hrandfieldWithCountWithValues(
+            @NonNull GlideString key, long count) {
+        return commandManager.submitNewCommand(
+                HRandField,
+                new GlideString[] {key, GlideString.of(count), GlideString.of(WITH_VALUES_REDIS_API)},
+                response -> castArrayofArrays(handleArrayResponseBinary(response), GlideString.class));
     }
 
     @Override

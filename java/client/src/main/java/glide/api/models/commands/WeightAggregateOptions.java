@@ -1,6 +1,7 @@
 /** Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0 */
 package glide.api.models.commands;
 
+import static glide.api.models.GlideString.gs;
 import static glide.utils.ArrayTransformUtils.concatenateArrays;
 
 import glide.api.commands.SortedSetBaseCommands;
@@ -40,6 +41,10 @@ public abstract class WeightAggregateOptions {
         public String[] toArgs() {
             return new String[] {AGGREGATE_REDIS_API, toString()};
         }
+
+        public GlideString[] toArgsBinary() {
+            return new GlideString[] {gs(AGGREGATE_REDIS_API), gs(toString())};
+        }
     }
 
     /**
@@ -55,6 +60,19 @@ public abstract class WeightAggregateOptions {
         String[] toArgs();
     }
 
+    /**
+     * Basic interface. Please use one of the following implementations:
+     *
+     * <ul>
+     *   <li>{@link KeyArrayBinary}
+     *   <li>{@link WeightedKeysBinary}
+     * </ul>
+     */
+    public interface KeysOrWeightedKeysBinary {
+        /** Convert to command arguments according to the Redis API. */
+        GlideString[] toArgs();
+    }
+
     /** Represents the keys of the sorted sets involved in the aggregation operation. */
     @RequiredArgsConstructor
     public static class KeyArray implements KeysOrWeightedKeys {
@@ -63,6 +81,17 @@ public abstract class WeightAggregateOptions {
         @Override
         public String[] toArgs() {
             return concatenateArrays(new String[] {Integer.toString(keys.length)}, keys);
+        }
+    }
+
+    /** Represents the binary keys of the sorted sets involved in the aggregation operation. */
+    @RequiredArgsConstructor
+    public static class KeyArrayBinary implements KeysOrWeightedKeysBinary {
+        private final GlideString[] keys;
+
+        @Override
+        public GlideString[] toArgs() {
+            return concatenateArrays(new GlideString[] {gs(Integer.toString(keys.length))}, keys);
         }
     }
 
@@ -97,30 +126,6 @@ public abstract class WeightAggregateOptions {
     }
 
     /**
-     * Basic interface. Please use one of the following implementations:
-     *
-     * <ul>
-     *   <li>{@link KeyArray}
-     *   <li>{@link WeightedKeys}
-     * </ul>
-     */
-    public interface KeysOrWeightedKeysBinary {
-        /** Convert to command arguments according to the Redis API. */
-        GlideString[] toArgs();
-    }
-
-    /** Represents the keys of the sorted sets involved in the aggregation operation. */
-    @RequiredArgsConstructor
-    public static class KeyArrayBinary implements KeysOrWeightedKeysBinary {
-        private final GlideString[] keys;
-
-        @Override
-        public GlideString[] toArgs() {
-            return concatenateArrays(new GlideString[] {GlideString.of(keys.length)}, keys);
-        }
-    }
-
-    /**
      * Represents the mapping of sorted set keys to their score weights. Each weight is used to boost
      * the scores of elements in the corresponding sorted set by multiplying them before their scores
      * are aggregated.
@@ -139,11 +144,12 @@ public abstract class WeightAggregateOptions {
                 keys.add(entry.getLeft());
                 weights.add(entry.getRight());
             }
-            argumentsList.add(GlideString.of(keys.size()));
+
+            argumentsList.add(gs(Integer.toString(keys.size())));
             argumentsList.addAll(keys);
-            argumentsList.add(GlideString.of(WEIGHTS_REDIS_API));
+            argumentsList.add(gs(WEIGHTS_REDIS_API));
             for (Double weight : weights) {
-                argumentsList.add(GlideString.of(weight));
+                argumentsList.add(gs(weight.toString()));
             }
 
             return argumentsList.toArray(new GlideString[0]);

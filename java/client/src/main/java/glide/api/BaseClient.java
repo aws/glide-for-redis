@@ -215,7 +215,9 @@ import glide.api.models.commands.ScriptOptionsGlideString;
 import glide.api.models.commands.SetOptions;
 import glide.api.models.commands.WeightAggregateOptions.Aggregate;
 import glide.api.models.commands.WeightAggregateOptions.KeyArray;
+import glide.api.models.commands.WeightAggregateOptions.KeyArrayBinary;
 import glide.api.models.commands.WeightAggregateOptions.KeysOrWeightedKeys;
+import glide.api.models.commands.WeightAggregateOptions.KeysOrWeightedKeysBinary;
 import glide.api.models.commands.ZAddOptions;
 import glide.api.models.commands.bitmap.BitFieldOptions.BitFieldReadOnlySubCommands;
 import glide.api.models.commands.bitmap.BitFieldOptions.BitFieldSubCommands;
@@ -1998,8 +2000,27 @@ public abstract class BaseClient
 
     @Override
     public CompletableFuture<Long> zunionstore(
+            @NonNull GlideString destination,
+            @NonNull KeysOrWeightedKeysBinary keysOrWeightedKeys,
+            @NonNull Aggregate aggregate) {
+        GlideString[] arguments =
+                concatenateArrays(
+                        new GlideString[] {destination}, keysOrWeightedKeys.toArgs(), aggregate.toArgsBinary());
+        return commandManager.submitNewCommand(ZUnionStore, arguments, this::handleLongResponse);
+    }
+
+    @Override
+    public CompletableFuture<Long> zunionstore(
             @NonNull String destination, @NonNull KeysOrWeightedKeys keysOrWeightedKeys) {
         String[] arguments = concatenateArrays(new String[] {destination}, keysOrWeightedKeys.toArgs());
+        return commandManager.submitNewCommand(ZUnionStore, arguments, this::handleLongResponse);
+    }
+
+    @Override
+    public CompletableFuture<Long> zunionstore(
+            @NonNull GlideString destination, @NonNull KeysOrWeightedKeysBinary keysOrWeightedKeys) {
+        GlideString[] arguments =
+                concatenateArrays(new GlideString[] {destination}, keysOrWeightedKeys.toArgs());
         return commandManager.submitNewCommand(ZUnionStore, arguments, this::handleLongResponse);
     }
 
@@ -2025,6 +2046,14 @@ public abstract class BaseClient
     public CompletableFuture<String[]> zunion(@NonNull KeyArray keys) {
         return commandManager.submitNewCommand(
                 ZUnion, keys.toArgs(), response -> castArray(handleArrayResponse(response), String.class));
+    }
+
+    @Override
+    public CompletableFuture<GlideString[]> zunion(@NonNull KeyArrayBinary keys) {
+        return commandManager.submitNewCommand(
+                ZUnion,
+                keys.toArgs(),
+                response -> castArray(handleArrayResponse(response), GlideString.class));
     }
 
     @Override

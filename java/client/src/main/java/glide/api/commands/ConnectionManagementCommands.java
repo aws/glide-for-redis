@@ -7,14 +7,14 @@ import java.util.concurrent.CompletableFuture;
 /**
  * Supports commands and transactions for the "Connection Management" group for a standalone client.
  *
- * @see <a href="https://redis.io/commands/?group=connection">Connection Management Commands</a>
+ * @see <a href="https://valkey.io/commands/?group=connection">Connection Management Commands</a>
  */
 public interface ConnectionManagementCommands {
 
     /**
      * Pings the Redis server.
      *
-     * @see <a href="https://redis.io/commands/ping/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/ping/">redis.io</a> for details.
      * @return <code>String</code> with <code>"PONG"</code>.
      * @example
      *     <pre>{@code
@@ -27,7 +27,7 @@ public interface ConnectionManagementCommands {
     /**
      * Pings the Redis server.
      *
-     * @see <a href="https://redis.io/commands/ping/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/ping/">redis.io</a> for details.
      * @param message The server will respond with a copy of the message.
      * @return <code>String</code> with a copy of the argument <code>message</code>.
      * @example
@@ -41,7 +41,7 @@ public interface ConnectionManagementCommands {
     /**
      * Pings the Redis server.
      *
-     * @see <a href="https://redis.io/commands/ping/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/ping/">redis.io</a> for details.
      * @param message The server will respond with a copy of the message.
      * @return <code>GlideString</code> with a copy of the argument <code>message</code>.
      * @example
@@ -55,7 +55,7 @@ public interface ConnectionManagementCommands {
     /**
      * Gets the current connection id.
      *
-     * @see <a href="https://redis.io/commands/client-id/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/client-id/">redis.io</a> for details.
      * @return The id of the client.
      * @example
      *     <pre>{@code
@@ -68,7 +68,7 @@ public interface ConnectionManagementCommands {
     /**
      * Gets the name of the current connection.
      *
-     * @see <a href="https://redis.io/commands/client-getname/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/client-getname/">redis.io</a> for details.
      * @return The name of the client connection as a string if a name is set, or <code>null</code> if
      *     no name is assigned.
      * @example
@@ -82,7 +82,7 @@ public interface ConnectionManagementCommands {
     /**
      * Echoes the provided <code>message</code> back.
      *
-     * @see <a href="https://redis.io/commands/echo/>redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/echo/>redis.io</a> for details.
      * @param message The message to be echoed back.
      * @return The provided <code>message</code>.
      * @example
@@ -96,7 +96,7 @@ public interface ConnectionManagementCommands {
     /**
      * Echoes the provided <code>message</code> back.
      *
-     * @see <a href="https://redis.io/commands/echo/>redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/echo/>redis.io</a> for details.
      * @param message The message to be echoed back.
      * @return The provided <code>message</code>.
      * @example

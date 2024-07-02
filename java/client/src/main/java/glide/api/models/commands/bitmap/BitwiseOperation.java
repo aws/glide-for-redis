@@ -7,7 +7,7 @@ import glide.api.commands.BitmapBaseCommands;
  * Defines bitwise operation for {@link BitmapBaseCommands#bitop(BitwiseOperation, String,
  * String[])}. Specifies bitwise operation to perform between keys.
  *
- * @see <a href="https://redis.io/commands/bitop/">redis.io</a>
+ * @see <a href="https://valkey.io/commands/bitop/">redis.io</a>
  */
 public enum BitwiseOperation {
     AND,

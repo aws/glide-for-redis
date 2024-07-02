@@ -8,7 +8,7 @@ import java.util.concurrent.CompletableFuture;
  * Supports commands and transactions for the "HyperLogLog Commands" group for standalone and
  * cluster clients.
  *
- * @see <a href="https://redis.io/commands/?group=hyperloglog">HyperLogLog Commands</a>
+ * @see <a href="https://valkey.io/commands/?group=hyperloglog">HyperLogLog Commands</a>
  */
 public interface HyperLogLogBaseCommands {
 
@@ -21,7 +21,7 @@ public interface HyperLogLogBaseCommands {
      * HyperLogLog, then no operation is performed. If <code>key</code> does not exist, then the
      * HyperLogLog structure is created.
      *
-     * @see <a href="https://redis.io/commands/pfadd/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/pfadd/">redis.io</a> for details.
      * @param key The <code>key</code> of the HyperLogLog data structure to add elements into.
      * @param elements An array of members to add to the HyperLogLog stored at <code>key</code>.
      * @return If the HyperLogLog is newly created, or if the HyperLogLog approximated cardinality is
@@ -46,7 +46,7 @@ public interface HyperLogLogBaseCommands {
      * HyperLogLog, then no operation is performed. If <code>key</code> does not exist, then the
      * HyperLogLog structure is created.
      *
-     * @see <a href="https://redis.io/commands/pfadd/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/pfadd/">redis.io</a> for details.
      * @param key The <code>key</code> of the HyperLogLog data structure to add elements into.
      * @param elements An array of members to add to the HyperLogLog stored at <code>key</code>.
      * @return If the HyperLogLog is newly created, or if the HyperLogLog approximated cardinality is
@@ -67,7 +67,7 @@ public interface HyperLogLogBaseCommands {
      * calculates the combined cardinality of multiple keys by merging their HyperLogLogs temporarily.
      *
      * @apiNote When in cluster mode, all <code>keys</code> must map to the same hash slot.
-     * @see <a href="https://redis.io/commands/pfcount/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/pfcount/">redis.io</a> for details.
      * @param keys The keys of the HyperLogLog data structures to be analyzed.
      * @return The approximated cardinality of given HyperLogLog data structures.<br>
      *     The cardinality of a key that does not exist is <code>0</code>.
@@ -84,7 +84,7 @@ public interface HyperLogLogBaseCommands {
      * calculates the combined cardinality of multiple keys by merging their HyperLogLogs temporarily.
      *
      * @apiNote When in cluster mode, all <code>keys</code> must map to the same hash slot.
-     * @see <a href="https://redis.io/commands/pfcount/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/pfcount/">redis.io</a> for details.
      * @param keys The keys of the HyperLogLog data structures to be analyzed.
      * @return The approximated cardinality of given HyperLogLog data structures.<br>
      *     The cardinality of a key that does not exist is <code>0</code>.
@@ -103,7 +103,7 @@ public interface HyperLogLogBaseCommands {
      *
      * @apiNote When in cluster mode, <code>destination</code> and all keys in <code>sourceKeys</code>
      *     must map to the same hash slot.
-     * @see <a href="https://redis.io/commands/pfmerge/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/pfmerge/">redis.io</a> for details.
      * @param destination The key of the destination HyperLogLog where the merged data sets will be
      *     stored.
      * @param sourceKeys The keys of the HyperLogLog structures to be merged.
@@ -126,7 +126,7 @@ public interface HyperLogLogBaseCommands {
      *
      * @apiNote When in cluster mode, <code>destination</code> and all keys in <code>sourceKeys</code>
      *     must map to the same hash slot.
-     * @see <a href="https://redis.io/commands/pfmerge/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/pfmerge/">redis.io</a> for details.
      * @param destination The key of the destination HyperLogLog where the merged data sets will be
      *     stored.
      * @param sourceKeys The keys of the HyperLogLog structures to be merged.

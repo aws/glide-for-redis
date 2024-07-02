@@ -20,7 +20,7 @@ import redis_request.RedisRequestOuterClass.Command;
 /**
  * Optional arguments for {@link StringBaseCommands#set(String, String, SetOptions)} command.
  *
- * @see <a href="https://redis.io/commands/set/">redis.io</a>
+ * @see <a href="https://valkey.io/commands/set/">redis.io</a>
  */
 @Builder
 public final class SetOptions {

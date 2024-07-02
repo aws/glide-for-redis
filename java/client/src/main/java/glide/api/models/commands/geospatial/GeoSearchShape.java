@@ -7,7 +7,7 @@ import lombok.Getter;
 /**
  * The query's shape for {@link GeospatialIndicesBaseCommands} command.
  *
- * @see <a href="https://redis.io/commands/geosearch/">valkey.io</a>
+ * @see <a href="https://valkey.io/commands/geosearch/">valkey.io</a>
  */
 @Getter
 public final class GeoSearchShape {

@@ -14,7 +14,7 @@ import java.util.concurrent.CompletableFuture;
  * Supports commands and transactions for the "Generic Commands" group for standalone and cluster
  * clients.
  *
- * @see <a href="https://redis.io/commands/?group=generic">Generic Commands</a>
+ * @see <a href="https://valkey.io/commands/?group=generic">Generic Commands</a>
  */
 public interface GenericBaseCommands {
     /** Redis API keyword used to replace the destination key. */
@@ -26,7 +26,7 @@ public interface GenericBaseCommands {
      *
      * @apiNote When in cluster mode, the command may route to multiple nodes when <code>keys</code>
      *     map to different hash slots.
-     * @see <a href="https://redis.io/commands/del/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/del/">redis.io</a> for details.
      * @param keys The keys we wanted to remove.
      * @return The number of keys that were removed.
      * @example
@@ -43,7 +43,7 @@ public interface GenericBaseCommands {
      *
      * @apiNote When in cluster mode, the command may route to multiple nodes when <code>keys</code>
      *     map to different hash slots.
-     * @see <a href="https://redis.io/commands/del/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/del/">redis.io</a> for details.
      * @param keys The keys we wanted to remove.
      * @return The number of keys that were removed.
      * @example
@@ -59,7 +59,7 @@ public interface GenericBaseCommands {
      *
      * @apiNote When in cluster mode, the command may route to multiple nodes when <code>keys</code>
      *     map to different hash slots.
-     * @see <a href="https://redis.io/commands/exists/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/exists/">redis.io</a> for details.
      * @param keys The keys list to check.
      * @return The number of keys that exist. If the same existing key is mentioned in <code>keys
      *     </code> multiple times, it will be counted multiple times.
@@ -76,7 +76,7 @@ public interface GenericBaseCommands {
      *
      * @apiNote When in cluster mode, the command may route to multiple nodes when <code>keys</code>
      *     map to different hash slots.
-     * @see <a href="https://redis.io/commands/exists/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/exists/">redis.io</a> for details.
      * @param keys The keys list to check.
      * @return The number of keys that exist. If the same existing key is mentioned in <code>keys
      *     </code> multiple times, it will be counted multiple times.
@@ -90,13 +90,13 @@ public interface GenericBaseCommands {
 
     /**
      * Unlink (delete) multiple <code>keys</code> from the database. A key is ignored if it does not
-     * exist. This command, similar to <a href="https://redis.io/commands/del/">DEL</a>, removes
+     * exist. This command, similar to <a href="https://valkey.io/commands/del/">DEL</a>, removes
      * specified keys and ignores non-existent ones. However, this command does not block the server,
-     * while <a href="https://redis.io/commands/del/">DEL</a> does.
+     * while <a href="https://valkey.io/commands/del/">DEL</a> does.
      *
      * @apiNote When in cluster mode, the command may route to multiple nodes when <code>keys</code>
      *     map to different hash slots.
-     * @see <a href="https://redis.io/commands/unlink/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/unlink/">redis.io</a> for details.
      * @param keys The list of keys to unlink.
      * @return The number of <code>keys</code> that were unlinked.
      * @example
@@ -109,13 +109,13 @@ public interface GenericBaseCommands {
 
     /**
      * Unlink (delete) multiple <code>keys</code> from the database. A key is ignored if it does not
-     * exist. This command, similar to <a href="https://redis.io/commands/del/">DEL</a>, removes
+     * exist. This command, similar to <a href="https://valkey.io/commands/del/">DEL</a>, removes
      * specified keys and ignores non-existent ones. However, this command does not block the server,
-     * while <a href="https://redis.io/commands/del/">DEL</a> does.
+     * while <a href="https://valkey.io/commands/del/">DEL</a> does.
      *
      * @apiNote When in cluster mode, the command may route to multiple nodes when <code>keys</code>
      *     map to different hash slots.
-     * @see <a href="https://redis.io/commands/unlink/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/unlink/">redis.io</a> for details.
      * @param keys The list of keys to unlink.
      * @return The number of <code>keys</code> that were unlinked.
      * @example
@@ -136,7 +136,7 @@ public interface GenericBaseCommands {
      * The timeout will only be cleared by commands that delete or overwrite the contents of <code>key
      * </code>.
      *
-     * @see <a href="https://redis.io/commands/expire/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/expire/">redis.io</a> for details.
      * @param key The key to set timeout on it.
      * @param seconds The timeout in seconds.
      * @return <code>true</code> if the timeout was set. <code>false</code> if the timeout was not
@@ -159,7 +159,7 @@ public interface GenericBaseCommands {
      * The timeout will only be cleared by commands that delete or overwrite the contents of <code>key
      * </code>.
      *
-     * @see <a href="https://redis.io/commands/expire/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/expire/">redis.io</a> for details.
      * @param key The key to set timeout on it.
      * @param seconds The timeout in seconds.
      * @return <code>true</code> if the timeout was set. <code>false</code> if the timeout was not
@@ -182,7 +182,7 @@ public interface GenericBaseCommands {
      * The timeout will only be cleared by commands that delete or overwrite the contents of <code>key
      * </code>.
      *
-     * @see <a href="https://redis.io/commands/expire/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/expire/">redis.io</a> for details.
      * @param key The key to set timeout on it.
      * @param seconds The timeout in seconds.
      * @param expireOptions The expire options.
@@ -207,7 +207,7 @@ public interface GenericBaseCommands {
      * The timeout will only be cleared by commands that delete or overwrite the contents of <code>key
      * </code>.
      *
-     * @see <a href="https://redis.io/commands/expire/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/expire/">redis.io</a> for details.
      * @param key The key to set timeout on it.
      * @param seconds The timeout in seconds.
      * @param expireOptions The expire options.
@@ -232,7 +232,7 @@ public interface GenericBaseCommands {
      * The timeout will only be cleared by commands that delete or overwrite the contents of <code>key
      * </code>.
      *
-     * @see <a href="https://redis.io/commands/expireat/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/expireat/">redis.io</a> for details.
      * @param key The key to set timeout on it.
      * @param unixSeconds The timeout in an absolute Unix timestamp.
      * @return <code>true</code> if the timeout was set. <code>false</code> if the timeout was not
@@ -255,7 +255,7 @@ public interface GenericBaseCommands {
      * The timeout will only be cleared by commands that delete or overwrite the contents of <code>key
      * </code>.
      *
-     * @see <a href="https://redis.io/commands/expireat/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/expireat/">redis.io</a> for details.
      * @param key The key to set timeout on it.
      * @param unixSeconds The timeout in an absolute Unix timestamp.
      * @return <code>true</code> if the timeout was set. <code>false</code> if the timeout was not
@@ -278,7 +278,7 @@ public interface GenericBaseCommands {
      * The timeout will only be cleared by commands that delete or overwrite the contents of <code>key
      * </code>.
      *
-     * @see <a href="https://redis.io/commands/expireat/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/expireat/">redis.io</a> for details.
      * @param key The key to set timeout on it.
      * @param unixSeconds The timeout in an absolute Unix timestamp.
      * @param expireOptions The expire options.
@@ -303,7 +303,7 @@ public interface GenericBaseCommands {
      * The timeout will only be cleared by commands that delete or overwrite the contents of <code>key
      * </code>.
      *
-     * @see <a href="https://redis.io/commands/expireat/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/expireat/">redis.io</a> for details.
      * @param key The key to set timeout on it.
      * @param unixSeconds The timeout in an absolute Unix timestamp.
      * @param expireOptions The expire options.
@@ -329,7 +329,7 @@ public interface GenericBaseCommands {
      * The timeout will only be cleared by commands that delete or overwrite the contents of <code>key
      * </code>.
      *
-     * @see <a href="https://redis.io/commands/pexpire/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/pexpire/">redis.io</a> for details.
      * @param key The key to set timeout on it.
      * @param milliseconds The timeout in milliseconds.
      * @return <code>true</code> if the timeout was set. <code>false</code> if the timeout was not
@@ -352,7 +352,7 @@ public interface GenericBaseCommands {
      * The timeout will only be cleared by commands that delete or overwrite the contents of <code>key
      * </code>.
      *
-     * @see <a href="https://redis.io/commands/pexpire/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/pexpire/">redis.io</a> for details.
      * @param key The key to set timeout on it.
      * @param milliseconds The timeout in milliseconds.
      * @return <code>true</code> if the timeout was set. <code>false</code> if the timeout was not
@@ -375,7 +375,7 @@ public interface GenericBaseCommands {
      * The timeout will only be cleared by commands that delete or overwrite the contents of <code>key
      * </code>.
      *
-     * @see <a href="https://redis.io/commands/pexpire/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/pexpire/">redis.io</a> for details.
      * @param key The key to set timeout on it.
      * @param milliseconds The timeout in milliseconds.
      * @param expireOptions The expire options.
@@ -400,7 +400,7 @@ public interface GenericBaseCommands {
      * The timeout will only be cleared by commands that delete or overwrite the contents of <code>key
      * </code>.
      *
-     * @see <a href="https://redis.io/commands/pexpire/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/pexpire/">redis.io</a> for details.
      * @param key The key to set timeout on it.
      * @param milliseconds The timeout in milliseconds.
      * @param expireOptions The expire options.
@@ -426,7 +426,7 @@ public interface GenericBaseCommands {
      * The timeout will only be cleared by commands that delete or overwrite the contents of <code>key
      * </code>.
      *
-     * @see <a href="https://redis.io/commands/pexpireat/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/pexpireat/">redis.io</a> for details.
      * @param key The <code>key</code> to set timeout on it.
      * @param unixMilliseconds The timeout in an absolute Unix timestamp.
      * @return <code>true</code> if the timeout was set. <code>false</code> if the timeout was not
@@ -449,7 +449,7 @@ public interface GenericBaseCommands {
      * The timeout will only be cleared by commands that delete or overwrite the contents of <code>key
      * </code>.
      *
-     * @see <a href="https://redis.io/commands/pexpireat/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/pexpireat/">redis.io</a> for details.
      * @param key The <code>key</code> to set timeout on it.
      * @param unixMilliseconds The timeout in an absolute Unix timestamp.
      * @return <code>true</code> if the timeout was set. <code>false</code> if the timeout was not
@@ -472,7 +472,7 @@ public interface GenericBaseCommands {
      * The timeout will only be cleared by commands that delete or overwrite the contents of <code>key
      * </code>.
      *
-     * @see <a href="https://redis.io/commands/pexpireat/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/pexpireat/">redis.io</a> for details.
      * @param key The <code>key</code> to set timeout on it.
      * @param unixMilliseconds The timeout in an absolute Unix timestamp.
      * @param expireOptions The expire option.
@@ -498,7 +498,7 @@ public interface GenericBaseCommands {
      * The timeout will only be cleared by commands that delete or overwrite the contents of <code>key
      * </code>.
      *
-     * @see <a href="https://redis.io/commands/pexpireat/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/pexpireat/">redis.io</a> for details.
      * @param key The <code>key</code> to set timeout on it.
      * @param unixMilliseconds The timeout in an absolute Unix timestamp.
      * @param expireOptions The expire option.
@@ -517,7 +517,7 @@ public interface GenericBaseCommands {
     /**
      * Returns the remaining time to live of <code>key</code> that has a timeout, in seconds.
      *
-     * @see <a href="https://redis.io/commands/ttl/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/ttl/">redis.io</a> for details.
      * @param key The <code>key</code> to return its timeout.
      * @return TTL in seconds, <code>-2</code> if <code>key</code> does not exist, or <code>-1</code>
      *     if <code>key</code> exists but has no associated expiration.
@@ -535,7 +535,7 @@ public interface GenericBaseCommands {
     /**
      * Returns the remaining time to live of <code>key</code> that has a timeout, in seconds.
      *
-     * @see <a href="https://redis.io/commands/ttl/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/ttl/">redis.io</a> for details.
      * @param key The <code>key</code> to return its timeout.
      * @return TTL in seconds, <code>-2</code> if <code>key</code> does not exist, or <code>-1</code>
      *     if <code>key</code> exists but has no associated expiration.
@@ -556,7 +556,7 @@ public interface GenericBaseCommands {
      * To get the expiration with millisecond precision, use {@link #pexpiretime(String)}.
      *
      * @since Redis 7.0 and above.
-     * @see <a href="https://redis.io/commands/expiretime/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/expiretime/">redis.io</a> for details.
      * @param key The <code>key</code> to determine the expiration value of.
      * @return The expiration Unix timestamp in seconds. <code>-2</code> if <code>key</code> does not
      *     exist, or <code>-1</code> if <code>key</code> exists but has no associated expiration.
@@ -574,7 +574,7 @@ public interface GenericBaseCommands {
      * To get the expiration with millisecond precision, use {@link #pexpiretime(String)}.
      *
      * @since Redis 7.0 and above.
-     * @see <a href="https://redis.io/commands/expiretime/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/expiretime/">redis.io</a> for details.
      * @param key The <code>key</code> to determine the expiration value of.
      * @return The expiration Unix timestamp in seconds. <code>-2</code> if <code>key</code> does not
      *     exist, or <code>-1</code> if <code>key</code> exists but has no associated expiration.
@@ -591,7 +591,7 @@ public interface GenericBaseCommands {
      * will expire, in milliseconds.
      *
      * @since Redis 7.0 and above.
-     * @see <a href="https://redis.io/commands/pexpiretime/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/pexpiretime/">redis.io</a> for details.
      * @param key The <code>key</code> to determine the expiration value of.
      * @return The expiration Unix timestamp in milliseconds. <code>-2</code> if <code>key</code> does
      *     not exist, or <code>-1</code> if <code>key</code> exists but has no associated expiration.
@@ -608,7 +608,7 @@ public interface GenericBaseCommands {
      * will expire, in milliseconds.
      *
      * @since Redis 7.0 and above.
-     * @see <a href="https://redis.io/commands/pexpiretime/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/pexpiretime/">redis.io</a> for details.
      * @param key The <code>key</code> to determine the expiration value of.
      * @return The expiration Unix timestamp in milliseconds. <code>-2</code> if <code>key</code> does
      *     not exist, or <code>-1</code> if <code>key</code> exists but has no associated expiration.
@@ -630,8 +630,8 @@ public interface GenericBaseCommands {
      * <code>SCRIPT LOAD</code> command. After that, it will be invoked using the Redis <code>EVALSHA
      * </code> command.
      *
-     * @see <a href="https://redis.io/commands/script-load/">SCRIPT LOAD</a> and <a
-     *     href="https://redis.io/commands/evalsha/">EVALSHA</a> for details.
+     * @see <a href="https://valkey.io/commands/script-load/">SCRIPT LOAD</a> and <a
+     *     href="https://valkey.io/commands/evalsha/">EVALSHA</a> for details.
      * @param script The Lua script to execute.
      * @return a value that depends on the script that was executed.
      * @example
@@ -652,8 +652,8 @@ public interface GenericBaseCommands {
      * automatically using the Redis <code>SCRIPT LOAD</code> command. After that, it will be invoked
      * using the Redis <code>EVALSHA</code> command.
      *
-     * @see <a href="https://redis.io/commands/script-load/">SCRIPT LOAD</a> and <a
-     *     href="https://redis.io/commands/evalsha/">EVALSHA</a> for details.
+     * @see <a href="https://valkey.io/commands/script-load/">SCRIPT LOAD</a> and <a
+     *     href="https://valkey.io/commands/evalsha/">EVALSHA</a> for details.
      * @param script The Lua script to execute.
      * @param options The script option that contains keys and arguments for the script.
      * @return a value that depends on the script that was executed.
@@ -677,8 +677,8 @@ public interface GenericBaseCommands {
      * automatically using the Redis <code>SCRIPT LOAD</code> command. After that, it will be invoked
      * using the Redis <code>EVALSHA</code> command.
      *
-     * @see <a href="https://redis.io/commands/script-load/">SCRIPT LOAD</a> and <a
-     *     href="https://redis.io/commands/evalsha/">EVALSHA</a> for details.
+     * @see <a href="https://valkey.io/commands/script-load/">SCRIPT LOAD</a> and <a
+     *     href="https://valkey.io/commands/evalsha/">EVALSHA</a> for details.
      * @param script The Lua script to execute.
      * @param options The script option that contains keys and arguments for the script.
      * @return a value that depends on the script that was executed.
@@ -697,7 +697,7 @@ public interface GenericBaseCommands {
     /**
      * Returns the remaining time to live of <code>key</code> that has a timeout, in milliseconds.
      *
-     * @see <a href="https://redis.io/commands/pttl/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/pttl/">redis.io</a> for details.
      * @param key The key to return its timeout.
      * @return TTL in milliseconds. <code>-2</code> if <code>key</code> does not exist, <code>-1
      *     </code> if <code>key</code> exists but has no associated expire.
@@ -715,7 +715,7 @@ public interface GenericBaseCommands {
     /**
      * Returns the remaining time to live of <code>key</code> that has a timeout, in milliseconds.
      *
-     * @see <a href="https://redis.io/commands/pttl/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/pttl/">redis.io</a> for details.
      * @param key The key to return its timeout.
      * @return TTL in milliseconds. <code>-2</code> if <code>key</code> does not exist, <code>-1
      *     </code> if <code>key</code> exists but has no associated expire.
@@ -735,7 +735,7 @@ public interface GenericBaseCommands {
      * <code>key</code> with an expire set) to persistent (a <code>key</code> that will never expire
      * as no timeout is associated).
      *
-     * @see <a href="https://redis.io/commands/persist/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/persist/">redis.io</a> for details.
      * @param key The <code>key</code> to remove the existing timeout on.
      * @return <code>false</code> if <code>key</code> does not exist or does not have an associated
      *     timeout, <code>true</code> if the timeout has been removed.
@@ -752,7 +752,7 @@ public interface GenericBaseCommands {
      * <code>key</code> with an expire set) to persistent (a <code>key</code> that will never expire
      * as no timeout is associated).
      *
-     * @see <a href="https://redis.io/commands/persist/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/persist/">redis.io</a> for details.
      * @param key The <code>key</code> to remove the existing timeout on.
      * @return <code>false</code> if <code>key</code> does not exist or does not have an associated
      *     timeout, <code>true</code> if the timeout has been removed.
@@ -767,7 +767,7 @@ public interface GenericBaseCommands {
     /**
      * Returns the string representation of the type of the value stored at <code>key</code>.
      *
-     * @see <a href="https://redis.io/commands/type/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/type/">redis.io</a> for details.
      * @param key The <code>key</code> to check its data type.
      * @return If the <code>key</code> exists, the type of the stored value is returned. Otherwise, a
      *     "none" string is returned.
@@ -785,7 +785,7 @@ public interface GenericBaseCommands {
     /**
      * Returns the string representation of the type of the value stored at <code>key</code>.
      *
-     * @see <a href="https://redis.io/commands/type/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/type/">redis.io</a> for details.
      * @param key The <code>key</code> to check its data type.
      * @return If the <code>key</code> exists, the type of the stored value is returned. Otherwise, a
      *     "none" string is returned.
@@ -803,7 +803,7 @@ public interface GenericBaseCommands {
     /**
      * Returns the internal encoding for the Redis object stored at <code>key</code>.
      *
-     * @see <a href="https://redis.io/commands/object-encoding/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/object-encoding/">redis.io</a> for details.
      * @param key The <code>key</code> of the object to get the internal encoding of.
      * @return If <code>key</code> exists, returns the internal encoding of the object stored at
      *     <code>key</code> as a <code>String</code>. Otherwise, returns <code>null</code>.
@@ -821,7 +821,7 @@ public interface GenericBaseCommands {
     /**
      * Returns the internal encoding for the Redis object stored at <code>key</code>.
      *
-     * @see <a href="https://redis.io/commands/object-encoding/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/object-encoding/">redis.io</a> for details.
      * @param key The <code>key</code> of the object to get the internal encoding of.
      * @return If <code>key</code> exists, returns the internal encoding of the object stored at
      *     <code>key</code> as a <code>String</code>. Otherwise, returns <code>null</code>.
@@ -839,7 +839,7 @@ public interface GenericBaseCommands {
     /**
      * Returns the logarithmic access frequency counter of a Redis object stored at <code>key</code>.
      *
-     * @see <a href="https://redis.io/commands/object-freq/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/object-freq/">redis.io</a> for details.
      * @param key The <code>key</code> of the object to get the logarithmic access frequency counter
      *     of.
      * @return If <code>key</code> exists, returns the logarithmic access frequency counter of the
@@ -859,7 +859,7 @@ public interface GenericBaseCommands {
     /**
      * Returns the logarithmic access frequency counter of a Redis object stored at <code>key</code>.
      *
-     * @see <a href="https://redis.io/commands/object-freq/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/object-freq/">redis.io</a> for details.
      * @param key The <code>key</code> of the object to get the logarithmic access frequency counter
      *     of.
      * @return If <code>key</code> exists, returns the logarithmic access frequency counter of the
@@ -879,7 +879,7 @@ public interface GenericBaseCommands {
     /**
      * Returns the time in seconds since the last access to the value stored at <code>key</code>.
      *
-     * @see <a href="https://redis.io/commands/object-idletime/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/object-idletime/">redis.io</a> for details.
      * @param key The <code>key</code> of the object to get the idle time of.
      * @return If <code>key</code> exists, returns the idle time in seconds. Otherwise, returns <code>
      *     null</code>.
@@ -897,7 +897,7 @@ public interface GenericBaseCommands {
     /**
      * Returns the time in seconds since the last access to the value stored at <code>key</code>.
      *
-     * @see <a href="https://redis.io/commands/object-idletime/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/object-idletime/">redis.io</a> for details.
      * @param key The <code>key</code> of the object to get the idle time of.
      * @return If <code>key</code> exists, returns the idle time in seconds. Otherwise, returns <code>
      *     null</code>.
@@ -915,7 +915,7 @@ public interface GenericBaseCommands {
     /**
      * Returns the reference count of the object stored at <code>key</code>.
      *
-     * @see <a href="https://redis.io/commands/object-refcount/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/object-refcount/">redis.io</a> for details.
      * @param key The <code>key</code> of the object to get the reference count of.
      * @return If <code>key</code> exists, returns the reference count of the object stored at <code>
      *     key</code> as a <code>Long</code>. Otherwise, returns <code>null</code>.
@@ -933,7 +933,7 @@ public interface GenericBaseCommands {
     /**
      * Returns the reference count of the object stored at <code>key</code>.
      *
-     * @see <a href="https://redis.io/commands/object-refcount/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/object-refcount/">redis.io</a> for details.
      * @param key The <code>key</code> of the object to get the reference count of.
      * @return If <code>key</code> exists, returns the reference count of the object stored at <code>
      *     key</code> as a <code>Long</code>. Otherwise, returns <code>null</code>.
@@ -954,7 +954,7 @@ public interface GenericBaseCommands {
      *
      * @apiNote When in cluster mode, both <code>key</code> and <code>newKey</code> must map to the
      *     same hash slot.
-     * @see <a href="https://redis.io/commands/rename/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/rename/">redis.io</a> for details.
      * @param key The key to rename.
      * @param newKey The new name of the key.
      * @return If the <code>key</code> was successfully renamed, return <code>"OK"</code>. If <code>
@@ -974,7 +974,7 @@ public interface GenericBaseCommands {
      *
      * @apiNote When in cluster mode, both <code>key</code> and <code>newKey</code> must map to the
      *     same hash slot.
-     * @see <a href="https://redis.io/commands/rename/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/rename/">redis.io</a> for details.
      * @param key The key to rename.
      * @param newKey The new name of the key.
      * @return If the <code>key</code> was successfully renamed, return <code>"OK"</code>. If <code>
@@ -993,7 +993,7 @@ public interface GenericBaseCommands {
      *
      * @apiNote When in cluster mode, both <code>key</code> and <code>newKey</code> must map to the
      *     same hash slot.
-     * @see <a href="https://redis.io/commands/renamenx/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/renamenx/">redis.io</a> for details.
      * @param key The key to rename.
      * @param newKey The new key name.
      * @return <code>true</code> if <code>key</code> was renamed to <code>newKey</code>, <code>false
@@ -1011,7 +1011,7 @@ public interface GenericBaseCommands {
      *
      * @apiNote When in cluster mode, both <code>key</code> and <code>newKey</code> must map to the
      *     same hash slot.
-     * @see <a href="https://redis.io/commands/renamenx/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/renamenx/">redis.io</a> for details.
      * @param key The key to rename.
      * @param newKey The new key name.
      * @return <code>true</code> if <code>key</code> was renamed to <code>newKey</code>, <code>false
@@ -1029,7 +1029,7 @@ public interface GenericBaseCommands {
      *
      * @apiNote When in cluster mode, the command may route to multiple nodes when <code>keys</code>
      *     map to different hash slots.
-     * @see <a href="https://redis.io/commands/touch/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/touch/">redis.io</a> for details.
      * @param keys The keys to update last access time.
      * @return The number of keys that were updated.
      * @example
@@ -1045,7 +1045,7 @@ public interface GenericBaseCommands {
      *
      * @apiNote When in cluster mode, the command may route to multiple nodes when <code>keys</code>
      *     map to different hash slots.
-     * @see <a href="https://redis.io/commands/touch/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/touch/">redis.io</a> for details.
      * @param keys The keys to update last access time.
      * @return The number of keys that were updated.
      * @example
@@ -1063,7 +1063,7 @@ public interface GenericBaseCommands {
      * @apiNote When in cluster mode, both <code>source</code> and <code>destination</code> must map
      *     to the same hash slot.
      * @since Redis 6.2.0 and above.
-     * @see <a href="https://redis.io/commands/copy/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/copy/">redis.io</a> for details.
      * @param source The key to the source value.
      * @param destination The key where the value should be copied to.
      * @return <code>true</code> if <code>source</code> was copied, <code>false</code> if <code>source
@@ -1085,7 +1085,7 @@ public interface GenericBaseCommands {
      * @apiNote When in cluster mode, both <code>source</code> and <code>destination</code> must map
      *     to the same hash slot.
      * @since Redis 6.2.0 and above.
-     * @see <a href="https://redis.io/commands/copy/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/copy/">redis.io</a> for details.
      * @param source The key to the source value.
      * @param destination The key where the value should be copied to.
      * @return <code>true</code> if <code>source</code> was copied, <code>false</code> if <code>source
@@ -1108,7 +1108,7 @@ public interface GenericBaseCommands {
      * @apiNote When in cluster mode, both <code>source</code> and <code>destination</code> must map
      *     to the same hash slot.
      * @since Redis 6.2.0 and above.
-     * @see <a href="https://redis.io/commands/copy/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/copy/">redis.io</a> for details.
      * @param source The key to the source value.
      * @param destination The key where the value should be copied to.
      * @param replace If the destination key should be removed before copying the value to it.
@@ -1132,7 +1132,7 @@ public interface GenericBaseCommands {
      * @apiNote When in cluster mode, both <code>source</code> and <code>destination</code> must map
      *     to the same hash slot.
      * @since Redis 6.2.0 and above.
-     * @see <a href="https://redis.io/commands/copy/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/copy/">redis.io</a> for details.
      * @param source The key to the source value.
      * @param destination The key where the value should be copied to.
      * @param replace If the destination key should be removed before copying the value to it.

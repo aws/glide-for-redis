@@ -20,7 +20,7 @@ import java.util.concurrent.CompletableFuture;
  * Supports commands and transactions for the "Stream Commands" group for standalone and cluster
  * clients.
  *
- * @see <a href="https://redis.io/commands/?group=stream">Stream Commands</a>
+ * @see <a href="https://valkey.io/commands/?group=stream">Stream Commands</a>
  */
 public interface StreamBaseCommands {
 

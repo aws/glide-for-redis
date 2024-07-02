@@ -11,7 +11,7 @@ import java.util.concurrent.CompletableFuture;
  * Supports commands and transactions for the "Set Commands" group for standalone and cluster
  * clients.
  *
- * @see <a href="https://redis.io/commands/?group=set">Set Commands</a>
+ * @see <a href="https://valkey.io/commands/?group=set">Set Commands</a>
  */
 public interface SetBaseCommands {
     /** Redis API keyword used to limit calculation of intersection of sorted sets. */
@@ -21,7 +21,7 @@ public interface SetBaseCommands {
      * Adds specified members to the set stored at <code>key</code>. Specified members that are
      * already a member of this set are ignored.
      *
-     * @see <a href="https://redis.io/commands/sadd/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/sadd/">redis.io</a> for details.
      * @param key The <code>key</code> where members will be added to its set.
      * @param members A list of members to add to the set stored at <code>key</code>.
      * @return The number of members that were added to the set, excluding members already present.
@@ -39,7 +39,7 @@ public interface SetBaseCommands {
      * Adds specified members to the set stored at <code>key</code>. Specified members that are
      * already a member of this set are ignored.
      *
-     * @see <a href="https://redis.io/commands/sadd/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/sadd/">redis.io</a> for details.
      * @param key The <code>key</code> where members will be added to its set.
      * @param members A list of members to add to the set stored at <code>key</code>.
      * @return The number of members that were added to the set, excluding members already present.
@@ -57,7 +57,7 @@ public interface SetBaseCommands {
      * Removes specified members from the set stored at <code>key</code>. Specified members that are
      * not a member of this set are ignored.
      *
-     * @see <a href="https://redis.io/commands/srem/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/srem/">redis.io</a> for details.
      * @param key The <code>key</code> from which members will be removed.
      * @param members A list of members to remove from the set stored at <code>key</code>.
      * @return The number of members that were removed from the set, excluding non-existing members.
@@ -75,7 +75,7 @@ public interface SetBaseCommands {
      * Removes specified members from the set stored at <code>key</code>. Specified members that are
      * not a member of this set are ignored.
      *
-     * @see <a href="https://redis.io/commands/srem/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/srem/">redis.io</a> for details.
      * @param key The <code>key</code> from which members will be removed.
      * @param members A list of members to remove from the set stored at <code>key</code>.
      * @return The number of members that were removed from the set, excluding non-existing members.
@@ -92,7 +92,7 @@ public interface SetBaseCommands {
     /**
      * Retrieves all the members of the set value stored at <code>key</code>.
      *
-     * @see <a href="https://redis.io/commands/smembers/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/smembers/">redis.io</a> for details.
      * @param key The key from which to retrieve the set members.
      * @return A <code>Set</code> of all members of the set.
      * @remarks If <code>key</code> does not exist an empty set will be returned.
@@ -107,7 +107,7 @@ public interface SetBaseCommands {
     /**
      * Retrieves all the members of the set value stored at <code>key</code>.
      *
-     * @see <a href="https://redis.io/commands/smembers/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/smembers/">redis.io</a> for details.
      * @param key The key from which to retrieve the set members.
      * @return A <code>Set</code> of all members of the set.
      * @remarks If <code>key</code> does not exist an empty set will be returned.
@@ -122,7 +122,7 @@ public interface SetBaseCommands {
     /**
      * Retrieves the set cardinality (number of elements) of the set stored at <code>key</code>.
      *
-     * @see <a href="https://redis.io/commands/scard/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/scard/">redis.io</a> for details.
      * @param key The key from which to retrieve the number of set members.
      * @return The cardinality (number of elements) of the set, or 0 if the key does not exist.
      * @example
@@ -136,7 +136,7 @@ public interface SetBaseCommands {
     /**
      * Retrieves the set cardinality (number of elements) of the set stored at <code>key</code>.
      *
-     * @see <a href="https://redis.io/commands/scard/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/scard/">redis.io</a> for details.
      * @param key The key from which to retrieve the number of set members.
      * @return The cardinality (number of elements) of the set, or 0 if the key does not exist.
      * @example
@@ -150,7 +150,7 @@ public interface SetBaseCommands {
     /**
      * Checks whether each member is contained in the members of the set stored at <code>key</code>.
      *
-     * @see <a href="https://redis.io/commands/smismember/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/smismember/">redis.io</a> for details.
      * @param key The key of the set to check.
      * @param members A list of members to check for existence in the set.
      * @return An <code>array</code> of <code>Boolean</code> values, each indicating if the respective
@@ -166,7 +166,7 @@ public interface SetBaseCommands {
     /**
      * Checks whether each member is contained in the members of the set stored at <code>key</code>.
      *
-     * @see <a href="https://redis.io/commands/smismember/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/smismember/">redis.io</a> for details.
      * @param key The key of the set to check.
      * @param members A list of members to check for existence in the set.
      * @return An <code>array</code> of <code>Boolean</code> values, each indicating if the respective
@@ -186,7 +186,7 @@ public interface SetBaseCommands {
      *
      * @apiNote When in cluster mode, both <code>source</code> and <code>destination</code> must map
      *     to the same hash slot.
-     * @see <a href="https://redis.io/commands/smove/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/smove/">redis.io</a> for details.
      * @param source The key of the set to remove the element from.
      * @param destination The key of the set to add the element to.
      * @param member The set element to move.
@@ -207,7 +207,7 @@ public interface SetBaseCommands {
      *
      * @apiNote When in cluster mode, both <code>source</code> and <code>destination</code> must map
      *     to the same hash slot.
-     * @see <a href="https://redis.io/commands/smove/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/smove/">redis.io</a> for details.
      * @param source The key of the set to remove the element from.
      * @param destination The key of the set to add the element to.
      * @param member The set element to move.
@@ -224,7 +224,7 @@ public interface SetBaseCommands {
     /**
      * Returns if <code>member</code> is a member of the set stored at <code>key</code>.
      *
-     * @see <a href="https://redis.io/commands/sismember/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/sismember/">redis.io</a> for details.
      * @param key The key of the set.
      * @param member The member to check for existence in the set.
      * @return <code>true</code> if the member exists in the set, <code>false</code> otherwise. If
@@ -244,7 +244,7 @@ public interface SetBaseCommands {
     /**
      * Returns if <code>member</code> is a member of the set stored at <code>key</code>.
      *
-     * @see <a href="https://redis.io/commands/sismember/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/sismember/">redis.io</a> for details.
      * @param key The key of the set.
      * @param member The member to check for existence in the set.
      * @return <code>true</code> if the member exists in the set, <code>false</code> otherwise. If
@@ -265,7 +265,7 @@ public interface SetBaseCommands {
      * Computes the difference between the first set and all the successive sets in <code>keys</code>.
      *
      * @apiNote When in cluster mode, all <code>keys</code> must map to the same hash slot.
-     * @see <a href="https://redis.io/commands/sdiff/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/sdiff/">redis.io</a> for details.
      * @param keys The keys of the sets to diff.
      * @return A <code>Set</code> of elements representing the difference between the sets.<br>
      *     If the a <code>key</code> does not exist, it is treated as an empty set.
@@ -281,7 +281,7 @@ public interface SetBaseCommands {
      * Computes the difference between the first set and all the successive sets in <code>keys</code>.
      *
      * @apiNote When in cluster mode, all <code>keys</code> must map to the same hash slot.
-     * @see <a href="https://redis.io/commands/sdiff/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/sdiff/">redis.io</a> for details.
      * @param keys The keys of the sets to diff.
      * @return A <code>Set</code> of elements representing the difference between the sets.<br>
      *     If the a <code>key</code> does not exist, it is treated as an empty set.
@@ -299,7 +299,7 @@ public interface SetBaseCommands {
      *
      * @apiNote When in cluster mode, <code>destination</code> and all <code>keys</code> must map to
      *     the same hash slot.
-     * @see <a href="https://redis.io/commands/sdiffstore/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/sdiffstore/">redis.io</a> for details.
      * @param destination The key of the destination set.
      * @param keys The keys of the sets to diff.
      * @return The number of elements in the resulting set.
@@ -317,7 +317,7 @@ public interface SetBaseCommands {
      *
      * @apiNote When in cluster mode, <code>destination</code> and all <code>keys</code> must map to
      *     the same hash slot.
-     * @see <a href="https://redis.io/commands/sdiffstore/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/sdiffstore/">redis.io</a> for details.
      * @param destination The key of the destination set.
      * @param keys The keys of the sets to diff.
      * @return The number of elements in the resulting set.
@@ -333,7 +333,7 @@ public interface SetBaseCommands {
      * Gets the intersection of all the given sets.
      *
      * @apiNote When in cluster mode, all <code>keys</code> must map to the same hash slot.
-     * @see <a href="https://redis.io/commands/sinter/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/sinter/">redis.io</a> for details.
      * @param keys The keys of the sets.
      * @return A <code>Set</code> of members which are present in all given sets.<br>
      *     If one or more sets do not exist, an empty set will be returned.
@@ -352,7 +352,7 @@ public interface SetBaseCommands {
      * Gets the intersection of all the given sets.
      *
      * @apiNote When in cluster mode, all <code>keys</code> must map to the same hash slot.
-     * @see <a href="https://redis.io/commands/sinter/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/sinter/">redis.io</a> for details.
      * @param keys The keys of the sets.
      * @return A <code>Set</code> of members which are present in all given sets.<br>
      *     If one or more sets do not exist, an empty set will be returned.
@@ -372,7 +372,7 @@ public interface SetBaseCommands {
      *
      * @since Redis 7.0 and above.
      * @apiNote When in cluster mode, all <code>keys</code> must map to the same hash slot.
-     * @see <a href="https://redis.io/commands/sintercard/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/sintercard/">redis.io</a> for details.
      * @param keys The keys of the sets.
      * @return The cardinality of the intersection result. If one or more sets do not exist, <code>0
      *     </code> is returned.
@@ -392,7 +392,7 @@ public interface SetBaseCommands {
      *
      * @since Redis 7.0 and above.
      * @apiNote When in cluster mode, all <code>keys</code> must map to the same hash slot.
-     * @see <a href="https://redis.io/commands/sintercard/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/sintercard/">redis.io</a> for details.
      * @param keys The keys of the sets.
      * @return The cardinality of the intersection result. If one or more sets do not exist, <code>0
      *     </code> is returned.
@@ -412,7 +412,7 @@ public interface SetBaseCommands {
      *
      * @since Redis 7.0 and above.
      * @apiNote When in cluster mode, all <code>keys</code> must map to the same hash slot.
-     * @see <a href="https://redis.io/commands/sintercard/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/sintercard/">redis.io</a> for details.
      * @param keys The keys of the sets.
      * @param limit The limit for the intersection cardinality value.
      * @return The cardinality of the intersection result. If one or more sets do not exist, <code>0
@@ -438,7 +438,7 @@ public interface SetBaseCommands {
      *
      * @since Redis 7.0 and above.
      * @apiNote When in cluster mode, all <code>keys</code> must map to the same hash slot.
-     * @see <a href="https://redis.io/commands/sintercard/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/sintercard/">redis.io</a> for details.
      * @param keys The keys of the sets.
      * @param limit The limit for the intersection cardinality value.
      * @return The cardinality of the intersection result. If one or more sets do not exist, <code>0
@@ -465,7 +465,7 @@ public interface SetBaseCommands {
      *
      * @apiNote When in cluster mode, <code>destination</code> and all <code>keys</code> must map to
      *     the same hash slot.
-     * @see <a href="https://redis.io/commands/sinterstore/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/sinterstore/">redis.io</a> for details.
      * @param destination The key of the destination set.
      * @param keys The keys from which to retrieve the set members.
      * @return The number of elements in the resulting set.
@@ -483,7 +483,7 @@ public interface SetBaseCommands {
      *
      * @apiNote When in cluster mode, <code>destination</code> and all <code>keys</code> must map to
      *     the same hash slot.
-     * @see <a href="https://redis.io/commands/sinterstore/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/sinterstore/">redis.io</a> for details.
      * @param destination The key of the destination set.
      * @param keys The keys from which to retrieve the set members.
      * @return The number of elements in the resulting set.
@@ -501,7 +501,7 @@ public interface SetBaseCommands {
      *
      * @apiNote When in cluster mode, <code>destination</code> and all <code>keys</code> must map to
      *     the same hash slot.
-     * @see <a href="https://redis.io/commands/sunionstore/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/sunionstore/">redis.io</a> for details.
      * @param destination The key of the destination set.
      * @param keys The keys from which to retrieve the set members.
      * @return The number of elements in the resulting set.
@@ -519,7 +519,7 @@ public interface SetBaseCommands {
      *
      * @apiNote When in cluster mode, <code>destination</code> and all <code>keys</code> must map to
      *     the same hash slot.
-     * @see <a href="https://redis.io/commands/sunionstore/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/sunionstore/">redis.io</a> for details.
      * @param destination The key of the destination set.
      * @param keys The keys from which to retrieve the set members.
      * @return The number of elements in the resulting set.
@@ -534,7 +534,7 @@ public interface SetBaseCommands {
     /**
      * Returns a random element from the set value stored at <code>key</code>.
      *
-     * @see <a href="https://redis.io/commands/srandmember/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/srandmember/">redis.io</a> for details.
      * @param key The key from which to retrieve the set member.
      * @return A random element from the set, or <code>null</code> if <code>key</code> does not exist.
      * @example
@@ -549,7 +549,7 @@ public interface SetBaseCommands {
     /**
      * Returns a random element from the set value stored at <code>key</code>.
      *
-     * @see <a href="https://redis.io/commands/srandmember/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/srandmember/">redis.io</a> for details.
      * @param key The key from which to retrieve the set member.
      * @return A random element from the set, or <code>null</code> if <code>key</code> does not exist.
      * @example
@@ -564,7 +564,7 @@ public interface SetBaseCommands {
     /**
      * Returns one or more random elements from the set value stored at <code>key</code>.
      *
-     * @see <a href="https://redis.io/commands/srandmember/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/srandmember/">redis.io</a> for details.
      * @param key The key from which to retrieve the set members.
      * @param count The number of elements to return.<br>
      *     If <code>count</code> is positive, returns unique elements.<br>
@@ -583,7 +583,7 @@ public interface SetBaseCommands {
     /**
      * Returns one or more random elements from the set value stored at <code>key</code>.
      *
-     * @see <a href="https://redis.io/commands/srandmember/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/srandmember/">redis.io</a> for details.
      * @param key The key from which to retrieve the set members.
      * @param count The number of elements to return.<br>
      *     If <code>count</code> is positive, returns unique elements.<br>
@@ -602,7 +602,7 @@ public interface SetBaseCommands {
     /**
      * Removes and returns one random member from the set stored at <code>key</code>.
      *
-     * @see <a href="https://redis.io/commands/spop/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/spop/">redis.io</a> for details.
      * @param key The key of the set.
      * @return The value of the popped member.<br>
      *     If <code>key</code> does not exist, <code>null</code> will be returned.
@@ -621,7 +621,7 @@ public interface SetBaseCommands {
      * Removes and returns up to <code>count</code> random members from the set stored at <code>key
      * </code>, depending on the set's length.
      *
-     * @see <a href="https://redis.io/commands/spop/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/spop/">redis.io</a> for details.
      * @param key The key of the set.
      * @param count The count of the elements to pop from the set.
      * @return A set of popped elements will be returned depending on the set's length.<br>

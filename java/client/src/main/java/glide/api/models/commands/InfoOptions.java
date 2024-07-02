@@ -9,7 +9,7 @@ import lombok.Singular;
 /**
  * Optional arguments to {@link ServerManagementCommands#info(InfoOptions)}
  *
- * @see <a href="https://redis.io/commands/info/">redis.io</a>
+ * @see <a href="https://valkey.io/commands/info/">redis.io</a>
  */
 @Builder
 public final class InfoOptions {

@@ -6,7 +6,7 @@ import glide.api.commands.ListBaseCommands;
 /**
  * Options for {@link ListBaseCommands#linsert}.
  *
- * @see <a href="https://redis.io/commands/linsert/">redis.io</a>
+ * @see <a href="https://valkey.io/commands/linsert/">redis.io</a>
  */
 public class LInsertOptions {
     /** Defines where to insert new elements into a list. */

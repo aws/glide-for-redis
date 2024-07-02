@@ -13,7 +13,7 @@ import java.util.concurrent.CompletableFuture;
  * Supports commands and transactions for the "String Commands" group for standalone and cluster
  * clients.
  *
- * @see <a href="https://redis.io/commands/?group=string">String Commands</a>
+ * @see <a href="https://valkey.io/commands/?group=string">String Commands</a>
  */
 public interface StringBaseCommands {
 
@@ -36,7 +36,7 @@ public interface StringBaseCommands {
      * Gets the value associated with the given <code>key</code>, or <code>null</code> if no such
      * value exists.
      *
-     * @see <a href="https://redis.io/commands/get/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/get/">redis.io</a> for details.
      * @param key The <code>key</code> to retrieve from the database.
      * @return Response from Redis. If <code>key</code> exists, returns the <code>value</code> of
      *     <code>key</code> as a <code>String</code>. Otherwise, return <code>null</code>.
@@ -55,7 +55,7 @@ public interface StringBaseCommands {
      * Gets the value associated with the given <code>key</code>, or <code>null</code> if no such
      * value exists.
      *
-     * @see <a href="https://redis.io/commands/get/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/get/">redis.io</a> for details.
      * @param key The <code>key</code> to retrieve from the database.
      * @return Response from Redis. If <code>key</code> exists, returns the <code>value</code> of
      *     <code>key</code> as a <code>String</code>. Otherwise, return <code>null</code>.
@@ -179,7 +179,7 @@ public interface StringBaseCommands {
     /**
      * Sets the given <code>key</code> with the given value.
      *
-     * @see <a href="https://redis.io/commands/set/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/set/">redis.io</a> for details.
      * @param key The <code>key</code> to store.
      * @param value The value to store with the given <code>key</code>.
      * @return Response from Redis containing <code>"OK"</code>.
@@ -194,7 +194,7 @@ public interface StringBaseCommands {
     /**
      * Sets the given <code>key</code> with the given value.
      *
-     * @see <a href="https://redis.io/commands/set/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/set/">redis.io</a> for details.
      * @param key The <code>key</code> to store.
      * @param value The value to store with the given <code>key</code>.
      * @return Response from Redis containing <code>"OK"</code>.
@@ -209,7 +209,7 @@ public interface StringBaseCommands {
     /**
      * Sets the given key with the given value. Return value is dependent on the passed options.
      *
-     * @see <a href="https://redis.io/commands/set/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/set/">redis.io</a> for details.
      * @param key The key to store.
      * @param value The value to store with the given key.
      * @param options The Set options.
@@ -230,7 +230,7 @@ public interface StringBaseCommands {
     /**
      * Sets the given key with the given value. Return value is dependent on the passed options.
      *
-     * @see <a href="https://redis.io/commands/set/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/set/">redis.io</a> for details.
      * @param key The key to store.
      * @param value The value to store with the given key.
      * @param options The Set options.
@@ -253,7 +253,7 @@ public interface StringBaseCommands {
      *
      * @apiNote When in cluster mode, the command may route to multiple nodes when <code>keys</code>
      *     map to different hash slots.
-     * @see <a href="https://redis.io/commands/mget/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/mget/">redis.io</a> for details.
      * @param keys A list of keys to retrieve values for.
      * @return An array of values corresponding to the provided <code>keys</code>.<br>
      *     If a <code>key</code>is not found, its corresponding value in the list will be <code>null
@@ -271,7 +271,7 @@ public interface StringBaseCommands {
      *
      * @apiNote When in cluster mode, the command may route to multiple nodes when <code>keys</code>
      *     map to different hash slots.
-     * @see <a href="https://redis.io/commands/mget/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/mget/">redis.io</a> for details.
      * @param keys A list of keys to retrieve values for.
      * @return An array of values corresponding to the provided <code>keys</code>.<br>
      *     If a <code>key</code>is not found, its corresponding value in the list will be <code>null
@@ -289,7 +289,7 @@ public interface StringBaseCommands {
      *
      * @apiNote When in cluster mode, the command may route to multiple nodes when keys in <code>
      *     keyValueMap</code> map to different hash slots.
-     * @see <a href="https://redis.io/commands/mset/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/mset/">redis.io</a> for details.
      * @param keyValueMap A key-value map consisting of keys and their respective values to set.
      * @return Always <code>OK</code>.
      * @example
@@ -306,7 +306,7 @@ public interface StringBaseCommands {
      *
      * @apiNote When in cluster mode, all keys in <code>keyValueMap</code> must map to the same hash
      *     slot.
-     * @see <a href="https://redis.io/commands/msetnx/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/msetnx/">redis.io</a> for details.
      * @param keyValueMap A key-value map consisting of keys and their respective values to set.
      * @return <code>true</code> if all keys were set. <code>false</code> if no key was set.
      * @example
@@ -321,7 +321,7 @@ public interface StringBaseCommands {
      * Increments the number stored at <code>key</code> by one. If <code>key</code> does not exist, it
      * is set to 0 before performing the operation.
      *
-     * @see <a href="https://redis.io/commands/incr/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/incr/">redis.io</a> for details.
      * @param key The key to increment its value.
      * @return The value of <code>key</code> after the increment.
      * @example
@@ -336,7 +336,7 @@ public interface StringBaseCommands {
      * Increments the number stored at <code>key</code> by one. If <code>key</code> does not exist, it
      * is set to 0 before performing the operation.
      *
-     * @see <a href="https://redis.io/commands/incr/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/incr/">redis.io</a> for details.
      * @param key The key to increment its value.
      * @return The value of <code>key</code> after the increment.
      * @example
@@ -351,7 +351,7 @@ public interface StringBaseCommands {
      * Increments the number stored at <code>key</code> by <code>amount</code>. If <code>key</code>
      * does not exist, it is set to 0 before performing the operation.
      *
-     * @see <a href="https://redis.io/commands/incrby/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/incrby/">redis.io</a> for details.
      * @param key The key to increment its value.
      * @param amount The amount to increment.
      * @return The value of <code>key</code> after the increment.
@@ -367,7 +367,7 @@ public interface StringBaseCommands {
      * Increments the number stored at <code>key</code> by <code>amount</code>. If <code>key</code>
      * does not exist, it is set to 0 before performing the operation.
      *
-     * @see <a href="https://redis.io/commands/incrby/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/incrby/">redis.io</a> for details.
      * @param key The key to increment its value.
      * @param amount The amount to increment.
      * @return The value of <code>key</code> after the increment.
@@ -385,7 +385,7 @@ public interface StringBaseCommands {
      * <code>key</code> is decremented. If <code>key</code> does not exist, it is set to 0 before
      * performing the operation.
      *
-     * @see <a href="https://redis.io/commands/incrbyfloat/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/incrbyfloat/">redis.io</a> for details.
      * @param key The key to increment its value.
      * @param amount The amount to increment.
      * @return The value of <code>key</code> after the increment.
@@ -403,7 +403,7 @@ public interface StringBaseCommands {
      * <code>key</code> is decremented. If <code>key</code> does not exist, it is set to 0 before
      * performing the operation.
      *
-     * @see <a href="https://redis.io/commands/incrbyfloat/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/incrbyfloat/">redis.io</a> for details.
      * @param key The key to increment its value.
      * @param amount The amount to increment.
      * @return The value of <code>key</code> after the increment.
@@ -419,7 +419,7 @@ public interface StringBaseCommands {
      * Decrements the number stored at <code>key</code> by one. If <code>key</code> does not exist, it
      * is set to 0 before performing the operation.
      *
-     * @see <a href="https://redis.io/commands/decr/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/decr/">redis.io</a> for details.
      * @param key The key to decrement its value.
      * @return The value of <code>key</code> after the decrement.
      * @example
@@ -434,7 +434,7 @@ public interface StringBaseCommands {
      * Decrements the number stored at <code>key</code> by one. If <code>key</code> does not exist, it
      * is set to 0 before performing the operation.
      *
-     * @see <a href="https://redis.io/commands/decr/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/decr/">redis.io</a> for details.
      * @param key The key to decrement its value.
      * @return The value of <code>key</code> after the decrement.
      * @example
@@ -449,7 +449,7 @@ public interface StringBaseCommands {
      * Decrements the number stored at <code>key</code> by <code>amount</code>. If <code>key</code>
      * does not exist, it is set to 0 before performing the operation.
      *
-     * @see <a href="https://redis.io/commands/decrby/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/decrby/">redis.io</a> for details.
      * @param key The key to decrement its value.
      * @param amount The amount to decrement.
      * @return The value of <code>key</code> after the decrement.
@@ -465,7 +465,7 @@ public interface StringBaseCommands {
      * Decrements the number stored at <code>key</code> by <code>amount</code>. If <code>key</code>
      * does not exist, it is set to 0 before performing the operation.
      *
-     * @see <a href="https://redis.io/commands/decrby/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/decrby/">redis.io</a> for details.
      * @param key The key to decrement its value.
      * @param amount The amount to decrement.
      * @return The value of <code>key</code> after the decrement.
@@ -480,7 +480,7 @@ public interface StringBaseCommands {
     /**
      * Returns the length of the string value stored at <code>key</code>.
      *
-     * @see <a href="https://redis.io/commands/strlen/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/strlen/">redis.io</a> for details.
      * @param key The key to check its length.
      * @return The length of the string value stored at key.<br>
      *     If <code>key</code> does not exist, it is treated as an empty string, and the command
@@ -500,7 +500,7 @@ public interface StringBaseCommands {
     /**
      * Returns the length of the string value stored at <code>key</code>.
      *
-     * @see <a href="https://redis.io/commands/strlen/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/strlen/">redis.io</a> for details.
      * @param key The key to check its length.
      * @return The length of the string value stored at key.<br>
      *     If <code>key</code> does not exist, it is treated as an empty string, and the command
@@ -524,7 +524,7 @@ public interface StringBaseCommands {
      * the string is padded with zero bytes to make <code>offset</code> fit. Creates the <code>key
      * </code> if it doesn't exist.
      *
-     * @see <a href="https://redis.io/commands/setrange/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/setrange/">redis.io</a> for details.
      * @param key The key of the string to update.
      * @param offset The position in the string where <code>value</code> should be written.
      * @param value The string written with <code>offset</code>.
@@ -547,7 +547,7 @@ public interface StringBaseCommands {
      * <code>key
      * </code> if it doesn't exist.
      *
-     * @see <a href="https://redis.io/commands/setrange/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/setrange/">redis.io</a> for details.
      * @param key The key of the GlideString to update.
      * @param offset The position in the GlideString where <code>value</code> should be written.
      * @param value The GlideString written with <code>offset</code>.
@@ -568,7 +568,7 @@ public interface StringBaseCommands {
      * order to provide an offset starting from the end of the string. So <code>-1</code> means the
      * last character, <code>-2</code> the penultimate and so forth.
      *
-     * @see <a href="https://redis.io/commands/getrange/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/getrange/">redis.io</a> for details.
      * @param key The key of the string.
      * @param start The starting offset.
      * @param end The ending offset.
@@ -590,7 +590,7 @@ public interface StringBaseCommands {
      * be used in order to provide an offset starting from the end of the GlideString. So <code>-1
      * </code> means the last character, <code>-2</code> the penultimate and so forth.
      *
-     * @see <a href="https://redis.io/commands/getrange/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/getrange/">redis.io</a> for details.
      * @param key The key of the GlideString.
      * @param start The starting offset.
      * @param end The ending offset.

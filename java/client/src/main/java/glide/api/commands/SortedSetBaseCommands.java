@@ -28,7 +28,7 @@ import java.util.concurrent.CompletableFuture;
  * Supports commands and transactions for the "Sorted Set Commands" group for standalone and cluster
  * clients.
  *
- * @see <a href="https://redis.io/commands/?group=sorted-set">Sorted Set Commands</a>
+ * @see <a href="https://valkey.io/commands/?group=sorted-set">Sorted Set Commands</a>
  */
 public interface SortedSetBaseCommands {
     /** Redis API keyword used to query sorted set members with their scores. */
@@ -47,7 +47,7 @@ public interface SortedSetBaseCommands {
      * Adds members with their scores to the sorted set stored at <code>key</code>.<br>
      * If a member is already a part of the sorted set, its score is updated.
      *
-     * @see <a href="https://redis.io/commands/zadd/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zadd/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param membersScoresMap A <code>Map</code> of members to their corresponding scores.
      * @param options The ZAdd options.
@@ -73,7 +73,7 @@ public interface SortedSetBaseCommands {
      * Adds members with their scores to the sorted set stored at <code>key</code>.<br>
      * If a member is already a part of the sorted set, its score is updated.
      *
-     * @see <a href="https://redis.io/commands/zadd/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zadd/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param membersScoresMap A <code>Map</code> of members to their corresponding scores.
      * @param options The ZAdd options.
@@ -96,7 +96,7 @@ public interface SortedSetBaseCommands {
      * Adds members with their scores to the sorted set stored at <code>key</code>.<br>
      * If a member is already a part of the sorted set, its score is updated.
      *
-     * @see <a href="https://redis.io/commands/zadd/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zadd/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param membersScoresMap A <code>Map</code> of members to their corresponding scores.
      * @param changed Modify the return value from the number of new elements added, to the total
@@ -115,7 +115,7 @@ public interface SortedSetBaseCommands {
      * Adds members with their scores to the sorted set stored at <code>key</code>.<br>
      * If a member is already a part of the sorted set, its score is updated.
      *
-     * @see <a href="https://redis.io/commands/zadd/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zadd/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param membersScoresMap A <code>Map</code> of members to their corresponding scores.
      * @return The number of elements added to the sorted set.
@@ -136,7 +136,7 @@ public interface SortedSetBaseCommands {
      * member is created.<br>
      * <code>zaddIncr</code> with empty option acts as {@link #zincrby(String, double, String)}.
      *
-     * @see <a href="https://redis.io/commands/zadd/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zadd/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param member A member in the sorted set to increment.
      * @param increment The score to increment the member.
@@ -166,7 +166,7 @@ public interface SortedSetBaseCommands {
      * If <code>key</code> does not exist, a new sorted set with the specified member as its sole
      * member is created.
      *
-     * @see <a href="https://redis.io/commands/zadd/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zadd/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param member A member in the sorted set to increment.
      * @param increment The score to increment the member.
@@ -183,7 +183,7 @@ public interface SortedSetBaseCommands {
      * Removes the specified members from the sorted set stored at <code>key</code>.<br>
      * Specified members that are not a member of this set are ignored.
      *
-     * @see <a href="https://redis.io/commands/zrem/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zrem/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param members An array of members to remove from the sorted set.
      * @return The number of members that were removed from the sorted set, not including non-existing
@@ -205,7 +205,7 @@ public interface SortedSetBaseCommands {
      * Removes the specified members from the sorted set stored at <code>key</code>.<br>
      * Specified members that are not a member of this set are ignored.
      *
-     * @see <a href="https://redis.io/commands/zrem/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zrem/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param members An array of members to remove from the sorted set.
      * @return The number of members that were removed from the sorted set, not including non-existing
@@ -226,7 +226,7 @@ public interface SortedSetBaseCommands {
     /**
      * Returns the cardinality (number of elements) of the sorted set stored at <code>key</code>.
      *
-     * @see <a href="https://redis.io/commands/zcard/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zcard/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @return The number of elements in the sorted set.<br>
      *     If <code>key</code> does not exist, it is treated as an empty sorted set, and this command
@@ -245,7 +245,7 @@ public interface SortedSetBaseCommands {
     /**
      * Returns the cardinality (number of elements) of the sorted set stored at <code>key</code>.
      *
-     * @see <a href="https://redis.io/commands/zcard/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zcard/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @return The number of elements in the sorted set.<br>
      *     If <code>key</code> does not exist, it is treated as an empty sorted set, and this command
@@ -265,7 +265,7 @@ public interface SortedSetBaseCommands {
      * Removes and returns up to <code>count</code> members with the lowest scores from the sorted set
      * stored at the specified <code>key</code>.
      *
-     * @see <a href="https://redis.io/commands/zpopmin/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zpopmin/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param count Specifies the quantity of members to pop.<br>
      *     If <code>count</code> is higher than the sorted set's cardinality, returns all members and
@@ -286,7 +286,7 @@ public interface SortedSetBaseCommands {
      * Removes and returns the member with the lowest score from the sorted set stored at the
      * specified <code>key</code>.
      *
-     * @see <a href="https://redis.io/commands/zpopmin/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zpopmin/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @return A map containing the removed member and its corresponding score.<br>
      *     If <code>key</code> doesn't exist, it will be treated as an empty sorted set and the
@@ -313,7 +313,7 @@ public interface SortedSetBaseCommands {
      *           Commands</a> for more details and best practices.
      *     </ul>
      *
-     * @see <a href="https://redis.io/commands/bzpopmin/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/bzpopmin/">redis.io</a> for more details.
      * @param keys The keys of the sorted sets.
      * @param timeout The number of seconds to wait for a blocking operation to complete. A value of
      *     <code>0</code> will block indefinitely.
@@ -333,7 +333,7 @@ public interface SortedSetBaseCommands {
      * Removes and returns up to <code>count</code> members with the highest scores from the sorted
      * set stored at the specified <code>key</code>.
      *
-     * @see <a href="https://redis.io/commands/zpopmax/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zpopmax/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param count Specifies the quantity of members to pop.<br>
      *     If <code>count</code> is higher than the sorted set's cardinality, returns all members and
@@ -354,7 +354,7 @@ public interface SortedSetBaseCommands {
      * Removes and returns the member with the highest score from the sorted set stored at the
      * specified <code>key</code>.
      *
-     * @see <a href="https://redis.io/commands/zpopmax/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zpopmax/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @return A map containing the removed member and its corresponding score.<br>
      *     If <code>key</code> doesn't exist, it will be treated as an empty sorted set and the
@@ -381,7 +381,7 @@ public interface SortedSetBaseCommands {
      *           Commands</a> for more details and best practices.
      *     </ul>
      *
-     * @see <a href="https://redis.io/commands/bzpopmax/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/bzpopmax/">redis.io</a> for more details.
      * @param keys The keys of the sorted sets.
      * @param timeout The number of seconds to wait for a blocking operation to complete. A value of
      *     <code>0</code> will block indefinitely.
@@ -400,7 +400,7 @@ public interface SortedSetBaseCommands {
     /**
      * Returns the score of <code>member</code> in the sorted set stored at <code>key</code>.
      *
-     * @see <a href="https://redis.io/commands/zscore/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zscore/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param member The member whose score is to be retrieved.
      * @return The score of the member.<br>
@@ -420,7 +420,7 @@ public interface SortedSetBaseCommands {
     /**
      * Returns the score of <code>member</code> in the sorted set stored at <code>key</code>.
      *
-     * @see <a href="https://redis.io/commands/zscore/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zscore/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param member The member whose score is to be retrieved.
      * @return The score of the member.<br>
@@ -443,7 +443,7 @@ public interface SortedSetBaseCommands {
      * score, or by lexicographical order.<br>
      * To get the elements with their scores, see {@link #zrangeWithScores}.
      *
-     * @see <a href="https://redis.io/commands/zrange/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zrange/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param rangeQuery The range query object representing the type of range query to perform.<br>
      *     <ul>
@@ -475,7 +475,7 @@ public interface SortedSetBaseCommands {
      * score, or by lexicographical order.<br>
      * To get the elements with their scores, see {@link #zrangeWithScores}.
      *
-     * @see <a href="https://redis.io/commands/zrange/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zrange/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param rangeQuery The range query object representing the type of range query to perform.<br>
      *     <ul>
@@ -503,7 +503,7 @@ public interface SortedSetBaseCommands {
      * Returns the specified range of elements with their scores in the sorted set stored at <code>key
      * </code>. Similar to {@link #zrange} but with a <code>WITHSCORE</code> flag.
      *
-     * @see <a href="https://redis.io/commands/zrange/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zrange/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param rangeQuery The range query object representing the type of range query to perform.<br>
      *     <ul>
@@ -534,7 +534,7 @@ public interface SortedSetBaseCommands {
      * Returns the specified range of elements with their scores in the sorted set stored at <code>key
      * </code>. Similar to {@link #zrange} but with a <code>WITHSCORE</code> flag.
      *
-     * @see <a href="https://redis.io/commands/zrange/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zrange/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param rangeQuery The range query object representing the type of range query to perform.<br>
      *     <ul>
@@ -565,7 +565,7 @@ public interface SortedSetBaseCommands {
      *
      * @apiNote When in cluster mode, <code>destination</code> and <code>source</code> must map to the
      *     same hash slot.
-     * @see <a href="https://redis.io/commands/zrangestore/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zrangestore/">redis.io</a> for more details.
      * @param destination The key for the destination sorted set.
      * @param source The key of the source sorted set.
      * @param rangeQuery The range query object representing the type of range query to perform.<br>
@@ -599,7 +599,7 @@ public interface SortedSetBaseCommands {
      *
      * @apiNote When in cluster mode, <code>destination</code> and <code>source</code> must map to the
      *     same hash slot.
-     * @see <a href="https://redis.io/commands/zrangestore/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zrangestore/">redis.io</a> for more details.
      * @param destination The key for the destination sorted set.
      * @param source The key of the source sorted set.
      * @param rangeQuery The range query object representing the type of range query to perform.<br>
@@ -628,7 +628,7 @@ public interface SortedSetBaseCommands {
      * scores ordered from low to high, starting from <code>0</code>.<br>
      * To get the rank of <code>member</code> with its score, see {@link #zrankWithScore}.
      *
-     * @see <a href="https://redis.io/commands/zrank/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zrank/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param member The member whose rank is to be retrieved.
      * @return The rank of <code>member</code> in the sorted set.<br>
@@ -650,7 +650,7 @@ public interface SortedSetBaseCommands {
      * scores ordered from low to high, starting from <code>0</code>.<br>
      * To get the rank of <code>member</code> with its score, see {@link #zrankWithScore}.
      *
-     * @see <a href="https://redis.io/commands/zrank/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zrank/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param member The member whose rank is to be retrieved.
      * @return The rank of <code>member</code> in the sorted set.<br>
@@ -671,7 +671,7 @@ public interface SortedSetBaseCommands {
      * Returns the rank of <code>member</code> in the sorted set stored at <code>key</code> with its
      * score, where scores are ordered from the lowest to highest, starting from <code>0</code>.<br>
      *
-     * @see <a href="https://redis.io/commands/zrank/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zrank/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param member The member whose rank is to be retrieved.
      * @return An array containing the rank (as <code>Long</code>) and score (as <code>Double</code>)
@@ -694,7 +694,7 @@ public interface SortedSetBaseCommands {
      * scores are ordered from the highest to lowest, starting from <code>0</code>.<br>
      * To get the rank of <code>member</code> with its score, see {@link #zrevrankWithScore}.
      *
-     * @see <a href="https://redis.io/commands/zrevrank/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zrevrank/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param member The member whose rank is to be retrieved.
      * @return The rank of <code>member</code> in the sorted set, where ranks are ordered from high to
@@ -716,7 +716,7 @@ public interface SortedSetBaseCommands {
      * Returns the rank of <code>member</code> in the sorted set stored at <code>key</code> with its
      * score, where scores are ordered from the highest to lowest, starting from <code>0</code>.
      *
-     * @see <a href="https://redis.io/commands/zrevrank/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zrevrank/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param member The member whose rank is to be retrieved.
      * @return An array containing the rank (as <code>Long</code>) and score (as <code>Double</code>)
@@ -739,7 +739,7 @@ public interface SortedSetBaseCommands {
      * Returns the scores associated with the specified <code>members</code> in the sorted set stored
      * at <code>key</code>.
      *
-     * @see <a href="https://redis.io/commands/zmscore/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zmscore/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param members An array of members in the sorted set.
      * @return An <code>Array</code> of scores of the <code>members</code>.<br>
@@ -757,7 +757,7 @@ public interface SortedSetBaseCommands {
      * Returns the scores associated with the specified <code>members</code> in the sorted set stored
      * at <code>key</code>.
      *
-     * @see <a href="https://redis.io/commands/zmscore/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zmscore/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param members An array of members in the sorted set.
      * @return An <code>Array</code> of scores of the <code>members</code>.<br>
@@ -777,7 +777,7 @@ public interface SortedSetBaseCommands {
      *
      * @apiNote When in cluster mode, all <code>keys</code> must map to the same hash slot.
      * @since Redis 6.2 and above.
-     * @see <a href="https://redis.io/commands/zdiff/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zdiff/">redis.io</a> for more details.
      * @param keys The keys of the sorted sets.
      * @return An <code>array</code> of elements representing the difference between the sorted sets.
      *     <br>
@@ -796,7 +796,7 @@ public interface SortedSetBaseCommands {
      *
      * @apiNote When in cluster mode, all <code>keys</code> must map to the same hash slot.
      * @since Redis 6.2 and above.
-     * @see <a href="https://redis.io/commands/zdiff/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zdiff/">redis.io</a> for more details.
      * @param keys The keys of the sorted sets.
      * @return A <code>Map</code> of elements and their scores representing the difference between the
      *     sorted sets.<br>
@@ -818,7 +818,7 @@ public interface SortedSetBaseCommands {
      * @apiNote When in cluster mode, <code>destination</code> and all <code>keys</code> must map to
      *     the same hash slot.
      * @since Redis 6.2 and above.
-     * @see <a href="https://redis.io/commands/zdiffstore/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zdiffstore/">redis.io</a> for more details.
      * @param destination The key for the resulting sorted set.
      * @param keys The keys of the sorted sets to compare.
      * @return The number of members in the resulting sorted set stored at <code>destination</code>.
@@ -838,7 +838,7 @@ public interface SortedSetBaseCommands {
      * @apiNote When in cluster mode, <code>destination</code> and all <code>keys</code> must map to
      *     the same hash slot.
      * @since Redis 6.2 and above.
-     * @see <a href="https://redis.io/commands/zdiffstore/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zdiffstore/">redis.io</a> for more details.
      * @param destination The key for the resulting sorted set.
      * @param keys The keys of the sorted sets to compare.
      * @return The number of members in the resulting sorted set stored at <code>destination</code>.
@@ -854,7 +854,7 @@ public interface SortedSetBaseCommands {
      * Returns the number of members in the sorted set stored at <code>key</code> with scores between
      * <code>minScore</code> and <code>maxScore</code>.
      *
-     * @see <a href="https://redis.io/commands/zcount/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zcount/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param minScore The minimum score to count from. Can be an implementation of {@link
      *     InfScoreBound} representing positive/negative infinity, or {@link ScoreBoundary}
@@ -883,7 +883,7 @@ public interface SortedSetBaseCommands {
      * indexes with <code>0</code> being the element with the lowest score. These indexes can be
      * negative numbers, where they indicate offsets starting at the element with the highest score.
      *
-     * @see <a href="https://redis.io/commands/zremrangebyrank/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zremrangebyrank/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param start The starting point of the range.
      * @param end The end of the range.
@@ -910,7 +910,7 @@ public interface SortedSetBaseCommands {
      * indexes with <code>0</code> being the element with the lowest score. These indexes can be
      * negative numbers, where they indicate offsets starting at the element with the highest score.
      *
-     * @see <a href="https://redis.io/commands/zremrangebyrank/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zremrangebyrank/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param start The starting point of the range.
      * @param end The end of the range.
@@ -935,7 +935,7 @@ public interface SortedSetBaseCommands {
      * Removes all elements in the sorted set stored at <code>key</code> with a lexicographical order
      * between <code>minLex</code> and <code>maxLex</code>.
      *
-     * @see <a href="https://redis.io/commands/zremrangebylex/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zremrangebylex/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param minLex The minimum bound of the lexicographical range. Can be an implementation of
      *     {@link InfLexBound} representing positive/negative infinity, or {@link LexBoundary}
@@ -962,7 +962,7 @@ public interface SortedSetBaseCommands {
      * Removes all elements in the sorted set stored at <code>key</code> with a score between <code>
      * minScore</code> and <code>maxScore</code>.
      *
-     * @see <a href="https://redis.io/commands/zremrangebyscore/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zremrangebyscore/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param minScore The minimum score to remove from. Can be an implementation of {@link
      *     InfScoreBound} representing positive/negative infinity, or {@link ScoreBoundary}
@@ -989,7 +989,7 @@ public interface SortedSetBaseCommands {
      * Returns the number of members in the sorted set stored at <code>key</code> with scores between
      * <code>minLex</code> and <code>maxLex</code>.
      *
-     * @see <a href="https://redis.io/commands/zlexcount/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zlexcount/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param minLex The minimum lex to count from. Can be an implementation of {@link InfLexBound}
      *     representing positive/negative infinity, or {@link LexBoundary} representing a specific lex
@@ -1019,7 +1019,7 @@ public interface SortedSetBaseCommands {
      *
      * @apiNote When in cluster mode, <code>destination</code> and all keys in <code>
      *     keysOrWeightedKeys</code> must map to the same hash slot.
-     * @see <a href="https://redis.io/commands/zunionstore/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zunionstore/">redis.io</a> for more details.
      * @param destination The key of the destination sorted set.
      * @param keysOrWeightedKeys The keys of the sorted sets with possible formats:
      *     <ul>
@@ -1047,7 +1047,7 @@ public interface SortedSetBaseCommands {
      *
      * @apiNote When in cluster mode, <code>destination</code> and all keys in <code>
      *     keysOrWeightedKeys</code> must map to the same hash slot.
-     * @see <a href="https://redis.io/commands/zunionstore/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zunionstore/">redis.io</a> for more details.
      * @param destination The key of the destination sorted set.
      * @param keysOrWeightedKeys The keys of the sorted sets with possible formats:
      *     <ul>
@@ -1072,7 +1072,7 @@ public interface SortedSetBaseCommands {
      *
      * @apiNote When in cluster mode, <code>destination</code> and all keys in <code>
      *     keysOrWeightedKeys</code> must map to the same hash slot.
-     * @see <a href="https://redis.io/commands/zinterstore/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zinterstore/">redis.io</a> for more details.
      * @param destination The key of the destination sorted set.
      * @param keysOrWeightedKeys The keys of the sorted sets with possible formats:
      *     <ul>
@@ -1100,7 +1100,7 @@ public interface SortedSetBaseCommands {
      *
      * @apiNote When in cluster mode, <code>destination</code> and all keys in <code>
      *     keysOrWeightedKeys</code> must map to the same hash slot.
-     * @see <a href="https://redis.io/commands/zinterstore/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zinterstore/">redis.io</a> for more details.
      * @param destination The key of the destination sorted set.
      * @param keysOrWeightedKeys The keys of the sorted sets with possible formats:
      *     <ul>
@@ -1124,7 +1124,7 @@ public interface SortedSetBaseCommands {
      *
      * @apiNote When in cluster mode, all <code>keys</code> must map to the same hash slot.
      * @since Redis 7.0 and above.
-     * @see <a href="https://redis.io/commands/zmpop/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zmpop/">redis.io</a> for more details.
      * @param keys The keys of the sorted sets.
      * @param modifier The element pop criteria - either {@link ScoreFilter#MIN} or {@link
      *     ScoreFilter#MAX} to pop the member with the lowest/highest score accordingly.
@@ -1147,7 +1147,7 @@ public interface SortedSetBaseCommands {
      *
      * @apiNote When in cluster mode, all <code>keys</code> must map to the same hash slot.
      * @since Redis 7.0 and above.
-     * @see <a href="https://redis.io/commands/zmpop/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zmpop/">redis.io</a> for more details.
      * @param keys The keys of the sorted sets.
      * @param modifier The element pop criteria - either {@link ScoreFilter#MIN} or {@link
      *     ScoreFilter#MAX} to pop members with the lowest/highest scores accordingly.
@@ -1180,7 +1180,7 @@ public interface SortedSetBaseCommands {
      *     </ol>
      *
      * @since Redis 7.0 and above.
-     * @see <a href="https://redis.io/commands/bzmpop/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/bzmpop/">redis.io</a> for more details.
      * @param keys The keys of the sorted sets.
      * @param modifier The element pop criteria - either {@link ScoreFilter#MIN} or {@link
      *     ScoreFilter#MAX} to pop members with the lowest/highest scores accordingly.
@@ -1214,7 +1214,7 @@ public interface SortedSetBaseCommands {
      *     </ol>
      *
      * @since Redis 7.0 and above.
-     * @see <a href="https://redis.io/commands/bzmpop/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/bzmpop/">redis.io</a> for more details.
      * @param keys The keys of the sorted sets.
      * @param modifier The element pop criteria - either {@link ScoreFilter#MIN} or {@link
      *     ScoreFilter#MAX} to pop members with the lowest/highest scores accordingly.
@@ -1242,7 +1242,7 @@ public interface SortedSetBaseCommands {
      *
      * @apiNote When in cluster mode, all keys in <code>keys</code> must map to the same hash slot.
      * @since Redis 6.2 and above.
-     * @see <a href="https://redis.io/commands/zunion/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zunion/">redis.io</a> for more details.
      * @param keys The keys of the sorted sets.
      * @return The resulting sorted set from the union.
      * @example
@@ -1265,7 +1265,7 @@ public interface SortedSetBaseCommands {
      * @apiNote When in cluster mode, all keys in <code>keysOrWeightedKeys</code> must map to the same
      *     hash slot.
      * @since Redis 6.2 and above.
-     * @see <a href="https://redis.io/commands/zunion/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zunion/">redis.io</a> for more details.
      * @param keysOrWeightedKeys The keys of the sorted sets with possible formats:
      *     <ul>
      *       <li>Use {@link KeyArray} for keys only.
@@ -1298,7 +1298,7 @@ public interface SortedSetBaseCommands {
      * @apiNote When in cluster mode, all keys in <code>keysOrWeightedKeys</code> must map to the same
      *     hash slot.
      * @since Redis 6.2 and above.
-     * @see <a href="https://redis.io/commands/zunion/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zunion/">redis.io</a> for more details.
      * @param keysOrWeightedKeys The keys of the sorted sets with possible formats:
      *     <ul>
      *       <li>Use {@link KeyArray} for keys only.
@@ -1326,7 +1326,7 @@ public interface SortedSetBaseCommands {
      *
      * @apiNote When in cluster mode, all keys in <code>keys</code> must map to the same hash slot.
      * @since Redis 6.2 and above.
-     * @see <a href="https://redis.io/commands/zinter/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zinter/">redis.io</a> for more details.
      * @param keys The keys of the sorted sets.
      * @return The resulting sorted set from the intersection.
      * @example
@@ -1350,7 +1350,7 @@ public interface SortedSetBaseCommands {
      * @apiNote When in cluster mode, all keys in <code>keysOrWeightedKeys</code> must map to the same
      *     hash slot.
      * @since Redis 6.2 and above.
-     * @see <a href="https://redis.io/commands/zinter/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zinter/">redis.io</a> for more details.
      * @param keysOrWeightedKeys The keys of the sorted sets with possible formats:
      *     <ul>
      *       <li>Use {@link KeyArray} for keys only.
@@ -1378,7 +1378,7 @@ public interface SortedSetBaseCommands {
      * @apiNote When in cluster mode, all keys in <code>keysOrWeightedKeys</code> must map to the same
      *     hash slot.
      * @since Redis 6.2 and above.
-     * @see <a href="https://redis.io/commands/zinter/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zinter/">redis.io</a> for more details.
      * @param keysOrWeightedKeys The keys of the sorted sets with possible formats:
      *     <ul>
      *       <li>Use {@link KeyArray} for keys only.
@@ -1405,7 +1405,7 @@ public interface SortedSetBaseCommands {
     /**
      * Returns a random element from the sorted set stored at <code>key</code>.
      *
-     * @see <a href="https://redis.io/commands/zrandmember/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zrandmember/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @return A <code>String</code> representing a random element from the sorted set.<br>
      *     If the sorted set does not exist or is empty, the response will be <code>null</code>.
@@ -1423,7 +1423,7 @@ public interface SortedSetBaseCommands {
     /**
      * Retrieves random elements from the sorted set stored at <code>key</code>.
      *
-     * @see <a href="https://redis.io/commands/zrandmember/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zrandmember/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param count The number of elements to return.<br>
      *     If <code>count</code> is positive, returns unique elements.<br>
@@ -1446,7 +1446,7 @@ public interface SortedSetBaseCommands {
      * Retrieves random elements along with their scores from the sorted set stored at <code>key
      * </code>.
      *
-     * @see <a href="https://redis.io/commands/zrandmember/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zrandmember/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param count The number of elements to return.<br>
      *     If <code>count</code> is positive, returns unique elements.<br>
@@ -1473,7 +1473,7 @@ public interface SortedSetBaseCommands {
      * </code> as its score. If <code>key</code> does not exist, a new sorted set with the specified
      * member as its sole member is created.
      *
-     * @see <a href="https://redis.io/commands/zincrby/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zincrby/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param increment The score increment.
      * @param member A member of the sorted set.
@@ -1493,7 +1493,7 @@ public interface SortedSetBaseCommands {
      * </code> as its score. If <code>key</code> does not exist, a new sorted set with the specified
      * member as its sole member is created.
      *
-     * @see <a href="https://redis.io/commands/zincrby/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zincrby/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param increment The score increment.
      * @param member A member of the sorted set.
@@ -1511,7 +1511,7 @@ public interface SortedSetBaseCommands {
      *
      * @apiNote When in cluster mode, all <code>keys</code> must map to the same hash slot.
      * @since Redis 7.0 and above.
-     * @see <a href="https://redis.io/commands/zintercard/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zintercard/">redis.io</a> for more details.
      * @param keys The keys of the sorted sets to intersect.
      * @return The cardinality of the intersection of the given sorted sets.
      * @example
@@ -1527,7 +1527,7 @@ public interface SortedSetBaseCommands {
      *
      * @apiNote When in cluster mode, all <code>keys</code> must map to the same hash slot.
      * @since Redis 7.0 and above.
-     * @see <a href="https://redis.io/commands/zintercard/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zintercard/">redis.io</a> for more details.
      * @param keys The keys of the sorted sets to intersect.
      * @return The cardinality of the intersection of the given sorted sets.
      * @example
@@ -1545,7 +1545,7 @@ public interface SortedSetBaseCommands {
      *
      * @apiNote When in cluster mode, all <code>keys</code> must map to the same hash slot.
      * @since Redis 7.0 and above.
-     * @see <a href="https://redis.io/commands/zintercard/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zintercard/">redis.io</a> for more details.
      * @param keys The keys of the sorted sets to intersect.
      * @param limit Specifies a maximum number for the intersection cardinality. If limit is set to
      *     <code>0</code> the range will be unlimited.
@@ -1566,7 +1566,7 @@ public interface SortedSetBaseCommands {
      *
      * @apiNote When in cluster mode, all <code>keys</code> must map to the same hash slot.
      * @since Redis 7.0 and above.
-     * @see <a href="https://redis.io/commands/zintercard/">redis.io</a> for more details.
+     * @see <a href="https://valkey.io/commands/zintercard/">redis.io</a> for more details.
      * @param keys The keys of the sorted sets to intersect.
      * @param limit Specifies a maximum number for the intersection cardinality. If limit is set to
      *     <code>0</code> the range will be unlimited.

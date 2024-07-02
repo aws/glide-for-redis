@@ -12,7 +12,7 @@ import lombok.experimental.SuperBuilder;
  * GenericCommands#sortReadOnly(String, SortOptions)}, and {@link GenericCommands#sortStore(String,
  * String, SortOptions)}
  *
- * @see <a href="https://redis.io/commands/sort/">redis.io</a> and <a
+ * @see <a href="https://valkey.io/commands/sort/">redis.io</a> and <a
  *     href="https://redis.io/docs/latest/commands/sort_ro/">redis.io</a>
  */
 @SuperBuilder

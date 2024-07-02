@@ -9,7 +9,7 @@ import lombok.RequiredArgsConstructor;
  * Optional arguments for {@link GenericBaseCommands#expire(String, long, ExpireOptions)}, and
  * similar commands.
  *
- * @see <a href="https://redis.io/commands/expire/">redis.io</a>
+ * @see <a href="https://valkey.io/commands/expire/">redis.io</a>
  */
 @RequiredArgsConstructor
 public enum ExpireOptions {

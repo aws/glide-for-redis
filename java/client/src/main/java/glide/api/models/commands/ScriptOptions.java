@@ -11,7 +11,7 @@ import lombok.Singular;
 /**
  * Optional arguments for {@link GenericBaseCommands#invokeScript(Script, ScriptOptions)} command.
  *
- * @see <a href="https://redis.io/commands/evalsha/">redis.io</a>
+ * @see <a href="https://valkey.io/commands/evalsha/">redis.io</a>
  */
 @Builder
 public final class ScriptOptions {

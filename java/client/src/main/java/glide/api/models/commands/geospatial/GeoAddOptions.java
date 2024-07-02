@@ -14,7 +14,7 @@ import lombok.Getter;
  * Optional arguments for {@link GeospatialIndicesBaseCommands#geoadd(String, Map, GeoAddOptions)}
  * command.
  *
- * @see <a href="https://redis.io/commands/geoadd/">redis.io</a>
+ * @see <a href="https://valkey.io/commands/geoadd/">redis.io</a>
  */
 @Getter
 public final class GeoAddOptions {

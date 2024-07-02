@@ -13,7 +13,7 @@ import lombok.NonNull;
  * Supports commands and transactions for the "List Commands" group for standalone and cluster
  * clients.
  *
- * @see <a href="https://redis.io/commands/?group=list">List Commands</a>
+ * @see <a href="https://valkey.io/commands/?group=list">List Commands</a>
  */
 public interface ListBaseCommands {
     /** Redis API keyword used to extract specific count of members from a sorted set. */
@@ -25,7 +25,7 @@ public interface ListBaseCommands {
      * element to the rightmost element. If <code>key</code> does not exist, it is created as an empty
      * list before performing the push operation.
      *
-     * @see <a href="https://redis.io/commands/lpush/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/lpush/">redis.io</a> for details.
      * @param key The key of the list.
      * @param elements The elements to insert at the head of the list stored at <code>key</code>.
      * @return The length of the list after the push operation.
@@ -46,7 +46,7 @@ public interface ListBaseCommands {
      * element to the rightmost element. If <code>key</code> does not exist, it is created as an empty
      * list before performing the push operation.
      *
-     * @see <a href="https://redis.io/commands/lpush/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/lpush/">redis.io</a> for details.
      * @param key The key of the list.
      * @param elements The elements to insert at the head of the list stored at <code>key</code>.
      * @return The length of the list after the push operation.
@@ -65,7 +65,7 @@ public interface ListBaseCommands {
      * Removes and returns the first elements of the list stored at <code>key</code>. The command pops
      * a single element from the beginning of the list.
      *
-     * @see <a href="https://redis.io/commands/lpop/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/lpop/">redis.io</a> for details.
      * @param key The key of the list.
      * @return The value of the first element.<br>
      *     If <code>key</code> does not exist, null will be returned.
@@ -278,7 +278,7 @@ public interface ListBaseCommands {
      * Removes and returns up to <code>count</code> elements of the list stored at <code>key</code>,
      * depending on the list's length.
      *
-     * @see <a href="https://redis.io/commands/lpop/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/lpop/">redis.io</a> for details.
      * @param key The key of the list.
      * @param count The count of the elements to pop from the list.
      * @return An array of the popped elements will be returned depending on the list's length.<br>
@@ -302,7 +302,7 @@ public interface ListBaseCommands {
      * <code>-1</code> being the last element of the list, <code>-2</code> being the penultimate, and
      * so on.
      *
-     * @see <a href="https://redis.io/commands/lrange/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/lrange/">redis.io</a> for details.
      * @param key The key of the list.
      * @param start The starting point of the range.
      * @param end The end of the range.
@@ -334,7 +334,7 @@ public interface ListBaseCommands {
      * <code>-1</code> being the last element of the list, <code>-2</code> being the penultimate, and
      * so on.
      *
-     * @see <a href="https://redis.io/commands/lrange/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/lrange/">redis.io</a> for details.
      * @param key The key of the list.
      * @param start The starting point of the range.
      * @param end The end of the range.
@@ -365,7 +365,7 @@ public interface ListBaseCommands {
      * the list. Here, <code>-1</code> means the last element, <code>-2</code> means the penultimate
      * and so forth.
      *
-     * @see <a href="https://redis.io/commands/lindex/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/lindex/">redis.io</a> for details.
      * @param key The key of the list.
      * @param index The index of the element in the list to retrieve.
      * @return The element at <code>index</code> in the list stored at <code>key</code>.<br>
@@ -389,7 +389,7 @@ public interface ListBaseCommands {
      * the list. Here, <code>-1</code> means the last element, <code>-2</code> means the penultimate
      * and so forth.
      *
-     * @see <a href="https://redis.io/commands/lindex/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/lindex/">redis.io</a> for details.
      * @param key The key of the list.
      * @param index The index of the element in the list to retrieve.
      * @return The element at <code>index</code> in the list stored at <code>key</code>.<br>
@@ -414,7 +414,7 @@ public interface ListBaseCommands {
      * These offsets can also be negative numbers indicating offsets starting at the end of the list,
      * with -1 being the last element of the list, -2 being the penultimate, and so on.
      *
-     * @see <a href="https://redis.io/commands/ltrim/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/ltrim/">redis.io</a> for details.
      * @param key The key of the list.
      * @param start The starting point of the range.
      * @param end The end of the range.
@@ -440,7 +440,7 @@ public interface ListBaseCommands {
      * These offsets can also be negative numbers indicating offsets starting at the end of the list,
      * with -1 being the last element of the list, -2 being the penultimate, and so on.
      *
-     * @see <a href="https://redis.io/commands/ltrim/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/ltrim/">redis.io</a> for details.
      * @param key The key of the list.
      * @param start The starting point of the range.
      * @param end The end of the range.
@@ -461,7 +461,7 @@ public interface ListBaseCommands {
     /**
      * Returns the length of the list stored at <code>key</code>.
      *
-     * @see <a href="https://redis.io/commands/llen/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/llen/">redis.io</a> for details.
      * @param key The key of the list.
      * @return The length of the list at <code>key</code>.<br>
      *     If <code>key</code> does not exist, it is interpreted as an empty list and <code>0</code>
@@ -477,7 +477,7 @@ public interface ListBaseCommands {
     /**
      * Returns the length of the list stored at <code>key</code>.
      *
-     * @see <a href="https://redis.io/commands/llen/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/llen/">redis.io</a> for details.
      * @param key The key of the list.
      * @return The length of the list at <code>key</code>.<br>
      *     If <code>key</code> does not exist, it is interpreted as an empty list and <code>0</code>
@@ -500,7 +500,7 @@ public interface ListBaseCommands {
      * If <code>count</code> is 0 or <code>count</code> is greater than the occurrences of elements
      * equal to <code>element</code>, it removes all elements equal to <code>element</code>.
      *
-     * @see <a href="https://redis.io/commands/lrem/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/lrem/">redis.io</a> for details.
      * @param key The key of the list.
      * @param count The count of the occurrences of elements equal to <code>element</code> to remove.
      * @param element The element to remove from the list.
@@ -524,7 +524,7 @@ public interface ListBaseCommands {
      * If <code>count</code> is 0 or <code>count</code> is greater than the occurrences of elements
      * equal to <code>element</code>, it removes all elements equal to <code>element</code>.
      *
-     * @see <a href="https://redis.io/commands/lrem/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/lrem/">redis.io</a> for details.
      * @param key The key of the list.
      * @param count The count of the occurrences of elements equal to <code>element</code> to remove.
      * @param element The element to remove from the list.
@@ -544,7 +544,7 @@ public interface ListBaseCommands {
      * leftmost element to the rightmost element. If <code>key</code> does not exist, it is created as
      * an empty list before performing the push operation.
      *
-     * @see <a href="https://redis.io/commands/rpush/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/rpush/">redis.io</a> for details.
      * @param key The key of the list.
      * @param elements The elements to insert at the tail of the list stored at <code>key</code>.
      * @return The length of the list after the push operation.
@@ -565,7 +565,7 @@ public interface ListBaseCommands {
      * leftmost element to the rightmost element. If <code>key</code> does not exist, it is created as
      * an empty list before performing the push operation.
      *
-     * @see <a href="https://redis.io/commands/rpush/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/rpush/">redis.io</a> for details.
      * @param key The key of the list.
      * @param elements The elements to insert at the tail of the list stored at <code>key</code>.
      * @return The length of the list after the push operation.
@@ -584,7 +584,7 @@ public interface ListBaseCommands {
      * Removes and returns the last elements of the list stored at <code>key</code>.<br>
      * The command pops a single element from the end of the list.
      *
-     * @see <a href="https://redis.io/commands/rpop/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/rpop/">redis.io</a> for details.
      * @param key The key of the list.
      * @return The value of the last element.<br>
      *     If <code>key</code> does not exist, <code>null</code> will be returned.
@@ -603,7 +603,7 @@ public interface ListBaseCommands {
      * Removes and returns up to <code>count</code> elements from the list stored at <code>key</code>,
      * depending on the list's length.
      *
-     * @see <a href="https://redis.io/commands/rpop/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/rpop/">redis.io</a> for details.
      * @param key The key of the list.
      * @param count The count of the elements to pop from the list.
      * @return An array of popped elements will be returned depending on the list's length.<br>
@@ -623,7 +623,7 @@ public interface ListBaseCommands {
      * Inserts <code>element</code> in the list at <code>key</code> either before or after the <code>
      * pivot</code>.
      *
-     * @see <a href="https://redis.io/commands/linsert/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/linsert/">redis.io</a> for details.
      * @param key The key of the list.
      * @param position The relative position to insert into - either {@link InsertPosition#BEFORE} or
      *     {@link InsertPosition#AFTER} the <code>pivot</code>.
@@ -645,7 +645,7 @@ public interface ListBaseCommands {
      * Inserts <code>element</code> in the list at <code>key</code> either before or after the <code>
      * pivot</code>.
      *
-     * @see <a href="https://redis.io/commands/linsert/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/linsert/">redis.io</a> for details.
      * @param key The key of the list.
      * @param position The relative position to insert into - either {@link InsertPosition#BEFORE} or
      *     {@link InsertPosition#AFTER} the <code>pivot</code>.
@@ -676,7 +676,7 @@ public interface ListBaseCommands {
      *           Commands</a> for more details and best practices.
      *     </ul>
      *
-     * @see <a href="https://redis.io/commands/blpop/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/blpop/">redis.io</a> for details.
      * @param keys The <code>keys</code> of the lists to pop from.
      * @param timeout The number of seconds to wait for a blocking operation to complete. A value of
      *     <code>0</code> will block indefinitely.
@@ -706,7 +706,7 @@ public interface ListBaseCommands {
      *           Commands</a> for more details and best practices.
      *     </ul>
      *
-     * @see <a href="https://redis.io/commands/brpop/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/brpop/">redis.io</a> for details.
      * @param keys The <code>keys</code> of the lists to pop from.
      * @param timeout The number of seconds to wait for a blocking operation to complete. A value of
      *     <code>0</code> will block indefinitely.
@@ -728,7 +728,7 @@ public interface ListBaseCommands {
      * <code>key</code> exists and holds a list. If <code>key</code> is not a list, this performs no
      * operation.
      *
-     * @see <a href="https://redis.io/commands/rpushx/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/rpushx/">redis.io</a> for details.
      * @param key The key of the list.
      * @param elements The elements to insert at the tail of the list stored at <code>key</code>.
      * @return The length of the list after the push operation.
@@ -745,7 +745,7 @@ public interface ListBaseCommands {
      * <code>key</code> exists and holds a list. If <code>key</code> is not a list, this performs no
      * operation.
      *
-     * @see <a href="https://redis.io/commands/rpushx/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/rpushx/">redis.io</a> for details.
      * @param key The key of the list.
      * @param elements The elements to insert at the tail of the list stored at <code>key</code>.
      * @return The length of the list after the push operation.
@@ -762,7 +762,7 @@ public interface ListBaseCommands {
      * <code>key</code> exists and holds a list. If <code>key</code> is not a list, this performs no
      * operation.
      *
-     * @see <a href="https://redis.io/commands/lpushx/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/lpushx/">redis.io</a> for details.
      * @param key The key of the list.
      * @param elements The elements to insert at the head of the list stored at <code>key</code>.
      * @return The length of the list after the push operation.
@@ -779,7 +779,7 @@ public interface ListBaseCommands {
      * <code>key</code> exists and holds a list. If <code>key</code> is not a list, this performs no
      * operation.
      *
-     * @see <a href="https://redis.io/commands/lpushx/">redis.io</a> for details.
+     * @see <a href="https://valkey.io/commands/lpushx/">redis.io</a> for details.
      * @param key The key of the list.
      * @param elements The elements to insert at the head of the list stored at <code>key</code>.
      * @return The length of the list after the push operation.

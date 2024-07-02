@@ -2,7 +2,9 @@
 package glide.api.models.commands.stream;
 
 import glide.api.commands.StreamBaseCommands;
+import glide.api.models.GlideString;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import lombok.NonNull;
 
@@ -63,6 +65,16 @@ public abstract class StreamTrimOptions {
         }
 
         return optionArgs.toArray(new String[0]);
+    }
+
+    /**
+     * Converts options for {@link StreamBaseCommands#xtrim(String, StreamTrimOptions)} into a
+     * GlideString[].
+     *
+     * @return GlideString[]
+     */
+    public GlideString[] toGlideStringArgs() {
+        return Arrays.stream(toArgs()).map(GlideString::gs).toArray(GlideString[]::new);
     }
 
     /** Option to trim the stream according to minimum ID. */

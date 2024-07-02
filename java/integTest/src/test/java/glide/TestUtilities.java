@@ -3,12 +3,14 @@ package glide;
 
 import static glide.TestConfiguration.CLUSTER_PORTS;
 import static glide.TestConfiguration.STANDALONE_PORTS;
+import static glide.api.models.GlideString.gs;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import glide.api.models.ClusterValue;
+import glide.api.models.GlideString;
 import glide.api.models.configuration.NodeAddress;
 import glide.api.models.configuration.RedisClientConfiguration;
 import glide.api.models.configuration.RedisClusterClientConfiguration;
@@ -199,7 +201,7 @@ public class TestUtilities {
         assertEquals(expected, response.get("engines"));
     }
 
-    /** Generate a LUA library code. */
+    /** Generate a String of LUA library code. */
     public static String generateLuaLibCode(
             String libName, Map<String, String> functions, boolean readonly) {
         StringBuilder code = new StringBuilder("#!lua name=" + libName + "\n");
@@ -215,6 +217,19 @@ public class TestUtilities {
             code.append(" }\n");
         }
         return code.toString();
+    }
+
+    /** Generate a Glidestring of LUA library code. */
+    public static GlideString generateLuaLibCodeBinary(
+            GlideString libName, Map<GlideString, GlideString> functions, boolean readonly) {
+
+        Map<String, String> transformedMap =
+                functions.entrySet().stream()
+                        .collect(
+                                Collectors.toMap(
+                                        entry -> entry.getKey().toString(), entry -> entry.getValue().toString()));
+
+        return gs(generateLuaLibCode(libName.toString(), transformedMap, readonly));
     }
 
     /**

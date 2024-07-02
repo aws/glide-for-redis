@@ -13,7 +13,6 @@ use redis::{Cmd, ErrorKind, PushInfo, Value};
 use redis::{RedisError, RedisResult};
 pub use standalone_client::StandaloneClient;
 use std::io;
-use std::ops::Deref;
 use std::time::Duration;
 pub use types::*;
 
@@ -327,11 +326,11 @@ impl Client {
         .boxed()
     }
 
-    pub async fn invoke_script<'a, T: Deref<Target = str>>(
+    pub async fn invoke_script<'a>(
         &'a mut self,
         hash: &'a str,
-        keys: Vec<T>,
-        args: Vec<T>,
+        keys: &Vec<&[u8]>,
+        args: &Vec<&[u8]>,
         routing: Option<RoutingInfo>,
     ) -> redis::RedisResult<Value> {
         let eval = eval_cmd(hash, keys, args);
@@ -343,7 +342,7 @@ impl Client {
             let Some(code) = get_script(hash) else {
                 return Err(err);
             };
-            let load = load_cmd(code.as_str());
+            let load = load_cmd(&code);
             self.send_command(&load, None).await?;
             self.send_command(&eval, routing).await
         } else {
@@ -352,20 +351,20 @@ impl Client {
     }
 }
 
-fn load_cmd(code: &str) -> Cmd {
+fn load_cmd(code: &[u8]) -> Cmd {
     let mut cmd = redis::cmd("SCRIPT");
     cmd.arg("LOAD").arg(code);
     cmd
 }
 
-fn eval_cmd<T: Deref<Target = str>>(hash: &str, keys: Vec<T>, args: Vec<T>) -> Cmd {
+fn eval_cmd(hash: &str, keys: &Vec<&[u8]>, args: &Vec<&[u8]>) -> Cmd {
     let mut cmd = redis::cmd("EVALSHA");
     cmd.arg(hash).arg(keys.len());
     for key in keys {
-        cmd.arg(&*key);
+        cmd.arg(key);
     }
     for arg in args {
-        cmd.arg(&*arg);
+        cmd.arg(arg);
     }
     cmd
 }

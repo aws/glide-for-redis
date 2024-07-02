@@ -43,6 +43,21 @@ public interface ConnectionManagementClusterCommands {
     CompletableFuture<String> ping(String message);
 
     /**
+     * Pings the Redis server.<br>
+     * The command will be routed to all primary nodes.
+     *
+     * @see <a href="https://redis.io/commands/ping/">redis.io</a> for details.
+     * @param message The server will respond with a copy of the message.
+     * @return <code>GlideString</code> with a copy of the argument <code>message</code>.
+     * @example
+     *     <pre>{@code
+     * GlideString payload = clusterClient.ping(gs("GLIDE")).get();
+     * assert payload.equals(gs("GLIDE"));
+     * }</pre>
+     */
+    CompletableFuture<GlideString> ping(GlideString message);
+
+    /**
      * Pings the Redis server.
      *
      * @see <a href="https://redis.io/commands/ping/">redis.io</a> for details.
@@ -72,6 +87,22 @@ public interface ConnectionManagementClusterCommands {
      * }</pre>
      */
     CompletableFuture<String> ping(String message, Route route);
+
+    /**
+     * Pings the Redis server.
+     *
+     * @see <a href="https://redis.io/commands/ping/">redis.io</a> for details.
+     * @param message The ping argument that will be returned.
+     * @param route Specifies the routing configuration for the command. The client will route the
+     *     command to the nodes defined by <code>route</code>.
+     * @return <code>GlideString</code> with a copy of the argument <code>message</code>.
+     * @example
+     *     <pre>{@code
+     * GlideString payload = clusterClient.ping(gs("GLIDE"), RANDOM).get();
+     * assert payload.equals(gs("GLIDE"));
+     * }</pre>
+     */
+    CompletableFuture<GlideString> ping(GlideString message, Route route);
 
     /**
      * Gets the current connection id.<br>

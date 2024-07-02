@@ -1,6 +1,7 @@
 /** Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0 */
 package glide.api.commands;
 
+import glide.api.models.GlideString;
 import glide.api.models.commands.FlushMode;
 import glide.api.models.commands.function.FunctionRestorePolicy;
 import glide.api.models.configuration.ReadFrom;
@@ -33,6 +34,24 @@ public interface ScriptingAndFunctionsCommands {
      * }</pre>
      */
     CompletableFuture<String> functionLoad(String libraryCode, boolean replace);
+
+    /**
+     * Loads a library to Redis.
+     *
+     * @since Redis 7.0 and above.
+     * @see <a href="https://redis.io/docs/latest/commands/function-load/">redis.io</a> for details.
+     * @param libraryCode The source code that implements the library.
+     * @param replace Whether the given library should overwrite a library with the same name if it
+     *     already exists.
+     * @return The library name that was loaded.
+     * @example
+     *     <pre>{@code
+     * GlideString code = gs("#!lua name=mylib \n redis.register_function('myfunc', function(keys, args) return args[1] end)");
+     * GlideString response = client.functionLoad(code, true).get();
+     * assert response.equals(gs("mylib"));
+     * }</pre>
+     */
+    CompletableFuture<GlideString> functionLoad(GlideString libraryCode, boolean replace);
 
     /**
      * Returns information about the functions and libraries.
@@ -131,6 +150,21 @@ public interface ScriptingAndFunctionsCommands {
     CompletableFuture<String> functionDelete(String libName);
 
     /**
+     * Deletes a library and all its functions.
+     *
+     * @since Redis 7.0 and above.
+     * @see <a href="https://redis.io/docs/latest/commands/function-delete/">redis.io</a> for details.
+     * @param libName The library name to delete.
+     * @return <code>OK</code>.
+     * @example
+     *     <pre>{@code
+     * String response = client.functionDelete(gs("myLib")).get();
+     * assert response.equals("OK");
+     * }</pre>
+     */
+    CompletableFuture<String> functionDelete(GlideString libName);
+
+    /**
      * Returns the serialized payload of all loaded libraries.
      *
      * @since Redis 7.0 and above.
@@ -195,6 +229,23 @@ public interface ScriptingAndFunctionsCommands {
     CompletableFuture<Object> fcall(String function);
 
     /**
+     * Invokes a previously loaded function.<br>
+     * This command is routed to primary nodes only.<br>
+     * To route to a replica please refer to {@link #fcallReadOnly}.
+     *
+     * @since Redis 7.0 and above.
+     * @see <a href="https://redis.io/docs/latest/commands/fcall/">redis.io</a> for details.
+     * @param function The function name.
+     * @return The invoked function's return value.
+     * @example
+     *     <pre>{@code
+     * Object response = client.fcall(gs("Deep_Thought")).get();
+     * assert response == 42L;
+     * }</pre>
+     */
+    CompletableFuture<Object> fcall(GlideString function);
+
+    /**
      * Invokes a previously loaded read-only function.<br>
      * This command is routed depending on the client's {@link ReadFrom} strategy.
      *
@@ -209,6 +260,22 @@ public interface ScriptingAndFunctionsCommands {
      * }</pre>
      */
     CompletableFuture<Object> fcallReadOnly(String function);
+
+    /**
+     * Invokes a previously loaded read-only function.<br>
+     * This command is routed depending on the client's {@link ReadFrom} strategy.
+     *
+     * @since Redis 7.0 and above.
+     * @see <a href="https://redis.io/docs/latest/commands/fcall_ro/">redis.io</a> for details.
+     * @param function The function name.
+     * @return The invoked function's return value.
+     * @example
+     *     <pre>{@code
+     * Object response = client.fcallReadOnly(gs("Deep_Thought")).get();
+     * assert response == 42L;
+     * }</pre>
+     */
+    CompletableFuture<Object> fcallReadOnly(GlideString function);
 
     /**
      * Kills a function that is currently executing.<br>

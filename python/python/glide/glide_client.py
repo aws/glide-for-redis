@@ -197,8 +197,7 @@ class BaseClient(CoreCommands):
         self._writer.write(b_arr)
         await self._writer.drain()
 
-    # TODO: change `str` to `TEncodable` where `TEncodable = Union[str, bytes]`
-    def _encode_arg(self, arg: str) -> bytes:
+    def _encode_arg(self, arg: Union[str, bytes]) -> bytes:
         """
         Converts a string argument to bytes.
 
@@ -208,9 +207,10 @@ class BaseClient(CoreCommands):
         Returns:
             bytes: The encoded argument as bytes.
         """
-
-        # TODO: Allow passing different encoding options
-        return bytes(arg, encoding="utf8")
+        if isinstance(arg, str):
+            # TODO: Allow passing different encoding options
+            return bytes(arg, encoding="utf8")
+        return arg
 
     # TODO: change `List[str]` to `List[TEncodable]` where `TEncodable = Union[str, bytes]`
     def _encode_and_sum_size(
@@ -294,8 +294,8 @@ class BaseClient(CoreCommands):
     async def _execute_script(
         self,
         hash: str,
-        keys: Optional[List[str]] = None,
-        args: Optional[List[str]] = None,
+        keys: Optional[List[Union[str, bytes]]] = None,
+        args: Optional[List[Union[str, bytes]]] = None,
         route: Optional[Route] = None,
     ) -> TResult:
         if self._is_closed:
@@ -305,8 +305,12 @@ class BaseClient(CoreCommands):
         request = RedisRequest()
         request.callback_idx = self._get_callback_index()
         request.script_invocation.hash = hash
-        request.script_invocation.args[:] = args if args is not None else []
-        request.script_invocation.keys[:] = keys if keys is not None else []
+        request.script_invocation.args[:] = (
+            [self._encode_arg(elem) for elem in args] if args is not None else []
+        )
+        request.script_invocation.keys[:] = (
+            [self._encode_arg(elem) for elem in keys] if keys is not None else []
+        )
         set_protobuf_route(request, route)
         return await self._write_request_await_response(request)
 
@@ -403,6 +407,8 @@ class BaseClient(CoreCommands):
             or message_kind == "Subscribe"
             or message_kind == "SSubscribe"
             or message_kind == "Unsubscribe"
+            or message_kind == "PUnsubscribe"
+            or message_kind == "SUnsubscribe"
         ):
             pass
         else:

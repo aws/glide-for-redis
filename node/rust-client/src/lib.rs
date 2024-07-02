@@ -15,6 +15,7 @@ use glide_core::start_socket_listener;
 use glide_core::MAX_REQUEST_ARGS_LENGTH;
 #[cfg(feature = "testing_utilities")]
 use napi::bindgen_prelude::BigInt;
+use napi::bindgen_prelude::Either;
 use napi::bindgen_prelude::Uint8Array;
 use napi::{Env, Error, JsObject, JsUnknown, Result, Status};
 use napi_derive::napi;
@@ -350,8 +351,11 @@ impl Script {
     /// Construct with the script's code.
     #[napi(constructor)]
     #[allow(dead_code)]
-    pub fn new(code: String) -> Self {
-        let hash = glide_core::scripts_container::add_script(&code);
+    pub fn new(code: Either<String, Uint8Array>) -> Self {
+        let hash = match code {
+            Either::A(code_str) => glide_core::scripts_container::add_script(code_str.as_bytes()),
+            Either::B(code_bytes) => glide_core::scripts_container::add_script(&code_bytes),
+        };
         Self { hash }
     }
 

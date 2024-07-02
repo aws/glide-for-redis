@@ -12,7 +12,7 @@ public class ThreadPoolResourceAllocator {
      * Sets up and returns the shared default ThreadPoolResource instance. On its first invocation,
      * this method creates and caches the defaultThreadPoolResource with a ThreadPoolResource instance
      * using the provided supplier. Subsequent calls return the cached instance, ensuring resource
-     * sharing among clients. If the current defaultThreadPoolResource’s ELG is in a shutting down
+     * sharing among clients. If the current defaultThreadPoolResource's ELG is in a shutting down
      * state, the cache is invalidated and a new default ThreadPoolResource is created and cached.
      *
      * @param supplier The supplier function used to create the ThreadPoolResource

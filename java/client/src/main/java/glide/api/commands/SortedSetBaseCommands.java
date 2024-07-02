@@ -27,6 +27,7 @@ import glide.api.models.commands.WeightAggregateOptions.KeysOrWeightedKeysBinary
 import glide.api.models.commands.WeightAggregateOptions.WeightedKeys;
 import glide.api.models.commands.ZAddOptions;
 import glide.api.models.commands.scan.ZScanOptions;
+import glide.api.models.commands.scan.ZScanOptionsBinary;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -2361,6 +2362,42 @@ public interface SortedSetBaseCommands {
      * @param key The key of the sorted set.
      * @param cursor The cursor that points to the next iteration of results. A value of <code>"0"
      *     </code> indicates the start of the search.
+     * @return An <code>Array</code> of <code>Objects</code>. The first element is always the <code>
+     *     cursor</code> for the next iteration of results. <code>"0"</code> will be the <code>cursor
+     *     </code> returned on the last iteration of the sorted set. The second element is always an
+     *     <code>
+     *     Array</code> of the subset of the sorted set held in <code>key</code>. The array in the
+     *     second element is always a flattened series of <code>String</code> pairs, where the value
+     *     is at even indices and the score is at odd indices.
+     * @example
+     *     <pre>{@code
+     * // Assume key contains a set with 200 member-score pairs
+     * GlideString cursor = gs("0");
+     * Object[] result;
+     * do {
+     *   result = client.zscan(key1, cursor).get();
+     *   cursor = gs(result[0].toString());
+     *   Object[] glideStringResults = (Object[]) result[1];
+     *
+     *   System.out.println("\nZSCAN iteration:");
+     *   for (int i = 0; i < glideStringResults.length; i += 2) {
+     *     System.out.printf("{%s=%s}", glideStringResults[i], glideStringResults[i + 1]);
+     *     if (i + 2 < glideStringResults.length) {
+     *       System.out.print(", ");
+     *     }
+     *   }
+     * } while (!cursor.equals(gs("0")));
+     * }</pre>
+     */
+    CompletableFuture<Object[]> zscan(GlideString key, GlideString cursor);
+
+    /**
+     * Iterates incrementally over a sorted set.
+     *
+     * @see <a href="https://valkey.io/commands/zscan">valkey.io</a> for details.
+     * @param key The key of the sorted set.
+     * @param cursor The cursor that points to the next iteration of results. A value of <code>"0"
+     *     </code> indicates the start of the search.
      * @param zScanOptions The {@link ZScanOptions}.
      * @return An <code>Array</code> of <code>Objects</code>. The first element is always the <code>
      *     cursor</code> for the next iteration of results. <code>"0"</code> will be the <code>cursor
@@ -2390,4 +2427,42 @@ public interface SortedSetBaseCommands {
      * }</pre>
      */
     CompletableFuture<Object[]> zscan(String key, String cursor, ZScanOptions zScanOptions);
+
+    /**
+     * Iterates incrementally over a sorted set.
+     *
+     * @see <a href="https://valkey.io/commands/zscan">valkey.io</a> for details.
+     * @param key The key of the sorted set.
+     * @param cursor The cursor that points to the next iteration of results. A value of <code>"0"
+     *     </code> indicates the start of the search.
+     * @param zScanOptions The {@link ZScanOptions}.
+     * @return An <code>Array</code> of <code>Objects</code>. The first element is always the <code>
+     *     cursor</code> for the next iteration of results. <code>"0"</code> will be the <code>cursor
+     *     </code> returned on the last iteration of the sorted set. The second element is always an
+     *     <code>
+     *     Array</code> of the subset of the sorted set held in <code>key</code>. The array in the
+     *     second element is always a flattened series of <code>String</code> pairs, where the value
+     *     is at even indices and the score is at odd indices.
+     * @example
+     *     <pre>{@code
+     * // Assume key contains a set with 200 member-score pairs
+     * GlideString cursor = gs("0");
+     * Object[] result;
+     * do {
+     *   result = client.zscan(key1, cursor, ZScanOptionsBinary.builder().matchPattern(gs("*")).count(20L).build()).get();
+     *   cursor = gs(result[0].toString());
+     *   Object[] glideStringResults = (Object[]) result[1];
+     *
+     *   System.out.println("\nZSCAN iteration:");
+     *   for (int i = 0; i < glideStringResults.length; i += 2) {
+     *     System.out.printf("{%s=%s}", glideStringResults[i], glideStringResults[i + 1]);
+     *     if (i + 2 < glideStringResults.length) {
+     *       System.out.print(", ");
+     *     }
+     *   }
+     * } while (!cursor.equals(gs("0")));
+     * }</pre>
+     */
+    CompletableFuture<Object[]> zscan(
+            GlideString key, GlideString cursor, ZScanOptionsBinary zScanOptions);
 }

@@ -11,10 +11,12 @@
     },
     "homepage": "https://github.com/aws/glide-for-redis#readme",
     "dependencies": {
+        "eslint-config-prettier": "^9.1.0",
+        "eslint-plugin-import": "^2.29.1",
         "glide-rs": "file:rust-client",
         "long": "^5.2.3",
         "npmignore": "^0.3.0",
-        "prettier": "^3.2.5",
+        "prettier": "^3.3.2",
         "protobufjs": "^7.2.2"
     },
     "bundleDependencies": [
@@ -46,10 +48,10 @@
         "@types/minimist": "^1.2.5",
         "@types/redis-server": "^1.2.0",
         "@types/uuid": "^9.0.1",
-        "@typescript-eslint/eslint-plugin": "^5.54.1",
-        "@typescript-eslint/parser": "^5.54.1",
+        "@typescript-eslint/eslint-plugin": "^5.62.0",
+        "@typescript-eslint/parser": "^5.62.0",
         "babel-jest": "^28.1.3",
-        "eslint": "^8.36.0",
+        "eslint": "^8.57.0",
         "eslint-plugin-tsdoc": "^0.2.17",
         "find-free-port": "^2.0.0",
         "jest": "^28.1.3",

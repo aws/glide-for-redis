@@ -100,6 +100,25 @@ public interface ListBaseCommands {
     CompletableFuture<Long> lpos(String key, String element);
 
     /**
+     * Returns the index of the first occurrence of <code>element</code> inside the list specified by
+     * <code>key</code>. If no match is found, <code>null</code> is returned.
+     *
+     * @since Redis 6.0.6.
+     * @see <a href="https://redis.io/docs/latest/commands/lpos/">redis.io</a> for details.
+     * @param key The name of the list.
+     * @param element The value to search for within the list.
+     * @return The index of the first occurrence of <code>element</code>, or <code>null</code> if
+     *     <code>element</code> is not in the list.
+     * @example
+     *     <pre>{@code
+     * Long listLen = client.rpush(gs("my_list"), new GlideString[] {gs("a"), gs("b"), gs("c"), gs("d"), gs("e"), gs("e")}).get();
+     * Long position = client.lpos(gs("my_list"), gs("e")).get();
+     * assert position == 4L;
+     * }</pre>
+     */
+    CompletableFuture<Long> lpos(GlideString key, GlideString element);
+
+    /**
      * Returns the index of an occurrence of <code>element</code> within a list based on the given
      * <code>options</code>. If no match is found, <code>null</code> is returned.
      *
@@ -129,6 +148,35 @@ public interface ListBaseCommands {
             @NonNull String key, @NonNull String element, @NonNull LPosOptions options);
 
     /**
+     * Returns the index of an occurrence of <code>element</code> within a list based on the given
+     * <code>options</code>. If no match is found, <code>null</code> is returned.
+     *
+     * @since Redis 6.0.6.
+     * @see <a href="https://redis.io/docs/latest/commands/lpos/">redis.io</a> for details.
+     * @param key The name of the list.
+     * @param element The value to search for within the list.
+     * @param options The LPos options.
+     * @return The index of <code>element</code>, or <code>null</code> if <code>element</code> is not
+     *     in the list.
+     * @example
+     *     <pre>{@code
+     * Long listLen = client.rpush(gs("my_list")), new GlideString[] {gs("a"), gs("b"), gs("c"), gs("d"), gs("e"), gs("e")}).get();
+     *
+     * // Returns the second occurrence of the element gs("e").
+     * LPosOptions options1 = LPosOptions.builder().rank(2L).build();
+     * Long position1 = client.lpos(gs("my_list"), gs("e"), options1).get();
+     * assert position1 == 5L;
+     *
+     * // rank and maxLength
+     * LPosOptions options2 = LPosOptions.builder().rank(1L).maxLength(1000L).build();
+     * Long position2 = client.lpos(gs("my_list"), gs("e"), options2).get();
+     * assert position2 == 4L;
+     * }</pre>
+     */
+    CompletableFuture<Long> lpos(
+            @NonNull GlideString key, @NonNull GlideString element, @NonNull LPosOptions options);
+
+    /**
      * Returns an <code>array</code> of indices of matching elements within a list.
      *
      * @since Redis 6.0.6.
@@ -145,6 +193,25 @@ public interface ListBaseCommands {
      * }</pre>
      */
     CompletableFuture<Long[]> lposCount(@NonNull String key, @NonNull String element, long count);
+
+    /**
+     * Returns an <code>array</code> of indices of matching elements within a list.
+     *
+     * @since Redis 6.0.6.
+     * @see <a href="https://redis.io/docs/latest/commands/lpos/">redis.io</a> for details.
+     * @param key The name of the list.
+     * @param element The value to search for within the list.
+     * @param count The number of matches wanted.
+     * @return An <code>array</code> that holds the indices of the matching elements within the list.
+     * @example
+     *     <pre>{@code
+     * Long listLen = client.rpush(gs("my_list"), new GlideString[] {gs("a"), gs("b"), gs("c"), gs("d"), gs("e"), gs("e"), gs("e")}).get();
+     * Long[] position = client.lposCount(gs("my_list"), gs("e"), 3L).get());
+     * assertArrayEquals(new Long[]{4L, 5L, 6L}, position);
+     * }</pre>
+     */
+    CompletableFuture<Long[]> lposCount(
+            @NonNull GlideString key, @NonNull GlideString element, long count);
 
     /**
      * Returns an <code>array</code> of indices of matching elements within a list based on the given
@@ -174,6 +241,38 @@ public interface ListBaseCommands {
      */
     CompletableFuture<Long[]> lposCount(
             @NonNull String key, @NonNull String element, long count, @NonNull LPosOptions options);
+
+    /**
+     * Returns an <code>array</code> of indices of matching elements within a list based on the given
+     * <code>options</code>. If no match is found, an empty <code>array</code>is returned.
+     *
+     * @since Redis 6.0.6.
+     * @see <a href="https://redis.io/docs/latest/commands/lpos/">redis.io</a> for details.
+     * @param key The name of the list.
+     * @param element The value to search for within the list.
+     * @param count The number of matches wanted.
+     * @param options The LPos options.
+     * @return An <code>array</code> that holds the indices of the matching elements within the list.
+     * @example
+     *     <pre>{@code
+     * Long listLen = client.rpush(gs("my_list"), new GlideString[] {gs("a"), gs("b"), gs("c"), gs("d"), gs("e"), gs("e"), gs("e")}).get();
+     *
+     * // rank
+     * LPosOptions options1 = LPosOptions.builder().rank(2L).build();
+     * Long[] position1 = client.lposCount(gs("my_list"), gs("e"), 1L, options1).get();
+     * assertArrayEquals(new Long[]{5L}, position1);
+     *
+     * // rank and maxLength
+     * LPosOptions options2 = LPosOptions.builder.rank(2L).maxLength(1000L).build();
+     * Long[] position2 = client.lposCount(gs("my_list"), gs("e"), 3L, options2).get();
+     * assertArrayEquals(new Long[]{5L, 6L}, position2);
+     * }</pre>
+     */
+    CompletableFuture<Long[]> lposCount(
+            @NonNull GlideString key,
+            @NonNull GlideString element,
+            long count,
+            @NonNull LPosOptions options);
 
     /**
      * Removes and returns up to <code>count</code> elements of the list stored at <code>key</code>,
@@ -226,6 +325,38 @@ public interface ListBaseCommands {
      * }</pre>
      */
     CompletableFuture<String[]> lrange(String key, long start, long end);
+
+    /**
+     * Returns the specified elements of the list stored at <code>key</code>.<br>
+     * The offsets <code>start</code> and <code>end</code> are zero-based indexes, with <code>0</code>
+     * being the first element of the list, <code>1</code> being the next element and so on. These
+     * offsets can also be negative numbers indicating offsets starting at the end of the list, with
+     * <code>-1</code> being the last element of the list, <code>-2</code> being the penultimate, and
+     * so on.
+     *
+     * @see <a href="https://redis.io/commands/lrange/">redis.io</a> for details.
+     * @param key The key of the list.
+     * @param start The starting point of the range.
+     * @param end The end of the range.
+     * @return Array of elements in the specified range.<br>
+     *     If <code>start</code> exceeds the end of the list, or if <code>start</code> is greater than
+     *     <code>end</code>, an empty array will be returned.<br>
+     *     If <code>end</code> exceeds the actual end of the list, the range will stop at the actual
+     *     end of the list.<br>
+     *     If <code>key</code> does not exist an empty array will be returned.
+     * @example
+     *     <pre>{@code
+     * GlideString[] payload = lient.lrange(gs("my_list"), 0, 2).get();
+     * assert Arrays.equals(new GlideString[] {gs("value1"), gs("value2"), gs("value3")});
+     *
+     * GlideString[] payload = client.lrange(gs("my_list"), -2, -1).get();
+     * assert Arrays.equals(new GlideString[] {gs("value2"), gs("value3")});
+     *
+     * GlideString[] payload = client.lrange(gs("non_exiting_key"), 0, 2).get();
+     * assert Arrays.equals(new GlideString[] {});
+     * }</pre>
+     */
+    CompletableFuture<GlideString[]> lrange(GlideString key, long start, long end);
 
     /**
      * Returns the element at <code>index</code> from the list stored at <code>key</code>.<br>

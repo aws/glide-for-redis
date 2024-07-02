@@ -415,6 +415,43 @@ class ClusterCommands(CoreCommands):
             ),
         )
 
+    async def fcall_route(
+        self,
+        function: str,
+        arguments: Optional[List[str]] = None,
+        route: Optional[Route] = None,
+    ) -> TClusterResponse[TResult]:
+        """
+        Invokes a previously loaded function.
+        See https://redis.io/commands/fcall/ for more details.
+
+        Args:
+            function (str): The function name.
+            arguments (Optional[List[str]]): A list of `function` arguments. `Arguments`
+                should not represent names of keys.
+            route (Optional[Route]): The command will be routed to a random primay node, unless `route` is provided, in which
+                case the client will route the command to the nodes defined by `route`. Defaults to None.
+
+        Returns:
+            TClusterResponse[TResult]:
+                If a single node route is requested, returns a Optional[TResult] representing the function's return value.
+                Otherwise, returns a dict of [str , Optional[TResult]] where each key contains the address of
+                the queried node and the value contains the function's return value.
+
+        Example:
+            >>> await client.fcall("Deep_Thought", ["Answer", "to", "the", "Ultimate", "Question", "of", "Life,", "the", "Universe,", "and", "Everything"], RandomNode())
+                'new_value' # Returns the function's return value.
+
+        Since: Redis version 7.0.0.
+        """
+        args = [function, "0"]
+        if arguments is not None:
+            args.extend(arguments)
+        return cast(
+            TClusterResponse[TResult],
+            await self._execute_command(RequestType.FCall, args, route),
+        )
+
     async def fcall_ro_route(
         self,
         function: str,
@@ -593,22 +630,23 @@ class ClusterCommands(CoreCommands):
         """
         Publish a message on pubsub channel.
         This command aggregates PUBLISH and SPUBLISH commands functionalities.
-        The mode is selected using the 'sharded' parameter
+        The mode is selected using the 'sharded' parameter.
+        For both sharded and non-sharded mode, request is routed using hashed channel as key.
         See https://valkey.io/commands/publish and https://valkey.io/commands/spublish for more details.
 
         Args:
             message (str): Message to publish
             channel (str): Channel to publish the message on.
-            sharded (bool): Use sharded pubsub mode.
+            sharded (bool): Use sharded pubsub mode. Available since Redis version 7.0.
 
         Returns:
-            int: Number of subscriptions in that shard that received the message.
+            int: Number of subscriptions in that node that received the message.
 
         Examples:
             >>> await client.publish("Hi all!", "global-channel", False)
-                1  # Publishes "Hi all!" message on global-channel channel using non-sharded mode
+                1  # Published 1 instance of "Hi all!" message on global-channel channel using non-sharded mode
             >>> await client.publish("Hi to sharded channel1!", "channel1, True)
-                2  # Publishes "Hi to sharded channel1!" message on channel1 using sharded mode
+                2  # Published 2 instances of "Hi to sharded channel1!" message on channel1 using sharded mode
         """
         result = await self._execute_command(
             RequestType.SPublish if sharded else RequestType.Publish, [channel, message]

@@ -4,8 +4,9 @@ use bytes::Bytes;
  */
 use glide_core::start_socket_listener;
 use glide_core::MAX_REQUEST_ARGS_LENGTH;
+use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
-use pyo3::types::{PyBool, PyBytes, PyDict, PyFloat, PyList, PySet};
+use pyo3::types::{PyAny, PyBool, PyBytes, PyDict, PyFloat, PyList, PySet};
 use pyo3::Python;
 
 use redis::Value;
@@ -40,9 +41,18 @@ pub struct Script {
 #[pymethods]
 impl Script {
     #[new]
-    fn new(code: String) -> Self {
-        let hash = glide_core::scripts_container::add_script(&code);
-        Script { hash }
+    fn new(code: &PyAny) -> PyResult<Self> {
+        let hash = if let Ok(code_str) = code.extract::<String>() {
+            glide_core::scripts_container::add_script(code_str.as_bytes())
+        } else if let Ok(code_bytes) = code.extract::<&PyBytes>() {
+            glide_core::scripts_container::add_script(code_bytes.as_bytes())
+        } else {
+            return Err(PyTypeError::new_err(
+                "code must be either a String or PyBytes",
+            ));
+        };
+
+        Ok(Script { hash })
     }
 
     fn get_hash(&self) -> String {

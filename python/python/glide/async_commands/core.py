@@ -357,8 +357,8 @@ class CoreCommands(Protocol):
     async def _execute_script(
         self,
         hash: str,
-        keys: Optional[List[str]] = None,
-        args: Optional[List[str]] = None,
+        keys: Optional[List[Union[str, bytes]]] = None,
+        args: Optional[List[Union[str, bytes]]] = None,
         route: Optional[Route] = None,
     ) -> TResult: ...
 
@@ -4957,8 +4957,8 @@ class CoreCommands(Protocol):
     async def invoke_script(
         self,
         script: Script,
-        keys: Optional[List[str]] = None,
-        args: Optional[List[str]] = None,
+        keys: Optional[List[Union[str, bytes]]] = None,
+        args: Optional[List[Union[str, bytes]]] = None,
     ) -> TResult:
         """
         Invokes a Lua script with its keys and arguments.
@@ -4971,8 +4971,8 @@ class CoreCommands(Protocol):
 
         Args:
             script (Script): The Lua script to execute.
-            keys (List[str]): The keys that are used in the script.
-            args (List[str]): The arguments for the script.
+            keys (List[Union[str, bytes]]): The keys that are used in the script.
+            args (List[Union[str, bytes]]): The arguments for the script.
 
         Returns:
             TResult: a value that depends on the script that was executed.
@@ -5700,6 +5700,48 @@ class CoreCommands(Protocol):
             await self._execute_command(RequestType.HScan, args),
         )
 
+    async def fcall(
+        self,
+        function: str,
+        keys: Optional[List[str]] = None,
+        arguments: Optional[List[str]] = None,
+    ) -> TResult:
+        """
+        Invokes a previously loaded function.
+        See https://redis.io/commands/fcall/ for more details.
+
+        When in cluster mode, all keys in `keys` must map to the same hash slot.
+
+        Args:
+            function (str): The function name.
+            keys (Optional[List[str]]): A list of keys accessed by the function. To ensure the correct
+                execution of functions, both in standalone and clustered deployments, all names of keys
+                that a function accesses must be explicitly provided as `keys`.
+            arguments (Optional[List[str]]): A list of `function` arguments. `Arguments`
+                should not represent names of keys.
+
+        Returns:
+            TResult:
+                The invoked function's return value.
+
+        Example:
+            >>> await client.fcall("Deep_Thought")
+                'new_value' # Returns the function's return value.
+
+        Since: Redis version 7.0.0.
+        """
+        args = []
+        if keys is not None:
+            args.extend([function, str(len(keys))] + keys)
+        else:
+            args.extend([function, str(0)])
+        if arguments is not None:
+            args.extend(arguments)
+        return cast(
+            TResult,
+            await self._execute_command(RequestType.FCall, args),
+        )
+
     async def fcall_ro(
         self,
         function: str,
@@ -5998,4 +6040,62 @@ class CoreCommands(Protocol):
         return cast(
             Mapping[str, Union[list[list[Union[list[int], int]]], int]],
             await self._execute_command(RequestType.LCS, args),
+        )
+
+    async def lpos(
+        self,
+        key: str,
+        element: str,
+        rank: Optional[int] = None,
+        count: Optional[int] = None,
+        max_len: Optional[int] = None,
+    ) -> Union[int, list[int], None]:
+        """
+        Returns the index or indexes of element(s) matching `element` in the `key` list. If no match is found,
+        None is returned.
+
+        See https://valkey.io/commands/lpos for more details.
+
+        Args:
+            key (str): The name of the list.
+            element (str): The value to search for within the list.
+            rank (Optional[int]): The rank of the match to return.
+            count (Optional[int]): The number of matches wanted. A `count` of 0 returns all the matches.
+            max_len (Optional[int]): The maximum number of comparisons to make between the element and the items
+                                     in the list. A `max_len` of 0 means unlimited amount of comparisons.
+
+        Returns:
+            Union[int, list[int], None]: The index of the first occurrence of `element`,
+            or None if `element` is not in the list.
+            With the `count` option, a list of indices of matching elements will be returned.
+
+        Examples:
+            >>> await client.rpush(key, ['a', 'b', 'c', '1', '2', '3', 'c', 'c'])
+            >>> await client.lpos(key, 'c')
+                2
+            >>> await client.lpos(key, 'c', rank = 2)
+                6
+            >>> await client.lpos(key, 'c', rank = -1)
+                7
+            >>> await client.lpos(key, 'c', count = 2)
+                [2, 6]
+            >>> await client.lpos(key, 'c', count = 0)
+                [2, 6, 7]
+
+        Since: Redis version 6.0.6.
+        """
+        args = [key, element]
+
+        if rank is not None:
+            args.extend(["RANK", str(rank)])
+
+        if count is not None:
+            args.extend(["COUNT", str(count)])
+
+        if max_len is not None:
+            args.extend(["MAXLEN", str(max_len)])
+
+        return cast(
+            Union[int, list[int], None],
+            await self._execute_command(RequestType.LPos, args),
         )

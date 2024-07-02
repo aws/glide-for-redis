@@ -276,16 +276,16 @@ pub extern "system" fn Java_glide_ffi_resolvers_SocketListenerResolver_startSock
 pub extern "system" fn Java_glide_ffi_resolvers_ScriptResolver_storeScript<'local>(
     mut env: JNIEnv<'local>,
     _class: JClass<'local>,
-    code: JString,
+    code: JByteArray,
 ) -> JObject<'local> {
     handle_panics(
         move || {
             fn store_script<'a>(
                 env: &mut JNIEnv<'a>,
-                code: JString,
+                code: JByteArray,
             ) -> Result<JObject<'a>, FFIError> {
-                let code_str: String = env.get_string(&code)?.into();
-                let hash = glide_core::scripts_container::add_script(&code_str);
+                let code_byte_array = env.convert_byte_array(code)?;
+                let hash = glide_core::scripts_container::add_script(&code_byte_array);
                 Ok(JObject::from(env.new_string(hash)?))
             }
             let result = store_script(&mut env, code);

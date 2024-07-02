@@ -8,7 +8,8 @@ import java.util.Map;
 import lombok.Builder;
 
 /**
- * Optional arguments to {@link StreamBaseCommands#xadd(String, Map, StreamAddOptions)}
+ * Optional arguments to {@link StreamBaseCommands#xadd(String, Map, StreamAddOptions)} and {@link
+ * StreamBaseCommands#xadd(GlideString, Map, StreamAddOptions)}
  *
  * @see <a href="https://valkey.io/commands/xadd/">valkey.io</a>
  */

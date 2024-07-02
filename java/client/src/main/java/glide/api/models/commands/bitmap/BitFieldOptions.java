@@ -4,6 +4,8 @@ package glide.api.models.commands.bitmap;
 import static glide.utils.ArrayTransformUtils.concatenateArrays;
 
 import glide.api.commands.BitmapBaseCommands;
+import glide.api.models.GlideString;
+import java.util.Arrays;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
@@ -231,5 +233,19 @@ public class BitFieldOptions {
         }
 
         return arguments;
+    }
+
+    /**
+     * Creates the arguments to be used in {@link BitmapBaseCommands#bitfield(GlideString,
+     * BitFieldSubCommands[])} and {@link BitmapBaseCommands#bitfieldReadOnly(GlideString,
+     * BitFieldReadOnlySubCommands[])}.
+     *
+     * @param subCommands commands that holds arguments to be included in the argument String array.
+     * @return a GlideString array that holds the sub commands and their arguments.
+     */
+    public static GlideString[] createBitFieldGlideStringArgs(BitFieldSubCommands[] subCommands) {
+        return Arrays.stream(createBitFieldArgs(subCommands))
+                .map(GlideString::gs)
+                .toArray(GlideString[]::new);
     }
 }

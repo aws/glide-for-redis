@@ -52,6 +52,7 @@ import glide.api.models.Transaction;
 import glide.api.models.commands.FlushMode;
 import glide.api.models.commands.InfoOptions;
 import glide.api.models.commands.SortOptions;
+import glide.api.models.commands.SortOptionsBinary;
 import glide.api.models.commands.function.FunctionRestorePolicy;
 import glide.api.models.configuration.RedisClientConfiguration;
 import java.util.Arrays;
@@ -113,6 +114,12 @@ public class RedisClient extends BaseClient
     public CompletableFuture<String> ping(@NonNull String message) {
         return commandManager.submitNewCommand(
                 Ping, new String[] {message}, this::handleStringResponse);
+    }
+
+    @Override
+    public CompletableFuture<GlideString> ping(@NonNull GlideString message) {
+        return commandManager.submitNewCommand(
+                Ping, new GlideString[] {message}, this::handleGlideStringResponse);
     }
 
     @Override
@@ -252,6 +259,17 @@ public class RedisClient extends BaseClient
     }
 
     @Override
+    public CompletableFuture<GlideString> functionLoad(
+            @NonNull GlideString libraryCode, boolean replace) {
+        GlideString[] arguments =
+                replace
+                        ? new GlideString[] {gs(REPLACE.toString()), libraryCode}
+                        : new GlideString[] {libraryCode};
+        return commandManager.submitNewCommand(
+                FunctionLoad, arguments, this::handleGlideStringResponse);
+    }
+
+    @Override
     public CompletableFuture<Boolean> move(@NonNull String key, long dbIndex) {
         return commandManager.submitNewCommand(
                 Move, new String[] {key, Long.toString(dbIndex)}, this::handleBooleanResponse);
@@ -301,6 +319,12 @@ public class RedisClient extends BaseClient
     }
 
     @Override
+    public CompletableFuture<String> functionDelete(@NonNull GlideString libName) {
+        return commandManager.submitNewCommand(
+                FunctionDelete, new GlideString[] {libName}, this::handleStringResponse);
+    }
+
+    @Override
     public CompletableFuture<byte[]> functionDump() {
         return commandManager.submitNewCommand(
                 FunctionDump, new GlideString[0], this::handleBytesOrNullResponse);
@@ -327,8 +351,18 @@ public class RedisClient extends BaseClient
     }
 
     @Override
+    public CompletableFuture<Object> fcall(@NonNull GlideString function) {
+        return fcall(function, new GlideString[0], new GlideString[0]);
+    }
+
+    @Override
     public CompletableFuture<Object> fcallReadOnly(@NonNull String function) {
         return fcallReadOnly(function, new String[0], new String[0]);
+    }
+
+    @Override
+    public CompletableFuture<Object> fcallReadOnly(@NonNull GlideString function) {
+        return fcallReadOnly(function, new GlideString[0], new GlideString[0]);
     }
 
     @Override
@@ -404,6 +438,16 @@ public class RedisClient extends BaseClient
     }
 
     @Override
+    public CompletableFuture<GlideString[]> sort(
+            @NonNull GlideString key, @NonNull SortOptionsBinary sortOptions) {
+        GlideString[] arguments = ArrayUtils.addFirst(sortOptions.toGlideStringArgs(), key);
+        return commandManager.submitNewCommand(
+                Sort,
+                arguments,
+                response -> castArray(handleArrayOrNullResponseBinary(response), GlideString.class));
+    }
+
+    @Override
     public CompletableFuture<String[]> sortReadOnly(
             @NonNull String key, @NonNull SortOptions sortOptions) {
         String[] arguments = ArrayUtils.addFirst(sortOptions.toArgs(), key);
@@ -414,11 +458,32 @@ public class RedisClient extends BaseClient
     }
 
     @Override
+    public CompletableFuture<GlideString[]> sortReadOnly(
+            @NonNull GlideString key, @NonNull SortOptionsBinary sortOptions) {
+        GlideString[] arguments = ArrayUtils.addFirst(sortOptions.toGlideStringArgs(), key);
+        return commandManager.submitNewCommand(
+                SortReadOnly,
+                arguments,
+                response -> castArray(handleArrayOrNullResponseBinary(response), GlideString.class));
+    }
+
+    @Override
     public CompletableFuture<Long> sortStore(
             @NonNull String key, @NonNull String destination, @NonNull SortOptions sortOptions) {
         String[] storeArguments = new String[] {STORE_COMMAND_STRING, destination};
         String[] arguments =
                 concatenateArrays(new String[] {key}, sortOptions.toArgs(), storeArguments);
+        return commandManager.submitNewCommand(Sort, arguments, this::handleLongResponse);
+    }
+
+    @Override
+    public CompletableFuture<Long> sortStore(
+            @NonNull GlideString key,
+            @NonNull GlideString destination,
+            @NonNull SortOptionsBinary sortOptions) {
+        GlideString[] storeArguments = new GlideString[] {gs(STORE_COMMAND_STRING), destination};
+        GlideString[] arguments =
+                concatenateArrays(new GlideString[] {key}, sortOptions.toGlideStringArgs(), storeArguments);
         return commandManager.submitNewCommand(Sort, arguments, this::handleLongResponse);
     }
 }

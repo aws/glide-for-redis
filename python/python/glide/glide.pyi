@@ -1,6 +1,6 @@
 from collections.abc import Callable
 from enum import Enum
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from glide.constants import TResult
 
@@ -17,7 +17,7 @@ class Level(Enum):
     def is_lower(self, level: Level) -> bool: ...
 
 class Script:
-    def __init__(self, code: str) -> None: ...
+    def __init__(self, code: Union[str, bytes]) -> None: ...
     def get_hash(self) -> str: ...
     def __del__(self) -> None: ...
 

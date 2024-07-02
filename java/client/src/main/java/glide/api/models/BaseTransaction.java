@@ -23,8 +23,8 @@ import static glide.api.models.commands.function.FunctionLoadOptions.REPLACE;
 import static glide.api.models.commands.stream.StreamClaimOptions.JUST_ID_REDIS_API;
 import static glide.utils.ArrayTransformUtils.concatenateArrays;
 import static glide.utils.ArrayTransformUtils.convertMapToKeyValueStringArray;
-import static glide.utils.ArrayTransformUtils.convertMapToValueKeyStringArray;
 import static glide.utils.ArrayTransformUtils.flattenMapToGlideStringArray;
+import static glide.utils.ArrayTransformUtils.flattenMapToGlideStringArrayValueFirst;
 import static glide.utils.ArrayTransformUtils.mapGeoDataToArray;
 import static redis_request.RedisRequestOuterClass.RequestType.Append;
 import static redis_request.RedisRequestOuterClass.RequestType.BLMPop;
@@ -235,8 +235,11 @@ import glide.api.models.commands.SetOptions.SetOptionsBuilder;
 import glide.api.models.commands.WeightAggregateOptions;
 import glide.api.models.commands.WeightAggregateOptions.Aggregate;
 import glide.api.models.commands.WeightAggregateOptions.KeyArray;
+import glide.api.models.commands.WeightAggregateOptions.KeyArrayBinary;
 import glide.api.models.commands.WeightAggregateOptions.KeysOrWeightedKeys;
+import glide.api.models.commands.WeightAggregateOptions.KeysOrWeightedKeysBinary;
 import glide.api.models.commands.WeightAggregateOptions.WeightedKeys;
+import glide.api.models.commands.WeightAggregateOptions.WeightedKeysBinary;
 import glide.api.models.commands.ZAddOptions;
 import glide.api.models.commands.bitmap.BitFieldOptions.BitFieldGet;
 import glide.api.models.commands.bitmap.BitFieldOptions.BitFieldIncrby;
@@ -298,10 +301,6 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
     /** Command class to send a single request to Redis. */
     protected final Transaction.Builder protobufTransaction = Transaction.newBuilder();
 
-    protected static final GlideString GLIDE_STRING = GlideString.of("gs");
-
-    protected static final String STRING = "string";
-
     protected boolean binarySafeOutput = false;
 
     protected abstract T getThis();
@@ -324,6 +323,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * Executes a single command, without checking inputs. Every part of the command, including
      * subcommands, should be added as a separate value in args.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @apiNote See <a
      *     href="https://github.com/aws/glide-for-redis/wiki/General-Concepts#custom-command">Glide
      *     for Redis Wiki</a> for details on the restrictions and limitations of the custom command
@@ -336,21 +337,23 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * }</pre>
      */
     public <ArgType> T customCommand(ArgType[] args) {
-        ArgsArray commandArgs = buildArgs(args);
-        protobufTransaction.addCommands(buildCommand(CustomCommand, commandArgs));
+        checkTypeOrThrow(args);
+        protobufTransaction.addCommands(buildCommand(CustomCommand, newArgsBuilder().add(args)));
         return getThis();
     }
 
     /**
      * Echoes the provided <code>message</code> back.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/echo>redis.io</a> for details.
      * @param message The message to be echoed back.
      * @return Command Response - The provided <code>message</code>.
      */
     public <ArgType> T echo(@NonNull ArgType message) {
-        ArgsArray commandArgs = buildArgs(message);
-        protobufTransaction.addCommands(buildCommand(Echo, commandArgs));
+        checkTypeOrThrow(message);
+        protobufTransaction.addCommands(buildCommand(Echo, newArgsBuilder().add(message)));
         return getThis();
     }
 
@@ -368,13 +371,15 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
     /**
      * Pings the Redis server.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/ping/">redis.io</a> for details.
      * @param msg The ping argument that will be returned.
      * @return Command Response - A response from Redis with a <code>String</code>.
      */
     public <ArgType> T ping(@NonNull ArgType msg) {
-        ArgsArray commandArgs = buildArgs(msg);
-        protobufTransaction.addCommands(buildCommand(Ping, commandArgs));
+        checkTypeOrThrow(msg);
+        protobufTransaction.addCommands(buildCommand(Ping, newArgsBuilder().add(msg)));
         return getThis();
     }
 
@@ -399,8 +404,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @return Command Response - A <code>String</code> containing the requested {@link Section}s.
      */
     public T info(@NonNull InfoOptions options) {
-        ArgsArray commandArgs = buildArgs(options.toArgs());
-        protobufTransaction.addCommands(buildCommand(Info, commandArgs));
+        protobufTransaction.addCommands(buildCommand(Info, newArgsBuilder().add(options.toArgs())));
         return getThis();
     }
 
@@ -408,25 +412,30 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * Removes the specified <code>keys</code> from the database. A key is ignored if it does not
      * exist.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/del/">redis.io</a> for details.
      * @param keys The keys we wanted to remove.
      * @return Command Response - The number of keys that were removed.
      */
     public <ArgType> T del(@NonNull ArgType[] keys) {
-        ArgsArray commandArgs = buildArgs(keys);
-        protobufTransaction.addCommands(buildCommand(Del, commandArgs));
+        checkTypeOrThrow(keys);
+        protobufTransaction.addCommands(buildCommand(Del, newArgsBuilder().add(keys)));
         return getThis();
     }
 
     /**
      * Gets the value associated with the given key, or null if no such value exists.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/get/">redis.io</a> for details.
      * @param key The key to retrieve from the database.
      * @return Command Response - If <code>key</code> exists, returns the <code>value</code> of <code>
      *     key</code> as a String. Otherwise, return <code>null</code>.
      */
     public <ArgType> T get(@NonNull ArgType key) {
+        checkTypeOrThrow(key);
         protobufTransaction.addCommands(buildCommand(Get, newArgsBuilder().add(key)));
         return getThis();
     }
@@ -434,14 +443,16 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
     /**
      * Gets a string value associated with the given <code>key</code> and deletes the key.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/docs/latest/commands/getdel/">redis.io</a> for details.
      * @param key The <code>key</code> to retrieve from the database.
      * @return Command Response - If <code>key</code> exists, returns the <code>value</code> of <code>
      *     key</code>. Otherwise, return <code>null</code>.
      */
     public <ArgType> T getdel(@NonNull ArgType key) {
-        ArgsArray commandArgs = buildArgs(key);
-        protobufTransaction.addCommands(buildCommand(GetDel, commandArgs));
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(GetDel, newArgsBuilder().add(key)));
         return getThis();
     }
 
@@ -449,14 +460,16 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * Gets the value associated with the given <code>key</code>.
      *
      * @since Redis 6.2.0.
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/docs/latest/commands/getex/">redis.io</a> for details.
      * @param key The <code>key</code> to retrieve from the database.
      * @return Command Response - If <code>key</code> exists, return the <code>value</code> of the
      *     <code>key</code>. Otherwise, return <code>null</code>.
      */
     public <ArgType> T getex(@NonNull ArgType key) {
-        ArgsArray commandArgs = buildArgs(key);
-        protobufTransaction.addCommands(buildCommand(GetEx, commandArgs));
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(GetEx, newArgsBuilder().add(key)));
         return getThis();
     }
 
@@ -464,6 +477,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * Gets the value associated with the given <code>key</code>.
      *
      * @since Redis 6.2.0.
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/docs/latest/commands/getex/">redis.io</a> for details.
      * @param key The <code>key</code> to retrieve from the database.
      * @param options The {@link GetExOptions} options.
@@ -471,20 +486,24 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     <code>key</code>. Otherwise, return <code>null</code>.
      */
     public <ArgType> T getex(@NonNull ArgType key, @NonNull GetExOptions options) {
-        ArgsArray commandArgs = buildArgs(ArrayUtils.addFirst(options.toArgs(), key));
-        protobufTransaction.addCommands(buildCommand(GetEx, commandArgs));
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(
+                buildCommand(GetEx, newArgsBuilder().add(key).add(options.toArgs())));
         return getThis();
     }
 
     /**
      * Sets the given key with the given value.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/set/">redis.io</a> for details.
      * @param key The key to store.
      * @param value The value to store with the given <code>key</code>.
      * @return Command Response - A response from Redis.
      */
     public <ArgType> T set(@NonNull ArgType key, @NonNull ArgType value) {
+        checkTypeOrThrow(key);
         protobufTransaction.addCommands(buildCommand(Set, newArgsBuilder().add(key).add(value)));
         return getThis();
     }
@@ -493,6 +512,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * Sets the given key with the given value. Return value is dependent on the passed options.
      *
      * @see <a href="https://redis.io/commands/set/">redis.io</a> for details.
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @param key The key to store.
      * @param value The value to store with the given key.
      * @param options The Set options.
@@ -504,6 +525,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      */
     public <ArgType> T set(
             @NonNull ArgType key, @NonNull ArgType value, @NonNull SetOptions options) {
+        checkTypeOrThrow(key);
         protobufTransaction.addCommands(
                 buildCommand(Set, newArgsBuilder().add(key).add(value).add(options.toArgs())));
         return getThis();
@@ -515,13 +537,15 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * this special case.
      *
      * @see <a href="https://redis.io/docs/latest/commands/append/">redis.io</a> for details.
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @param key The key of the string.
      * @param value The value to append.
      * @return Command Response - The length of the string after appending the value.
      */
     public <ArgType> T append(@NonNull ArgType key, @NonNull ArgType value) {
-        ArgsArray commandArgs = buildArgs(key, value);
-        protobufTransaction.addCommands(buildCommand(Append, commandArgs));
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(Append, newArgsBuilder().add(key).add(value)));
         return getThis();
     }
 
@@ -529,6 +553,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * Retrieves the values of multiple <code>keys</code>.
      *
      * @see <a href="https://redis.io/commands/mget/">redis.io</a> for details.
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @param keys A list of keys to retrieve values for.
      * @return Command Response - An array of values corresponding to the provided <code>keys</code>.
      *     <br>
@@ -536,8 +562,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     </code>.
      */
     public <ArgType> T mget(@NonNull ArgType[] keys) {
-        ArgsArray commandArgs = buildArgs(keys);
-        protobufTransaction.addCommands(buildCommand(MGet, commandArgs));
+        checkTypeOrThrow(keys);
+        protobufTransaction.addCommands(buildCommand(MGet, newArgsBuilder().add(keys)));
         return getThis();
     }
 
@@ -550,9 +576,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      */
     public T mset(@NonNull Map<?, ?> keyValueMap) {
         GlideString[] args = flattenMapToGlideStringArray(keyValueMap);
-        ArgsArray commandArgs = buildArgs(args);
-
-        protobufTransaction.addCommands(buildCommand(MSet, commandArgs));
+        protobufTransaction.addCommands(buildCommand(MSet, newArgsBuilder().add(args)));
         return getThis();
     }
 
@@ -567,9 +591,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      */
     public T msetnx(@NonNull Map<?, ?> keyValueMap) {
         GlideString[] args = flattenMapToGlideStringArray(keyValueMap);
-        ArgsArray commandArgs = buildArgs(args);
-
-        protobufTransaction.addCommands(buildCommand(MSetNX, commandArgs));
+        protobufTransaction.addCommands(buildCommand(MSetNX, newArgsBuilder().add(args)));
         return getThis();
     }
 
@@ -578,12 +600,14 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * is set to 0 before performing the operation.
      *
      * @see <a href="https://redis.io/commands/incr/">redis.io</a> for details.
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @param key The key to increment its value.
      * @return Command Response - The value of <code>key</code> after the increment.
      */
     public <ArgType> T incr(@NonNull ArgType key) {
-        ArgsArray commandArgs = buildArgs(key);
-        protobufTransaction.addCommands(buildCommand(Incr, commandArgs));
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(Incr, newArgsBuilder().add(key)));
         return getThis();
     }
 
@@ -592,13 +616,15 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * does not exist, it is set to 0 before performing the operation.
      *
      * @see <a href="https://redis.io/commands/incrby/">redis.io</a> for details.
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @param key The key to increment its value.
      * @param amount The amount to increment.
      * @return Command Response - The value of <code>key</code> after the increment.
      */
     public <ArgType> T incrBy(@NonNull ArgType key, long amount) {
-        ArgsArray commandArgs = buildArgs(key, this.convertTo(key.getClass(), amount));
-        protobufTransaction.addCommands(buildCommand(IncrBy, commandArgs));
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(IncrBy, newArgsBuilder().add(key).add(amount)));
         return getThis();
     }
 
@@ -609,13 +635,16 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * performing the operation.
      *
      * @see <a href="https://redis.io/commands/incrbyfloat/">redis.io</a> for details.
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @param key The key to increment its value.
      * @param amount The amount to increment.
      * @return Command Response - The value of <code>key</code> after the increment.
      */
     public <ArgType> T incrByFloat(@NonNull ArgType key, double amount) {
-        ArgsArray commandArgs = buildArgs(key, this.convertTo(key.getClass(), amount));
-        protobufTransaction.addCommands(buildCommand(IncrByFloat, commandArgs));
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(
+                buildCommand(IncrByFloat, newArgsBuilder().add(key).add(amount)));
         return getThis();
     }
 
@@ -624,12 +653,14 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * is set to 0 before performing the operation.
      *
      * @see <a href="https://redis.io/commands/decr/">redis.io</a> for details.
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @param key The key to decrement its value.
      * @return Command Response - The value of <code>key</code> after the decrement.
      */
     public <ArgType> T decr(@NonNull ArgType key) {
-        ArgsArray commandArgs = buildArgs(key);
-        protobufTransaction.addCommands(buildCommand(Decr, commandArgs));
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(Decr, newArgsBuilder().add(key)));
         return getThis();
     }
 
@@ -638,19 +669,23 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * does not exist, it is set to 0 before performing the operation.
      *
      * @see <a href="https://redis.io/commands/decrby/">redis.io</a> for details.
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @param key The key to decrement its value.
      * @param amount The amount to decrement.
      * @return Command Response - The value of <code>key</code> after the decrement.
      */
     public <ArgType> T decrBy(@NonNull ArgType key, long amount) {
-        ArgsArray commandArgs = buildArgs(key, this.convertTo(key.getClass(), amount));
-        protobufTransaction.addCommands(buildCommand(DecrBy, commandArgs));
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(DecrBy, newArgsBuilder().add(key).add(amount)));
         return getThis();
     }
 
     /**
      * Returns the length of the string value stored at <code>key</code>.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/strlen/">redis.io</a> for details.
      * @param key The key to check its length.
      * @return Command Response - The length of the string value stored at key.<br>
@@ -658,8 +693,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     returns <code>0</code>.
      */
     public <ArgType> T strlen(@NonNull ArgType key) {
-        ArgsArray commandArgs = buildArgs(key);
-        protobufTransaction.addCommands(buildCommand(Strlen, commandArgs));
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(Strlen, newArgsBuilder().add(key)));
         return getThis();
     }
 
@@ -670,6 +705,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * the string is padded with zero bytes to make <code>offset</code> fit. Creates the <code>key
      * </code> if it doesn't exist.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/setrange/">redis.io</a> for details.
      * @param key The key of the string to update.
      * @param offset The position in the string where <code>value</code> should be written.
@@ -678,8 +715,9 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     modified.
      */
     public <ArgType> T setrange(@NonNull ArgType key, int offset, @NonNull ArgType value) {
-        ArgsArray commandArgs = buildArgs(key, this.convertTo(key.getClass(), offset), value);
-        protobufTransaction.addCommands(buildCommand(SetRange, commandArgs));
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(
+                buildCommand(SetRange, newArgsBuilder().add(key).add(offset).add(value)));
         return getThis();
     }
 
@@ -689,6 +727,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * order to provide an offset starting from the end of the string. So <code>-1</code> means the
      * last character, <code>-2</code> the penultimate and so forth.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/getrange/">redis.io</a> for details.
      * @param key The key of the string.
      * @param start The starting offset.
@@ -696,15 +736,17 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @return Command Response - A substring extracted from the value stored at <code>key</code>.
      */
     public <ArgType> T getrange(@NonNull ArgType key, int start, int end) {
-        ArgsArray commandArgs =
-                buildArgs(key, this.convertTo(key.getClass(), start), this.convertTo(key.getClass(), end));
-        protobufTransaction.addCommands(buildCommand(GetRange, commandArgs));
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(
+                buildCommand(GetRange, newArgsBuilder().add(key).add(start).add(end)));
         return getThis();
     }
 
     /**
      * Retrieves the value associated with <code>field</code> in the hash stored at <code>key</code>.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/hget/">redis.io</a> for details.
      * @param key The key of the hash.
      * @param field The field in the hash stored at <code>key</code> to retrieve from the database.
@@ -712,14 +754,16 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     when <code>field</code> is not present in the hash or <code>key</code> does not exist.
      */
     public <ArgType> T hget(@NonNull ArgType key, @NonNull ArgType field) {
-        ArgsArray commandArgs = buildArgs(key, field);
-        protobufTransaction.addCommands(buildCommand(HGet, commandArgs));
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(HGet, newArgsBuilder().add(key).add(field)));
         return getThis();
     }
 
     /**
      * Sets the specified fields to their respective values in the hash stored at <code>key</code>.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/hset/">redis.io</a> for details.
      * @param key The key of the hash.
      * @param fieldValueMap A field-value map consisting of fields and their corresponding values to
@@ -727,13 +771,10 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @return Command Response - The number of fields that were added.
      */
     public <ArgType> T hset(@NonNull ArgType key, @NonNull Map<ArgType, ArgType> fieldValueMap) {
-        ArgsArray commandArgs =
-                buildArgs(
-                        ArrayUtils.addFirst(
-                                flattenMapToGlideStringArray(fieldValueMap),
-                                this.convertTo(GlideString.class, key)));
-
-        protobufTransaction.addCommands(buildCommand(HSet, commandArgs));
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(
+                buildCommand(
+                        HSet, newArgsBuilder().add(key).add(flattenMapToGlideStringArray(fieldValueMap))));
         return getThis();
     }
 
@@ -743,6 +784,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * If <code>key</code> does not exist, a new key holding a hash is created.<br>
      * If <code>field</code> already exists, this operation has no effect.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/hsetnx/">redis.io</a> for details.
      * @param key The key of the hash.
      * @param field The field to set the value for.
@@ -751,8 +794,9 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     field already existed and was not set.
      */
     public <ArgType> T hsetnx(@NonNull ArgType key, @NonNull ArgType field, @NonNull ArgType value) {
-        ArgsArray commandArgs = buildArgs(key, field, value);
-        protobufTransaction.addCommands(buildCommand(HSetNX, commandArgs));
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(
+                buildCommand(HSetNX, newArgsBuilder().add(key).add(field).add(value)));
         return getThis();
     }
 
@@ -760,6 +804,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * Removes the specified fields from the hash stored at <code>key</code>. Specified fields that do
      * not exist within this hash are ignored.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/hdel/">redis.io</a> for details.
      * @param key The key of the hash.
      * @param fields The fields to remove from the hash stored at <code>key</code>.
@@ -768,14 +814,16 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     If <code>key</code> does not exist, it is treated as an empty hash and it returns 0.<br>
      */
     public <ArgType> T hdel(@NonNull ArgType key, @NonNull ArgType[] fields) {
-        ArgsArray commandArgs = buildArgs(ArrayUtils.addFirst(fields, key));
-        protobufTransaction.addCommands(buildCommand(HDel, commandArgs));
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(HDel, newArgsBuilder().add(key).add(fields)));
         return getThis();
     }
 
     /**
      * Returns the number of fields contained in the hash stored at <code>key</code>.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/hlen/">redis.io</a> for details.
      * @param key The key of the hash.
      * @return Command Response - The number of fields in the hash, or <code>0</code> when the key
@@ -783,28 +831,32 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     If <code>key</code> holds a value that is not a hash, an error is returned.
      */
     public <ArgType> T hlen(@NonNull ArgType key) {
-        ArgsArray commandArgs = buildArgs(key);
-        protobufTransaction.addCommands(buildCommand(HLen, commandArgs));
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(HLen, newArgsBuilder().add(key)));
         return getThis();
     }
 
     /**
      * Returns all values in the hash stored at <code>key</code>.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/hvals/">redis.io</a> for details.
      * @param key The key of the hash.
      * @return Command Response - An <code>array</code> of values in the hash, or an <code>empty array
      *     </code> when the key does not exist.
      */
     public <ArgType> T hvals(@NonNull ArgType key) {
-        ArgsArray commandArgs = buildArgs(key);
-        protobufTransaction.addCommands(buildCommand(HVals, commandArgs));
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(HVals, newArgsBuilder().add(key)));
         return getThis();
     }
 
     /**
      * Returns the values associated with the specified fields in the hash stored at <code>key</code>.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/hmget/">redis.io</a> for details.
      * @param key The key of the hash.
      * @param fields The fields in the hash stored at <code>key</code> to retrieve from the database.
@@ -815,14 +867,16 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     of null values.<br>
      */
     public <ArgType> T hmget(@NonNull ArgType key, @NonNull ArgType[] fields) {
-        ArgsArray commandArgs = buildArgs(ArrayUtils.addFirst(fields, key));
-        protobufTransaction.addCommands(buildCommand(HMGet, commandArgs));
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(HMGet, newArgsBuilder().add(key).add(fields)));
         return getThis();
     }
 
     /**
      * Returns if <code>field</code> is an existing field in the hash stored at <code>key</code>.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/hexists/">redis.io</a> for details.
      * @param key The key of the hash.
      * @param field The field to check in the hash stored at <code>key</code>.
@@ -830,24 +884,26 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     hash does not contain the field, or if the key does not exist, it returns <code>False
      *     </code>.
      */
-    public T hexists(@NonNull String key, @NonNull String field) {
-        ArgsArray commandArgs = buildArgs(key, field);
-        protobufTransaction.addCommands(buildCommand(HExists, commandArgs));
+    public <ArgType> T hexists(@NonNull ArgType key, @NonNull ArgType field) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(HExists, newArgsBuilder().add(key).add(field)));
         return getThis();
     }
 
     /**
      * Returns all fields and values of the hash stored at <code>key</code>.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/hgetall/">redis.io</a> for details.
      * @param key The key of the hash.
      * @return Command Response - A <code>Map</code> of fields and their values stored in the hash.
      *     Every field name in the map is associated with its corresponding value.<br>
      *     If <code>key</code> does not exist, it returns an empty map.
      */
-    public T hgetall(@NonNull String key) {
-        ArgsArray commandArgs = buildArgs(key);
-        protobufTransaction.addCommands(buildCommand(HGetAll, commandArgs));
+    public <ArgType> T hgetall(@NonNull ArgType key) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(HGetAll, newArgsBuilder().add(key)));
         return getThis();
     }
 
@@ -857,6 +913,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * hash stored at <code>key</code> is decremented. If <code>field</code> or <code>key</code> does
      * not exist, it is set to 0 before performing the operation.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/hincrby/">redis.io</a> for details.
      * @param key The key of the hash.
      * @param field The field in the hash stored at <code>key</code> to increment or decrement its
@@ -866,9 +924,10 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @return Command Response - The value of <code>field</code> in the hash stored at <code>key
      *     </code> after the increment or decrement.
      */
-    public T hincrBy(@NonNull String key, @NonNull String field, long amount) {
-        ArgsArray commandArgs = buildArgs(key, field, Long.toString(amount));
-        protobufTransaction.addCommands(buildCommand(HIncrBy, commandArgs));
+    public <ArgType> T hincrBy(@NonNull ArgType key, @NonNull ArgType field, long amount) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(
+                buildCommand(HIncrBy, newArgsBuilder().add(key).add(field).add(amount)));
         return getThis();
     }
 
@@ -879,6 +938,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * field</code> or <code>key</code> does not exist, it is set to 0 before performing the
      * operation.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/hincrbyfloat/">redis.io</a> for details.
      * @param key The key of the hash.
      * @param field The field in the hash stored at <code>key</code> to increment or decrement its
@@ -888,22 +949,26 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @return Command Response - The value of <code>field</code> in the hash stored at <code>key
      *     </code> after the increment or decrement.
      */
-    public T hincrByFloat(@NonNull String key, @NonNull String field, double amount) {
-        ArgsArray commandArgs = buildArgs(key, field, Double.toString(amount));
-        protobufTransaction.addCommands(buildCommand(HIncrByFloat, commandArgs));
+    public <ArgType> T hincrByFloat(@NonNull ArgType key, @NonNull ArgType field, double amount) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(
+                buildCommand(HIncrByFloat, newArgsBuilder().add(key).add(field).add(amount)));
         return getThis();
     }
 
     /**
      * Returns all field names in the hash stored at <code>key</code>.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://valkey.io/commands/hkeys/">redis.io</a> for details
      * @param key The key of the hash.
      * @return Command Response - An <code>array</code> of field names in the hash, or an <code>
      *     empty array</code> when the key does not exist.
      */
-    public T hkeys(@NonNull String key) {
-        protobufTransaction.addCommands(buildCommand(HKeys, buildArgs(key)));
+    public <ArgType> T hkeys(@NonNull ArgType key) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(HKeys, newArgsBuilder().add(key)));
         return getThis();
     }
 
@@ -911,14 +976,17 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * Returns the string length of the value associated with <code>field</code> in the hash stored at
      * <code>key</code>.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://valkey.io/commands/hstrlen/">valkey.io</a> for details.
      * @param key The key of the hash.
      * @param field The field in the hash.
      * @return Command Response - The string length or <code>0</code> if <code>field</code> or <code>
      *     key</code> does not exist.
      */
-    public T hstrlen(@NonNull String key, @NonNull String field) {
-        protobufTransaction.addCommands(buildCommand(HStrlen, buildArgs(key, field)));
+    public <ArgType> T hstrlen(@NonNull ArgType key, @NonNull ArgType field) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(HStrlen, newArgsBuilder().add(key).add(field)));
         return getThis();
     }
 
@@ -926,13 +994,16 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * Returns a random field name from the hash value stored at <code>key</code>.
      *
      * @since Redis 6.2 and above.
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/hrandfield/">redis.io</a> for details.
      * @param key The key of the hash.
      * @return Command Response - A random field name from the hash stored at <code>key</code>, or
      *     <code>null</code> when the key does not exist.
      */
-    public T hrandfield(@NonNull String key) {
-        protobufTransaction.addCommands(buildCommand(HRandField, buildArgs(key)));
+    public <ArgType> T hrandfield(@NonNull ArgType key) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(HRandField, newArgsBuilder().add(key)));
         return getThis();
     }
 
@@ -941,6 +1012,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * </code>.
      *
      * @since Redis 6.2 and above.
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/hrandfield/">redis.io</a> for details.
      * @param key The key of the hash.
      * @param count The number of field names to return.<br>
@@ -949,8 +1022,9 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @return Command Response - An <code>array</code> of random field names from the hash stored at
      *     <code>key</code>, or an <code>empty array</code> when the key does not exist.
      */
-    public T hrandfieldWithCount(@NonNull String key, long count) {
-        protobufTransaction.addCommands(buildCommand(HRandField, buildArgs(key, Long.toString(count))));
+    public <ArgType> T hrandfieldWithCount(@NonNull ArgType key, long count) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(HRandField, newArgsBuilder().add(key).add(count)));
         return getThis();
     }
 
@@ -959,6 +1033,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * value stored at <code>key</code>.
      *
      * @since Redis 6.2 and above.
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/hrandfield/">redis.io</a> for details.
      * @param key The key of the hash.
      * @param count The number of field names to return.<br>
@@ -969,9 +1045,10 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     value</code> is the associated value of the field name.<br>
      *     If the hash does not exist or is empty, the response will be an empty <code>array</code>.
      */
-    public T hrandfieldWithCountWithValues(@NonNull String key, long count) {
-        ArgsArray commandArgs = buildArgs(key, Long.toString(count), WITH_VALUES_REDIS_API);
-        protobufTransaction.addCommands(buildCommand(HRandField, commandArgs));
+    public <ArgType> T hrandfieldWithCountWithValues(@NonNull ArgType key, long count) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(
+                buildCommand(HRandField, newArgsBuilder().add(key).add(count).add(WITH_VALUES_REDIS_API)));
         return getThis();
     }
 
@@ -981,14 +1058,16 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * element to the rightmost element. If <code>key</code> does not exist, it is created as an empty
      * list before performing the push operations.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/lpush/">redis.io</a> for details.
      * @param key The key of the list.
      * @param elements The elements to insert at the head of the list stored at <code>key</code>.
      * @return Command Response - The length of the list after the push operations.
      */
-    public T lpush(@NonNull String key, @NonNull String[] elements) {
-        ArgsArray commandArgs = buildArgs(ArrayUtils.addFirst(elements, key));
-        protobufTransaction.addCommands(buildCommand(LPush, commandArgs));
+    public <ArgType> T lpush(@NonNull ArgType key, @NonNull ArgType[] elements) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(LPush, newArgsBuilder().add(key).add(elements)));
         return getThis();
     }
 
@@ -996,14 +1075,16 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * Removes and returns the first elements of the list stored at <code>key</code>. The command pops
      * a single element from the beginning of the list.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/lpop/">redis.io</a> for details.
      * @param key The key of the list.
      * @return Command Response - The value of the first element.<br>
      *     If <code>key</code> does not exist, null will be returned.
      */
-    public T lpop(@NonNull String key) {
-        ArgsArray commandArgs = buildArgs(key);
-        protobufTransaction.addCommands(buildCommand(LPop, commandArgs));
+    public <ArgType> T lpop(@NonNull ArgType key) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(LPop, newArgsBuilder().add(key)));
         return getThis();
     }
 
@@ -1012,15 +1093,17 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * <code>key</code>. If no match is found, <code>null</code> is returned.
      *
      * @since Redis 6.0.6.
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/docs/latest/commands/lpos/">redis.io</a> for details.
      * @param key The name of the list.
      * @param element The value to search for within the list.
      * @return Command Response - The index of the first occurrence of <code>element</code>, or <code>
      *     null</code> if <code>element</code> is not in the list.
      */
-    public T lpos(@NonNull String key, @NonNull String element) {
-        ArgsArray commandArgs = buildArgs(key, element);
-        protobufTransaction.addCommands(buildCommand(LPos, commandArgs));
+    public <ArgType> T lpos(@NonNull ArgType key, @NonNull ArgType element) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(LPos, newArgsBuilder().add(key).add(element)));
         return getThis();
     }
 
@@ -1029,6 +1112,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * <code>options</code>. If no match is found, <code>null</code> is returned.
      *
      * @since Redis 6.0.6.
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/docs/latest/commands/lpos/">redis.io</a> for details.
      * @param key The name of the list.
      * @param element The value to search for within the list.
@@ -1036,10 +1121,11 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @return Command Response - The index of <code>element</code>, or <code>null</code> if <code>
      *     element</code> is not in the list.
      */
-    public T lpos(@NonNull String key, @NonNull String element, @NonNull LPosOptions options) {
-        ArgsArray commandArgs =
-                buildArgs(ArrayUtils.addAll(new String[] {key, element}, options.toArgs()));
-        protobufTransaction.addCommands(buildCommand(LPos, commandArgs));
+    public <ArgType> T lpos(
+            @NonNull ArgType key, @NonNull ArgType element, @NonNull LPosOptions options) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(
+                buildCommand(LPos, newArgsBuilder().add(key).add(element).add(options.toArgs())));
         return getThis();
     }
 
@@ -1047,6 +1133,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * Returns an <code>array</code> of indices of matching elements within a list.
      *
      * @since Redis 6.0.6.
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/docs/latest/commands/lpos/">redis.io</a> for details.
      * @param key The name of the list.
      * @param element The value to search for within the list.
@@ -1054,9 +1142,10 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @return Command Response - An <code>array</code> that holds the indices of the matching
      *     elements within the list.
      */
-    public T lposCount(@NonNull String key, @NonNull String element, long count) {
-        ArgsArray commandArgs = buildArgs(key, element, COUNT_REDIS_API, Long.toString(count));
-        protobufTransaction.addCommands(buildCommand(LPos, commandArgs));
+    public <ArgType> T lposCount(@NonNull ArgType key, @NonNull ArgType element, long count) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(
+                buildCommand(LPos, newArgsBuilder().add(key).add(element).add(COUNT_REDIS_API).add(count)));
         return getThis();
     }
 
@@ -1065,6 +1154,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * <code>options</code>. If no match is found, an empty <code>array</code>is returned.
      *
      * @since Redis 6.0.6.
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/docs/latest/commands/lpos/">redis.io</a> for details.
      * @param key The name of the list.
      * @param element The value to search for within the list.
@@ -1073,14 +1164,18 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @return Command Response - An <code>array</code> that holds the indices of the matching
      *     elements within the list.
      */
-    public T lposCount(
-            @NonNull String key, @NonNull String element, long count, @NonNull LPosOptions options) {
-        ArgsArray commandArgs =
-                buildArgs(
-                        ArrayUtils.addAll(
-                                new String[] {key, element, COUNT_REDIS_API, Long.toString(count)},
-                                options.toArgs()));
-        protobufTransaction.addCommands(buildCommand(LPos, commandArgs));
+    public <ArgType> T lposCount(
+            @NonNull ArgType key, @NonNull ArgType element, long count, @NonNull LPosOptions options) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(
+                buildCommand(
+                        LPos,
+                        newArgsBuilder()
+                                .add(key)
+                                .add(element)
+                                .add(COUNT_REDIS_API)
+                                .add(count)
+                                .add(options.toArgs())));
         return getThis();
     }
 
@@ -1088,6 +1183,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * Removes and returns up to <code>count</code> elements of the list stored at <code>key</code>,
      * depending on the list's length.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/lpop/">redis.io</a> for details.
      * @param key The key of the list.
      * @param count The count of the elements to pop from the list.
@@ -1095,9 +1192,9 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     list's length.<br>
      *     If <code>key</code> does not exist, null will be returned.
      */
-    public T lpopCount(@NonNull String key, long count) {
-        ArgsArray commandArgs = buildArgs(key, Long.toString(count));
-        protobufTransaction.addCommands(buildCommand(LPop, commandArgs));
+    public <ArgType> T lpopCount(@NonNull ArgType key, long count) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(LPop, newArgsBuilder().add(key).add(count)));
         return getThis();
     }
 
@@ -1109,6 +1206,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * <code>-1</code> being the last element of the list, <code>-2</code> being the penultimate, and
      * so on.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/lrange/">redis.io</a> for details.
      * @param key The key of the list.
      * @param start The starting point of the range.
@@ -1120,9 +1219,10 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     end of the list.<br>
      *     If <code>key</code> does not exist an empty array will be returned.
      */
-    public T lrange(@NonNull String key, long start, long end) {
-        ArgsArray commandArgs = buildArgs(key, Long.toString(start), Long.toString(end));
-        protobufTransaction.addCommands(buildCommand(LRange, commandArgs));
+    public <ArgType> T lrange(@NonNull ArgType key, long start, long end) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(
+                buildCommand(LRange, newArgsBuilder().add(key).add(start).add(end)));
         return getThis();
     }
 
@@ -1133,6 +1233,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * the list. Here, <code>-1</code> means the last element, <code>-2</code> means the penultimate
      * and so forth.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/lindex/">redis.io</a> for details.
      * @param key The key of the list.
      * @param index The index of the element in the list to retrieve.
@@ -1141,10 +1243,9 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     If <code>index</code> is out of range or if <code>key</code> does not exist, <code>null
      *     </code> is returned.
      */
-    public T lindex(@NonNull String key, long index) {
-        ArgsArray commandArgs = buildArgs(key, Long.toString(index));
-
-        protobufTransaction.addCommands(buildCommand(LIndex, commandArgs));
+    public <ArgType> T lindex(@NonNull ArgType key, long index) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(LIndex, newArgsBuilder().add(key).add(index)));
         return getThis();
     }
 
@@ -1157,6 +1258,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * with <code>-1</code> being the last element of the list, <code>-2</code> being the penultimate,
      * and so on.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/ltrim/">redis.io</a> for details.
      * @param key The key of the list.
      * @param start The starting point of the range.
@@ -1168,25 +1271,27 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     element of the list.<br>
      *     If <code>key</code> does not exist, OK will be returned without changes to the database.
      */
-    public T ltrim(@NonNull String key, long start, long end) {
-        ArgsArray commandArgs = buildArgs(key, Long.toString(start), Long.toString(end));
-        protobufTransaction.addCommands(buildCommand(LTrim, commandArgs));
+    public <ArgType> T ltrim(@NonNull ArgType key, long start, long end) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(
+                buildCommand(LTrim, newArgsBuilder().add(key).add(start).add(end)));
         return getThis();
     }
 
     /**
      * Returns the length of the list stored at <code>key</code>.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/llen/">redis.io</a> for details.
      * @param key The key of the list.
      * @return Command Response - The length of the list at <code>key</code>.<br>
      *     If <code>key</code> does not exist, it is interpreted as an empty list and <code>0</code>
      *     is returned.
      */
-    public T llen(@NonNull String key) {
-        ArgsArray commandArgs = buildArgs(key);
-
-        protobufTransaction.addCommands(buildCommand(LLen, commandArgs));
+    public <ArgType> T llen(@NonNull ArgType key) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(LLen, newArgsBuilder().add(key)));
         return getThis();
     }
 
@@ -1200,6 +1305,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * If <code>count</code> is 0 or <code>count</code> is greater than the occurrences of elements
      * equal to <code>element</code>, it removes all elements equal to <code>element</code>.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/lrem/">redis.io</a> for details.
      * @param key The key of the list.
      * @param count The count of the occurrences of elements equal to <code>element</code> to remove.
@@ -1207,9 +1314,10 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @return Command Response - The number of the removed elements.<br>
      *     If <code>key</code> does not exist, <code>0</code> is returned.
      */
-    public T lrem(@NonNull String key, long count, @NonNull String element) {
-        ArgsArray commandArgs = buildArgs(key, Long.toString(count), element);
-        protobufTransaction.addCommands(buildCommand(LRem, commandArgs));
+    public <ArgType> T lrem(@NonNull ArgType key, long count, @NonNull ArgType element) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(
+                buildCommand(LRem, newArgsBuilder().add(key).add(count).add(element)));
         return getThis();
     }
 
@@ -1219,14 +1327,16 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * leftmost element to the rightmost element. If <code>key</code> does not exist, it is created as
      * an empty list before performing the push operations.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/rpush/">redis.io</a> for details.
      * @param key The key of the list.
      * @param elements The elements to insert at the tail of the list stored at <code>key</code>.
      * @return Command Response - The length of the list after the push operations.
      */
-    public T rpush(@NonNull String key, @NonNull String[] elements) {
-        ArgsArray commandArgs = buildArgs(ArrayUtils.addFirst(elements, key));
-        protobufTransaction.addCommands(buildCommand(RPush, commandArgs));
+    public <ArgType> T rpush(@NonNull ArgType key, @NonNull ArgType[] elements) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(RPush, newArgsBuilder().add(key).add(elements)));
         return getThis();
     }
 
@@ -1234,14 +1344,16 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * Removes and returns the last elements of the list stored at <code>key</code>.<br>
      * The command pops a single element from the end of the list.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/rpop/">redis.io</a> for details.
      * @param key The key of the list.
      * @return Command Response - The value of the last element.<br>
      *     If <code>key</code> does not exist, <code>null</code> will be returned.
      */
-    public T rpop(@NonNull String key) {
-        ArgsArray commandArgs = buildArgs(key);
-        protobufTransaction.addCommands(buildCommand(RPop, commandArgs));
+    public <ArgType> T rpop(@NonNull ArgType key) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(RPop, newArgsBuilder().add(key)));
         return getThis();
     }
 
@@ -1249,15 +1361,17 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * Removes and returns up to <code>count</code> elements from the list stored at <code>key</code>,
      * depending on the list's length.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/rpop/">redis.io</a> for details.
      * @param count The count of the elements to pop from the list.
      * @return Command Response - An array of popped elements will be returned depending on the list's
      *     length.<br>
      *     If <code>key</code> does not exist, <code>null</code> will be returned.
      */
-    public T rpopCount(@NonNull String key, long count) {
-        ArgsArray commandArgs = buildArgs(key, Long.toString(count));
-        protobufTransaction.addCommands(buildCommand(RPop, commandArgs));
+    public <ArgType> T rpopCount(@NonNull ArgType key, long count) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(RPop, newArgsBuilder().add(key).add(count)));
         return getThis();
     }
 
@@ -1265,6 +1379,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * Adds specified members to the set stored at <code>key</code>. Specified members that are
      * already a member of this set are ignored.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/sadd/">redis.io</a> for details.
      * @param key The <code>key</code> where members will be added to its set.
      * @param members A list of members to add to the set stored at <code>key</code>.
@@ -1273,15 +1389,17 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @remarks If <code>key</code> does not exist, a new set is created before adding <code>members
      *     </code>.
      */
-    public T sadd(@NonNull String key, @NonNull String[] members) {
-        ArgsArray commandArgs = buildArgs(ArrayUtils.addFirst(members, key));
-        protobufTransaction.addCommands(buildCommand(SAdd, commandArgs));
+    public <ArgType> T sadd(@NonNull ArgType key, @NonNull ArgType[] members) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(SAdd, newArgsBuilder().add(key).add(members)));
         return getThis();
     }
 
     /**
      * Returns if <code>member</code> is a member of the set stored at <code>key</code>.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/sismember/">redis.io</a> for details.
      * @param key The key of the set.
      * @param member The member to check for existence in the set.
@@ -1289,9 +1407,9 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     </code> otherwise. If <code>key</code> doesn't exist, it is treated as an <code>empty set
      *     </code> and the command returns <code>false</code>.
      */
-    public T sismember(@NonNull String key, @NonNull String member) {
-        ArgsArray commandArgs = buildArgs(key, member);
-        protobufTransaction.addCommands(buildCommand(SIsMember, commandArgs));
+    public <ArgType> T sismember(@NonNull ArgType key, @NonNull ArgType member) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(SIsMember, newArgsBuilder().add(key).add(member)));
         return getThis();
     }
 
@@ -1299,6 +1417,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * Removes specified members from the set stored at <code>key</code>. Specified members that are
      * not a member of this set are ignored.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/srem/">redis.io</a> for details.
      * @param key The <code>key</code> from which members will be removed.
      * @param members A list of members to remove from the set stored at <code>key</code>.
@@ -1307,67 +1427,76 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @remarks If <code>key</code> does not exist, it is treated as an empty set and this command
      *     returns <code>0</code>.
      */
-    public T srem(@NonNull String key, @NonNull String[] members) {
-        ArgsArray commandArgs = buildArgs(ArrayUtils.addFirst(members, key));
-        protobufTransaction.addCommands(buildCommand(SRem, commandArgs));
+    public <ArgType> T srem(@NonNull ArgType key, @NonNull ArgType[] members) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(SRem, newArgsBuilder().add(key).add(members)));
         return getThis();
     }
 
     /**
      * Retrieves all the members of the set value stored at <code>key</code>.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/smembers/">redis.io</a> for details.
      * @param key The key from which to retrieve the set members.
      * @return Command Response - A <code>Set</code> of all members of the set.
      * @remarks If <code>key</code> does not exist an empty set will be returned.
      */
-    public T smembers(@NonNull String key) {
-        ArgsArray commandArgs = buildArgs(key);
-        protobufTransaction.addCommands(buildCommand(SMembers, commandArgs));
+    public <ArgType> T smembers(@NonNull ArgType key) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(SMembers, newArgsBuilder().add(key)));
         return getThis();
     }
 
     /**
      * Retrieves the set cardinality (number of elements) of the set stored at <code>key</code>.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/scard/">redis.io</a> for details.
      * @param key The key from which to retrieve the number of set members.
      * @return Command Response - The cardinality (number of elements) of the set, or 0 if the key
      *     does not exist.
      */
-    public T scard(@NonNull String key) {
-        ArgsArray commandArgs = buildArgs(key);
-        protobufTransaction.addCommands(buildCommand(SCard, commandArgs));
+    public <ArgType> T scard(@NonNull ArgType key) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(SCard, newArgsBuilder().add(key)));
         return getThis();
     }
 
     /**
      * Computes the difference between the first set and all the successive sets in <code>keys</code>.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/sdiff/">redis.io</a> for details.
      * @param keys The keys of the sets to diff.
      * @return Command Response - A <code>Set</code> of elements representing the difference between
      *     the sets.<br>
      *     If the a <code>key</code> does not exist, it is treated as an empty set.
      */
-    public T sdiff(@NonNull String[] keys) {
-        ArgsArray commandArgs = buildArgs(keys);
-        protobufTransaction.addCommands(buildCommand(SDiff, commandArgs));
+    public <ArgType> T sdiff(@NonNull ArgType[] keys) {
+        checkTypeOrThrow(keys);
+        protobufTransaction.addCommands(buildCommand(SDiff, newArgsBuilder().add(keys)));
         return getThis();
     }
 
     /**
      * Checks whether each member is contained in the members of the set stored at <code>key</code>.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/smismember/">redis.io</a> for details.
      * @param key The key of the set to check.
      * @param members A list of members to check for existence in the set.
      * @return Command Response - An <code>array</code> of <code>Boolean</code> values, each
      *     indicating if the respective member exists in the set.
      */
-    public T smismember(@NonNull String key, @NonNull String[] members) {
-        ArgsArray commandArgs = buildArgs(ArrayUtils.addFirst(members, key));
-        protobufTransaction.addCommands(buildCommand(SMIsMember, commandArgs));
+    public <ArgType> T smismember(@NonNull ArgType key, @NonNull ArgType[] members) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(
+                buildCommand(SMIsMember, newArgsBuilder().add(key).add(members)));
         return getThis();
     }
 
@@ -1375,14 +1504,17 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * Stores the difference between the first set and all the successive sets in <code>keys</code>
      * into a new set at <code>destination</code>.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/sdiffstore/">redis.io</a> for details.
      * @param destination The key of the destination set.
      * @param keys The keys of the sets to diff.
      * @return Command Response - The number of elements in the resulting set.
      */
-    public T sdiffstore(@NonNull String destination, @NonNull String[] keys) {
-        ArgsArray commandArgs = buildArgs(ArrayUtils.addFirst(keys, destination));
-        protobufTransaction.addCommands(buildCommand(SDiffStore, commandArgs));
+    public <ArgType> T sdiffstore(@NonNull ArgType destination, @NonNull ArgType[] keys) {
+        checkTypeOrThrow(destination);
+        protobufTransaction.addCommands(
+                buildCommand(SDiffStore, newArgsBuilder().add(destination).add(keys)));
         return getThis();
     }
 
@@ -1391,6 +1523,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * </code>, removing it from the source set. Creates a new destination set if needed. The
      * operation is atomic.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/smove/">redis.io</a> for details.
      * @param source The key of the set to remove the element from.
      * @param destination The key of the set to add the element to.
@@ -1398,24 +1532,28 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @return Command response - <code>true</code> on success, or <code>false</code> if the <code>
      *     source</code> set does not exist or the element is not a member of the source set.
      */
-    public T smove(@NonNull String source, @NonNull String destination, @NonNull String member) {
-        ArgsArray commandArgs = buildArgs(source, destination, member);
-        protobufTransaction.addCommands(buildCommand(SMove, commandArgs));
+    public <ArgType> T smove(
+            @NonNull ArgType source, @NonNull ArgType destination, @NonNull ArgType member) {
+        checkTypeOrThrow(source);
+        protobufTransaction.addCommands(
+                buildCommand(SMove, newArgsBuilder().add(source).add(destination).add(member)));
         return getThis();
     }
 
     /**
      * Gets the intersection of all the given sets.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/sinter/">redis.io</a> for details.
      * @param keys The keys of the sets.
      * @return Command Response - A <code>Set</code> of members which are present in all given sets.
      *     <br>
      *     Missing or empty input sets cause an empty response.
      */
-    public T sinter(@NonNull String[] keys) {
-        ArgsArray commandArgs = buildArgs(keys);
-        protobufTransaction.addCommands(buildCommand(SInter, commandArgs));
+    public <ArgType> T sinter(@NonNull ArgType[] keys) {
+        checkTypeOrThrow(keys);
+        protobufTransaction.addCommands(buildCommand(SInter, newArgsBuilder().add(keys)));
         return getThis();
     }
 
@@ -1423,14 +1561,17 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * Stores the members of the intersection of all given sets specified by <code>keys</code> into a
      * new set at <code>destination</code>.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/sinterstore/">redis.io</a> for details.
      * @param destination The key of the destination set.
      * @param keys The keys from which to retrieve the set members.
      * @return Command Response - The number of elements in the resulting set.
      */
-    public T sinterstore(@NonNull String destination, @NonNull String[] keys) {
-        ArgsArray commandArgs = buildArgs(ArrayUtils.addFirst(keys, destination));
-        protobufTransaction.addCommands(buildCommand(SInterStore, commandArgs));
+    public <ArgType> T sinterstore(@NonNull ArgType destination, @NonNull ArgType[] keys) {
+        checkTypeOrThrow(destination);
+        protobufTransaction.addCommands(
+                buildCommand(SInterStore, newArgsBuilder().add(destination).add(keys)));
         return getThis();
     }
 
@@ -1438,15 +1579,17 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * Gets the cardinality of the intersection of all the given sets.
      *
      * @since Redis 7.0 and above.
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/sintercard/">redis.io</a> for details.
      * @param keys The keys of the sets.
      * @return Command Response - The cardinality of the intersection result. If one or more sets do
      *     not exist, <code>0</code> is returned.
      */
-    public T sintercard(@NonNull String[] keys) {
-        ArgsArray commandArgs =
-                buildArgs(concatenateArrays(new String[] {Long.toString(keys.length)}, keys));
-        protobufTransaction.addCommands(buildCommand(SInterCard, commandArgs));
+    public <ArgType> T sintercard(@NonNull ArgType[] keys) {
+        checkTypeOrThrow(keys);
+        protobufTransaction.addCommands(
+                buildCommand(SInterCard, newArgsBuilder().add(keys.length).add(keys)));
         return getThis();
     }
 
@@ -1454,6 +1597,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * Gets the cardinality of the intersection of all the given sets.
      *
      * @since Redis 7.0 and above.
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/sintercard/">redis.io</a> for details.
      * @param keys The keys of the sets.
      * @param limit The limit for the intersection cardinality value.
@@ -1461,14 +1606,12 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     not exist, <code>0</code> is returned. If the intersection cardinality reaches <code>limit
      *     </code> partway through the computation, returns <code>limit</code> as the cardinality.
      */
-    public T sintercard(@NonNull String[] keys, long limit) {
-        ArgsArray commandArgs =
-                buildArgs(
-                        concatenateArrays(
-                                new String[] {Long.toString(keys.length)},
-                                keys,
-                                new String[] {SET_LIMIT_REDIS_API, Long.toString(limit)}));
-        protobufTransaction.addCommands(buildCommand(SInterCard, commandArgs));
+    public <ArgType> T sintercard(@NonNull ArgType[] keys, long limit) {
+        checkTypeOrThrow(keys);
+        protobufTransaction.addCommands(
+                buildCommand(
+                        SInterCard,
+                        newArgsBuilder().add(keys.length).add(keys).add(SET_LIMIT_REDIS_API).add(limit)));
         return getThis();
     }
 
@@ -1476,58 +1619,67 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * Stores the members of the union of all given sets specified by <code>keys</code> into a new set
      * at <code>destination</code>.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/sunionstore/">redis.io</a> for details.
      * @param destination The key of the destination set.
      * @param keys The keys from which to retrieve the set members.
      * @return Command Response - The number of elements in the resulting set.
      */
-    public T sunionstore(@NonNull String destination, @NonNull String[] keys) {
-        ArgsArray commandArgs = buildArgs(ArrayUtils.addFirst(keys, destination));
-        protobufTransaction.addCommands(buildCommand(SUnionStore, commandArgs));
+    public <ArgType> T sunionstore(@NonNull ArgType destination, @NonNull ArgType[] keys) {
+        checkTypeOrThrow(destination);
+        protobufTransaction.addCommands(
+                buildCommand(SUnionStore, newArgsBuilder().add(destination).add(keys)));
         return getThis();
     }
 
     /**
      * Reads the configuration parameters of a running Redis server.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/config-get/">redis.io</a> for details.
      * @param parameters An <code>array</code> of configuration parameter names to retrieve values
      *     for.
      * @return Command response - A <code>map</code> of values corresponding to the configuration
      *     parameters.
      */
-    public T configGet(@NonNull String[] parameters) {
-        ArgsArray commandArgs = buildArgs(parameters);
-        protobufTransaction.addCommands(buildCommand(ConfigGet, commandArgs));
+    public <ArgType> T configGet(@NonNull ArgType[] parameters) {
+        checkTypeOrThrow(parameters);
+        protobufTransaction.addCommands(buildCommand(ConfigGet, newArgsBuilder().add(parameters)));
         return getThis();
     }
 
     /**
      * Sets configuration parameters to the specified values.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/config-set/">redis.io</a> for details.
      * @param parameters A <code>map</code> consisting of configuration parameters and their
      *     respective values to set.
      * @return Command response - <code>OK</code> if all configurations have been successfully set.
      *     Otherwise, the transaction fails with an error.
      */
-    public T configSet(@NonNull Map<String, String> parameters) {
-        ArgsArray commandArgs = buildArgs(convertMapToKeyValueStringArray(parameters));
-        protobufTransaction.addCommands(buildCommand(ConfigSet, commandArgs));
+    public T configSet(@NonNull Map<?, ?> parameters) {
+        protobufTransaction.addCommands(
+                buildCommand(ConfigSet, newArgsBuilder().add(flattenMapToGlideStringArray(parameters))));
         return getThis();
     }
 
     /**
      * Returns the number of keys in <code>keys</code> that exist in the database.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/exists/">redis.io</a> for details.
      * @param keys The keys list to check.
      * @return Command Response - The number of keys that exist. If the same existing key is mentioned
      *     in <code>keys</code> multiple times, it will be counted multiple times.
      */
-    public T exists(@NonNull String[] keys) {
-        ArgsArray commandArgs = buildArgs(keys);
-        protobufTransaction.addCommands(buildCommand(Exists, commandArgs));
+    public <ArgType> T exists(@NonNull ArgType[] keys) {
+        checkTypeOrThrow(keys);
+        protobufTransaction.addCommands(buildCommand(Exists, newArgsBuilder().add(keys)));
         return getThis();
     }
 
@@ -1537,13 +1689,15 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * However, this command does not block the server, while <a
      * href="https://redis.io/commands/del/">DEL</a> does.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/unlink/">redis.io</a> for details.
      * @param keys The list of keys to unlink.
      * @return Command Response - The number of <code>keys</code> that were unlinked.
      */
-    public T unlink(@NonNull String[] keys) {
-        ArgsArray commandArgs = buildArgs(keys);
-        protobufTransaction.addCommands(buildCommand(Unlink, commandArgs));
+    public <ArgType> T unlink(@NonNull ArgType[] keys) {
+        checkTypeOrThrow(keys);
+        protobufTransaction.addCommands(buildCommand(Unlink, newArgsBuilder().add(keys)));
         return getThis();
     }
 
@@ -1557,15 +1711,17 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * The timeout will only be cleared by commands that delete or overwrite the contents of <code>key
      * </code>.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/expire/">redis.io</a> for details.
      * @param key The key to set timeout on it.
      * @param seconds The timeout in seconds.
      * @return Command response - <code>true</code> if the timeout was set. <code>false</code> if the
      *     timeout was not set. e.g. key doesn't exist.
      */
-    public T expire(@NonNull String key, long seconds) {
-        ArgsArray commandArgs = buildArgs(key, Long.toString(seconds));
-        protobufTransaction.addCommands(buildCommand(Expire, commandArgs));
+    public <ArgType> T expire(@NonNull ArgType key, long seconds) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(Expire, newArgsBuilder().add(key).add(seconds)));
         return getThis();
     }
 
@@ -1579,6 +1735,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * The timeout will only be cleared by commands that delete or overwrite the contents of <code>key
      * </code>.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/expire/">redis.io</a> for details.
      * @param key The key to set timeout on it.
      * @param seconds The timeout in seconds.
@@ -1587,12 +1745,11 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     timeout was not set. e.g. <code>key</code> doesn't exist, or operation skipped due to the
      *     provided arguments.
      */
-    public T expire(@NonNull String key, long seconds, @NonNull ExpireOptions expireOptions) {
-        ArgsArray commandArgs =
-                buildArgs(
-                        ArrayUtils.addAll(new String[] {key, Long.toString(seconds)}, expireOptions.toArgs()));
-
-        protobufTransaction.addCommands(buildCommand(Expire, commandArgs));
+    public <ArgType> T expire(
+            @NonNull ArgType key, long seconds, @NonNull ExpireOptions expireOptions) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(
+                buildCommand(Expire, newArgsBuilder().add(key).add(seconds).add(expireOptions.toArgs())));
         return getThis();
     }
 
@@ -1606,15 +1763,18 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * The timeout will only be cleared by commands that delete or overwrite the contents of <code>key
      * </code>.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/expireat/">redis.io</a> for details.
      * @param key The key to set timeout on it.
      * @param unixSeconds The timeout in an absolute Unix timestamp.
      * @return Command response - <code>true</code> if the timeout was set. <code>false</code> if the
      *     timeout was not set. e.g. <code>key</code> doesn't exist.
      */
-    public T expireAt(@NonNull String key, long unixSeconds) {
-        ArgsArray commandArgs = buildArgs(key, Long.toString(unixSeconds));
-        protobufTransaction.addCommands(buildCommand(ExpireAt, commandArgs));
+    public <ArgType> T expireAt(@NonNull ArgType key, long unixSeconds) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(
+                buildCommand(ExpireAt, newArgsBuilder().add(key).add(unixSeconds)));
         return getThis();
     }
 
@@ -1628,6 +1788,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * The timeout will only be cleared by commands that delete or overwrite the contents of <code>key
      * </code>.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/expireat/">redis.io</a> for details.
      * @param key The key to set timeout on it.
      * @param unixSeconds The timeout in an absolute Unix timestamp.
@@ -1636,13 +1798,12 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     timeout was not set. e.g. <code>key</code> doesn't exist, or operation skipped due to the
      *     provided arguments.
      */
-    public T expireAt(@NonNull String key, long unixSeconds, @NonNull ExpireOptions expireOptions) {
-        ArgsArray commandArgs =
-                buildArgs(
-                        ArrayUtils.addAll(
-                                new String[] {key, Long.toString(unixSeconds)}, expireOptions.toArgs()));
-
-        protobufTransaction.addCommands(buildCommand(ExpireAt, commandArgs));
+    public <ArgType> T expireAt(
+            @NonNull ArgType key, long unixSeconds, @NonNull ExpireOptions expireOptions) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(
+                buildCommand(
+                        ExpireAt, newArgsBuilder().add(key).add(unixSeconds).add(expireOptions.toArgs())));
         return getThis();
     }
 
@@ -1656,15 +1817,18 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * The timeout will only be cleared by commands that delete or overwrite the contents of <code>key
      * </code>.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/pexpire/">redis.io</a> for details.
      * @param key The key to set timeout on it.
      * @param milliseconds The timeout in milliseconds.
      * @return Command response - <code>true</code> if the timeout was set. <code>false</code> if the
      *     timeout was not set. e.g. <code>key</code> doesn't exist.
      */
-    public T pexpire(@NonNull String key, long milliseconds) {
-        ArgsArray commandArgs = buildArgs(key, Long.toString(milliseconds));
-        protobufTransaction.addCommands(buildCommand(PExpire, commandArgs));
+    public <ArgType> T pexpire(@NonNull ArgType key, long milliseconds) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(
+                buildCommand(PExpire, newArgsBuilder().add(key).add(milliseconds)));
         return getThis();
     }
 
@@ -1678,6 +1842,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * The timeout will only be cleared by commands that delete or overwrite the contents of <code>key
      * </code>.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/pexpire/">redis.io</a> for details.
      * @param key The key to set timeout on it.
      * @param milliseconds The timeout in milliseconds.
@@ -1686,13 +1852,12 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     timeout was not set. e.g. <code>key</code> doesn't exist, or operation skipped due to the
      *     provided arguments.
      */
-    public T pexpire(@NonNull String key, long milliseconds, @NonNull ExpireOptions expireOptions) {
-        ArgsArray commandArgs =
-                buildArgs(
-                        ArrayUtils.addAll(
-                                new String[] {key, Long.toString(milliseconds)}, expireOptions.toArgs()));
-
-        protobufTransaction.addCommands(buildCommand(PExpire, commandArgs));
+    public <ArgType> T pexpire(
+            @NonNull ArgType key, long milliseconds, @NonNull ExpireOptions expireOptions) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(
+                buildCommand(
+                        PExpire, newArgsBuilder().add(key).add(milliseconds).add(expireOptions.toArgs())));
         return getThis();
     }
 
@@ -1706,16 +1871,18 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * The timeout will only be cleared by commands that delete or overwrite the contents of <code>key
      * </code>.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/pexpireat/">redis.io</a> for details.
      * @param key The <code>key</code> to set timeout on it.
      * @param unixMilliseconds The timeout in an absolute Unix timestamp.
      * @return Command response - <code>true</code> if the timeout was set. <code>false</code> if the
      *     timeout was not set. e.g. <code>key</code> doesn't exist.
      */
-    public T pexpireAt(@NonNull String key, long unixMilliseconds) {
-        ArgsArray commandArgs = buildArgs(key, Long.toString(unixMilliseconds));
-
-        protobufTransaction.addCommands(buildCommand(PExpireAt, commandArgs));
+    public <ArgType> T pexpireAt(@NonNull ArgType key, long unixMilliseconds) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(
+                buildCommand(PExpireAt, newArgsBuilder().add(key).add(unixMilliseconds)));
         return getThis();
     }
 
@@ -1729,6 +1896,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * The timeout will only be cleared by commands that delete or overwrite the contents of <code>key
      * </code>.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/pexpireat/">redis.io</a> for details.
      * @param key The <code>key</code> to set timeout on it.
      * @param unixMilliseconds The timeout in an absolute Unix timestamp.
@@ -1737,29 +1906,29 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     timeout was not set. e.g. <code>key</code> doesn't exist, or operation skipped due to the
      *     provided arguments.
      */
-    public T pexpireAt(
-            @NonNull String key, long unixMilliseconds, @NonNull ExpireOptions expireOptions) {
-        ArgsArray commandArgs =
-                buildArgs(
-                        ArrayUtils.addAll(
-                                new String[] {key, Long.toString(unixMilliseconds)}, expireOptions.toArgs()));
-
-        protobufTransaction.addCommands(buildCommand(PExpireAt, commandArgs));
+    public <ArgType> T pexpireAt(
+            @NonNull ArgType key, long unixMilliseconds, @NonNull ExpireOptions expireOptions) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(
+                buildCommand(
+                        PExpireAt,
+                        newArgsBuilder().add(key).add(unixMilliseconds).add(expireOptions.toArgs())));
         return getThis();
     }
 
     /**
      * Returns the remaining time to live of <code>key</code> that has a timeout.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/ttl/">redis.io</a> for details.
      * @param key The <code>key</code> to return its timeout.
      * @return Command response - TTL in seconds, <code>-2</code> if <code>key</code> does not exist,
      *     or <code>-1</code> if <code>key</code> exists but has no associated expire.
      */
-    public T ttl(@NonNull String key) {
-        ArgsArray commandArgs = buildArgs(key);
-
-        protobufTransaction.addCommands(buildCommand(TTL, commandArgs));
+    public <ArgType> T ttl(@NonNull ArgType key) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(TTL, newArgsBuilder().add(key)));
         return getThis();
     }
 
@@ -1769,14 +1938,17 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * To get the expiration with millisecond precision, use {@link #pexpiretime(String)}.
      *
      * @since Redis 7.0 and above.
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/expiretime/">redis.io</a> for details.
      * @param key The <code>key</code> to determine the expiration value of.
      * @return Command response - The expiration Unix timestamp in seconds, <code>-2</code> if <code>
      *     key</code> does not exist, or <code>-1</code> if <code>key</code> exists but has no
      *     associated expiration.
      */
-    public T expiretime(@NonNull String key) {
-        protobufTransaction.addCommands(buildCommand(ExpireTime, buildArgs(key)));
+    public <ArgType> T expiretime(@NonNull ArgType key) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(ExpireTime, newArgsBuilder().add(key)));
         return getThis();
     }
 
@@ -1785,6 +1957,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * will expire, in milliseconds.
      *
      * @since Redis 7.0 and above.
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/pexpiretime/">redis.io</a> for details.
      * @param key The <code>key</code> to determine the expiration value of.
      * @return Command response - The expiration Unix timestamp in milliseconds, <code>-2</code> if
@@ -1792,8 +1966,9 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     </code> does not exist, or <code>-1</code> if <code>key</code> exists but has no associated
      *     expiration.
      */
-    public T pexpiretime(@NonNull String key) {
-        protobufTransaction.addCommands(buildCommand(PExpireTime, buildArgs(key)));
+    public <ArgType> T pexpiretime(@NonNull ArgType key) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(PExpireTime, newArgsBuilder().add(key)));
         return getThis();
     }
 
@@ -1849,6 +2024,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * Adds members with their scores to the sorted set stored at <code>key</code>.<br>
      * If a member is already a part of the sorted set, its score is updated.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/zadd/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param membersScoresMap A <code>Map</code> of members to their corresponding scores.
@@ -1858,20 +2035,19 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @return Command Response - The number of elements added to the sorted set. <br>
      *     If <code>changed</code> is set, returns the number of elements updated in the sorted set.
      */
-    public T zadd(
-            @NonNull String key,
-            @NonNull Map<String, Double> membersScoresMap,
+    public <ArgType> T zadd(
+            @NonNull ArgType key,
+            @NonNull Map<ArgType, Double> membersScoresMap,
             @NonNull ZAddOptions options,
             boolean changed) {
-        String[] changedArg = changed ? new String[] {"CH"} : new String[] {};
-        String[] membersScores = convertMapToValueKeyStringArray(membersScoresMap);
-
-        String[] arguments =
-                concatenateArrays(new String[] {key}, options.toArgs(), changedArg, membersScores);
-
-        ArgsArray commandArgs = buildArgs(arguments);
-
-        protobufTransaction.addCommands(buildCommand(ZAdd, commandArgs));
+        checkTypeOrThrow(key);
+        ArgsBuilder args = new ArgsBuilder();
+        args.add(key).add(options.toArgs());
+        if (changed) {
+            args.add("CH");
+        }
+        args.add(flattenMapToGlideStringArrayValueFirst(membersScoresMap));
+        protobufTransaction.addCommands(buildCommand(ZAdd, args));
         return getThis();
     }
 
@@ -1879,15 +2055,17 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * Adds members with their scores to the sorted set stored at <code>key</code>.<br>
      * If a member is already a part of the sorted set, its score is updated.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/zadd/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param membersScoresMap A <code>Map</code> of members to their corresponding scores.
      * @param options The ZAdd options.
      * @return Command Response - The number of elements added to the sorted set.
      */
-    public T zadd(
-            @NonNull String key,
-            @NonNull Map<String, Double> membersScoresMap,
+    public <ArgType> T zadd(
+            @NonNull ArgType key,
+            @NonNull Map<ArgType, Double> membersScoresMap,
             @NonNull ZAddOptions options) {
         return zadd(key, membersScoresMap, options, false);
     }
@@ -1896,6 +2074,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * Adds members with their scores to the sorted set stored at <code>key</code>.<br>
      * If a member is already a part of the sorted set, its score is updated.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/zadd/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param membersScoresMap A <code>Map</code> of members to their corresponding scores.
@@ -1904,8 +2084,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @return Command Response - The number of elements added to the sorted set. <br>
      *     If <code>changed</code> is set, returns the number of elements updated in the sorted set.
      */
-    public T zadd(
-            @NonNull String key, @NonNull Map<String, Double> membersScoresMap, boolean changed) {
+    public <ArgType> T zadd(
+            @NonNull ArgType key, @NonNull Map<ArgType, Double> membersScoresMap, boolean changed) {
         return zadd(key, membersScoresMap, ZAddOptions.builder().build(), changed);
     }
 
@@ -1913,12 +2093,14 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * Adds members with their scores to the sorted set stored at <code>key</code>.<br>
      * If a member is already a part of the sorted set, its score is updated.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/zadd/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param membersScoresMap A <code>Map</code> of members to their corresponding scores.
      * @return Command Response - The number of elements added to the sorted set.
      */
-    public T zadd(@NonNull String key, @NonNull Map<String, Double> membersScoresMap) {
+    public <ArgType> T zadd(@NonNull ArgType key, @NonNull Map<ArgType, Double> membersScoresMap) {
         return zadd(key, membersScoresMap, ZAddOptions.builder().build(), false);
     }
 
@@ -1931,6 +2113,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * member is created.<br>
      * <code>zaddIncr</code> with empty option acts as {@link #zincrby(String, double, String)}.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/zadd/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param member A member in the sorted set to increment.
@@ -1940,16 +2124,21 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     If there was a conflict with the options, the operation aborts and <code>null</code> is
      *     returned.
      */
-    public T zaddIncr(
-            @NonNull String key, @NonNull String member, double increment, @NonNull ZAddOptions options) {
-        ArgsArray commandArgs =
-                buildArgs(
-                        concatenateArrays(
-                                new String[] {key},
-                                options.toArgs(),
-                                new String[] {"INCR", Double.toString(increment), member}));
-
-        protobufTransaction.addCommands(buildCommand(ZAdd, commandArgs));
+    public <ArgType> T zaddIncr(
+            @NonNull ArgType key,
+            @NonNull ArgType member,
+            double increment,
+            @NonNull ZAddOptions options) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(
+                buildCommand(
+                        ZAdd,
+                        newArgsBuilder()
+                                .add(key)
+                                .add(options.toArgs())
+                                .add("INCR")
+                                .add(increment)
+                                .add(member)));
         return getThis();
     }
 
@@ -1961,13 +2150,15 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * If <code>key</code> does not exist, a new sorted set with the specified member as its sole
      * member is created.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/zadd/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param member A member in the sorted set to increment.
      * @param increment The score to increment the member.
      * @return Command Response - The score of the member.
      */
-    public T zaddIncr(@NonNull String key, @NonNull String member, double increment) {
+    public <ArgType> T zaddIncr(@NonNull ArgType key, @NonNull ArgType member, double increment) {
         return zaddIncr(key, member, increment, ZAddOptions.builder().build());
     }
 
@@ -1975,6 +2166,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * Removes the specified members from the sorted set stored at <code>key</code>.<br>
      * Specified members that are not a member of this set are ignored.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/zrem/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param members An array of members to remove from the sorted set.
@@ -1983,24 +2176,26 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     If <code>key</code> does not exist, it is treated as an empty sorted set, and this command
      *     returns <code>0</code>.
      */
-    public T zrem(@NonNull String key, @NonNull String[] members) {
-        ArgsArray commandArgs = buildArgs(ArrayUtils.addFirst(members, key));
-        protobufTransaction.addCommands(buildCommand(ZRem, commandArgs));
+    public <ArgType> T zrem(@NonNull ArgType key, @NonNull ArgType[] members) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(ZRem, newArgsBuilder().add(key).add(members)));
         return getThis();
     }
 
     /**
      * Returns the cardinality (number of elements) of the sorted set stored at <code>key</code>.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/zcard/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @return Command Response - The number of elements in the sorted set.<br>
      *     If <code>key</code> does not exist, it is treated as an empty sorted set, and this command
      *     return <code>0</code>.
      */
-    public T zcard(@NonNull String key) {
-        ArgsArray commandArgs = buildArgs(key);
-        protobufTransaction.addCommands(buildCommand(ZCard, commandArgs));
+    public <ArgType> T zcard(@NonNull ArgType key) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(ZCard, newArgsBuilder().add(key)));
         return getThis();
     }
 
@@ -2008,6 +2203,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * Removes and returns up to <code>count</code> members with the lowest scores from the sorted set
      * stored at the specified <code>key</code>.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/zpopmin/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param count Specifies the quantity of members to pop.<br>
@@ -2018,9 +2215,9 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     If <code>key</code> doesn't exist, it will be treated as an empty sorted set and the
      *     command returns an empty <code>Map</code>.
      */
-    public T zpopmin(@NonNull String key, long count) {
-        ArgsArray commandArgs = buildArgs(key, Long.toString(count));
-        protobufTransaction.addCommands(buildCommand(ZPopMin, commandArgs));
+    public <ArgType> T zpopmin(@NonNull ArgType key, long count) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(ZPopMin, newArgsBuilder().add(key).add(count)));
         return getThis();
     }
 
@@ -2028,36 +2225,42 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * Removes and returns the member with the lowest score from the sorted set stored at the
      * specified <code>key</code>.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/zpopmin/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @return Command Response - A map containing the removed member and its corresponding score.<br>
      *     If <code>key</code> doesn't exist, it will be treated as an empty sorted set and the
      *     command returns an empty <code>Map</code>.
      */
-    public T zpopmin(@NonNull String key) {
-        ArgsArray commandArgs = buildArgs(key);
-        protobufTransaction.addCommands(buildCommand(ZPopMin, commandArgs));
+    public <ArgType> T zpopmin(@NonNull ArgType key) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(ZPopMin, newArgsBuilder().add(key)));
         return getThis();
     }
 
     /**
      * Returns a random element from the sorted set stored at <code>key</code>.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/zrandmember/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @return Command Response - A <code>String</code> representing a random element from the sorted
      *     set.<br>
      *     If the sorted set does not exist or is empty, the response will be <code>null</code>.
      */
-    public T zrandmember(@NonNull String key) {
-        ArgsArray commandArgs = buildArgs(key);
-        protobufTransaction.addCommands(buildCommand(ZRandMember, commandArgs));
+    public <ArgType> T zrandmember(@NonNull ArgType key) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(ZRandMember, newArgsBuilder().add(key)));
         return getThis();
     }
 
     /**
      * Retrieves random elements from the sorted set stored at <code>key</code>.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/zrandmember/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param count The number of elements to return.<br>
@@ -2067,9 +2270,10 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     If the sorted set does not exist or is empty, the response will be an empty <code>array
      *     </code>.
      */
-    public T zrandmemberWithCount(@NonNull String key, long count) {
-        ArgsArray commandArgs = buildArgs(key, Long.toString(count));
-        protobufTransaction.addCommands(buildCommand(ZRandMember, commandArgs));
+    public <ArgType> T zrandmemberWithCount(@NonNull ArgType key, long count) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(
+                buildCommand(ZRandMember, newArgsBuilder().add(key).add(count)));
         return getThis();
     }
 
@@ -2077,6 +2281,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * Retrieves random elements along with their scores from the sorted set stored at <code>key
      * </code>.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/zrandmember/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param count The number of elements to return.<br>
@@ -2087,11 +2293,10 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     If the sorted set does not exist or is empty, the response will be an empty <code>array
      *     </code>.
      */
-    public T zrandmemberWithCountWithScores(String key, long count) {
-        String[] arguments = new String[] {key, Long.toString(count), WITH_SCORES_REDIS_API};
-
-        ArgsArray commandArgs = buildArgs(arguments);
-        protobufTransaction.addCommands(buildCommand(ZRandMember, commandArgs));
+    public <ArgType> T zrandmemberWithCountWithScores(ArgType key, long count) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(
+                buildCommand(ZRandMember, newArgsBuilder().add(key).add(count).add(WITH_SCORES_REDIS_API)));
         return getThis();
     }
 
@@ -2102,15 +2307,18 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * </code> as its score. If <code>key</code> does not exist, a new sorted set with the specified
      * member as its sole member is created.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/zincrby/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param increment The score increment.
      * @param member A member of the sorted set.
      * @return Command Response - The new score of <code>member</code>.
      */
-    public T zincrby(@NonNull String key, double increment, @NonNull String member) {
-        ArgsArray commandArgs = buildArgs(key, Double.toString(increment), member);
-        protobufTransaction.addCommands(buildCommand(ZIncrBy, commandArgs));
+    public <ArgType> T zincrby(@NonNull ArgType key, double increment, @NonNull ArgType member) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(
+                buildCommand(ZIncrBy, newArgsBuilder().add(key).add(increment).add(member)));
         return getThis();
     }
 
@@ -2120,6 +2328,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * they are provided.<br>
      * <code>BZPOPMIN</code> is the blocking variant of {@link #zpopmin(String)}.<br>
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/bzpopmin/">redis.io</a> for more details.
      * @apiNote <code>BZPOPMIN</code> is a client blocking command, see <a
      *     href="https://github.com/aws/glide-for-redis/wiki/General-Concepts#blocking-commands">Blocking
@@ -2132,9 +2342,10 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     If no member could be popped and the <code>timeout</code> expired, returns <code>null
      *     </code>.
      */
-    public T bzpopmin(@NonNull String[] keys, double timeout) {
-        ArgsArray commandArgs = buildArgs(ArrayUtils.add(keys, Double.toString(timeout)));
-        protobufTransaction.addCommands(buildCommand(BZPopMin, commandArgs));
+    public <ArgType> T bzpopmin(@NonNull ArgType[] keys, double timeout) {
+        checkTypeOrThrow(keys);
+        protobufTransaction.addCommands(
+                buildCommand(BZPopMin, newArgsBuilder().add(keys).add(timeout)));
         return getThis();
     }
 
@@ -2142,6 +2353,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * Removes and returns up to <code>count</code> members with the highest scores from the sorted
      * set stored at the specified <code>key</code>.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/zpopmax/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param count Specifies the quantity of members to pop.<br>
@@ -2152,9 +2365,9 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     If <code>key</code> doesn't exist, it will be treated as an empty sorted set and the
      *     command returns an empty <code>Map</code>.
      */
-    public T zpopmax(@NonNull String key, long count) {
-        ArgsArray commandArgs = buildArgs(key, Long.toString(count));
-        protobufTransaction.addCommands(buildCommand(ZPopMax, commandArgs));
+    public <ArgType> T zpopmax(@NonNull ArgType key, long count) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(ZPopMax, newArgsBuilder().add(key).add(count)));
         return getThis();
     }
 
@@ -2162,15 +2375,17 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * Removes and returns the member with the highest score from the sorted set stored at the
      * specified <code>key</code>.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/zpopmax/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @return Command Response - A map containing the removed member and its corresponding score.<br>
      *     If <code>key</code> doesn't exist, it will be treated as an empty sorted set and the
      *     command returns an empty <code>Map</code>.
      */
-    public T zpopmax(@NonNull String key) {
-        ArgsArray commandArgs = buildArgs(key);
-        protobufTransaction.addCommands(buildCommand(ZPopMax, commandArgs));
+    public <ArgType> T zpopmax(@NonNull ArgType key) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(ZPopMax, newArgsBuilder().add(key)));
         return getThis();
     }
 
@@ -2180,6 +2395,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * they are provided.<br>
      * <code>BZPOPMAX</code> is the blocking variant of {@link #zpopmax(String)}.<br>
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/bzpopmax/">redis.io</a> for more details.
      * @apiNote <code>BZPOPMAX</code> is a client blocking command, see <a
      *     href="https://github.com/aws/glide-for-redis/wiki/General-Concepts#blocking-commands">Blocking
@@ -2192,15 +2409,18 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     If no member could be popped and the <code>timeout</code> expired, returns <code>null
      *     </code>.
      */
-    public T bzpopmax(@NonNull String[] keys, double timeout) {
-        ArgsArray commandArgs = buildArgs(ArrayUtils.add(keys, Double.toString(timeout)));
-        protobufTransaction.addCommands(buildCommand(BZPopMax, commandArgs));
+    public <ArgType> T bzpopmax(@NonNull ArgType[] keys, double timeout) {
+        checkTypeOrThrow(keys);
+        protobufTransaction.addCommands(
+                buildCommand(BZPopMax, newArgsBuilder().add(keys).add(timeout)));
         return getThis();
     }
 
     /**
      * Returns the score of <code>member</code> in the sorted set stored at <code>key</code>.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/zscore/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param member The member whose score is to be retrieved.
@@ -2208,9 +2428,9 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     If <code>member</code> does not exist in the sorted set, <code>null</code> is returned.<br>
      *     If <code>key</code> does not exist, <code>null</code> is returned.
      */
-    public T zscore(@NonNull String key, @NonNull String member) {
-        ArgsArray commandArgs = buildArgs(key, member);
-        protobufTransaction.addCommands(buildCommand(ZScore, commandArgs));
+    public <ArgType> T zscore(@NonNull ArgType key, @NonNull ArgType member) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(ZScore, newArgsBuilder().add(key).add(member)));
         return getThis();
     }
 
@@ -2219,6 +2439,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * scores ordered from low to high, starting from <code>0</code>.<br>
      * To get the rank of <code>member</code> with its score, see {@link #zrankWithScore}.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/zrank/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param member The member whose rank is to be retrieved.
@@ -2226,9 +2448,9 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     If <code>key</code> doesn't exist, or if <code>member</code> is not present in the set,
      *     <code>null</code> will be returned.
      */
-    public T zrank(@NonNull String key, @NonNull String member) {
-        ArgsArray commandArgs = buildArgs(key, member);
-        protobufTransaction.addCommands(buildCommand(ZRank, commandArgs));
+    public <ArgType> T zrank(@NonNull ArgType key, @NonNull ArgType member) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(ZRank, newArgsBuilder().add(key).add(member)));
         return getThis();
     }
 
@@ -2236,6 +2458,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * Returns the rank of <code>member</code> in the sorted set stored at <code>key</code> with its
      * score, where scores are ordered from the lowest to highest, starting from <code>0</code>.<br>
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/zrank/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param member The member whose rank is to be retrieved.
@@ -2244,9 +2468,10 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     If <code>key</code> doesn't exist, or if <code>member</code> is not present in the set,
      *     <code>null</code> will be returned.
      */
-    public T zrankWithScore(@NonNull String key, @NonNull String member) {
-        ArgsArray commandArgs = buildArgs(key, member, WITH_SCORE_REDIS_API);
-        protobufTransaction.addCommands(buildCommand(ZRank, commandArgs));
+    public <ArgType> T zrankWithScore(@NonNull ArgType key, @NonNull ArgType member) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(
+                buildCommand(ZRank, newArgsBuilder().add(key).add(member).add(WITH_SCORE_REDIS_API)));
         return getThis();
     }
 
@@ -2255,6 +2480,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * scores are ordered from the highest to lowest, starting from <code>0</code>.<br>
      * To get the rank of <code>member</code> with its score, see {@link #zrevrankWithScore}.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/zrevrank/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param member The member whose rank is to be retrieved.
@@ -2263,9 +2490,9 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     If <code>key</code> doesn't exist, or if <code>member</code> is not present in the set,
      *     <code>null</code> will be returned.
      */
-    public T zrevrank(@NonNull String key, @NonNull String member) {
-        ArgsArray commandArgs = buildArgs(key, member);
-        protobufTransaction.addCommands(buildCommand(ZRevRank, commandArgs));
+    public <ArgType> T zrevrank(@NonNull ArgType key, @NonNull ArgType member) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(ZRevRank, newArgsBuilder().add(key).add(member)));
         return getThis();
     }
 
@@ -2273,6 +2500,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * Returns the rank of <code>member</code> in the sorted set stored at <code>key</code> with its
      * score, where scores are ordered from the highest to lowest, starting from <code>0</code>.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/zrevrank/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param member The member whose rank is to be retrieved.
@@ -2282,9 +2511,10 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     If <code>key</code> doesn't exist, or if <code>member</code> is not present in the set,
      *     <code>null</code> will be returned.
      */
-    public T zrevrankWithScore(@NonNull String key, @NonNull String member) {
-        ArgsArray commandArgs = buildArgs(key, member, WITH_SCORE_REDIS_API);
-        protobufTransaction.addCommands(buildCommand(ZRevRank, commandArgs));
+    public <ArgType> T zrevrankWithScore(@NonNull ArgType key, @NonNull ArgType member) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(
+                buildCommand(ZRevRank, newArgsBuilder().add(key).add(member).add(WITH_SCORE_REDIS_API)));
         return getThis();
     }
 
@@ -2292,6 +2522,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * Returns the scores associated with the specified <code>members</code> in the sorted set stored
      * at <code>key</code>.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/zmscore/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param members An array of members in the sorted set.
@@ -2299,9 +2531,9 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     If a <code>member</code> does not exist, the corresponding value in the <code>Array</code>
      *     will be <code>null</code>.
      */
-    public T zmscore(@NonNull String key, @NonNull String[] members) {
-        ArgsArray commandArgs = buildArgs(ArrayUtils.addFirst(members, key));
-        protobufTransaction.addCommands(buildCommand(ZMScore, commandArgs));
+    public <ArgType> T zmscore(@NonNull ArgType key, @NonNull ArgType[] members) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(buildCommand(ZMScore, newArgsBuilder().add(key).add(members)));
         return getThis();
     }
 
@@ -2310,6 +2542,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * To get the elements with their scores, see {@link #zdiffWithScores}.
      *
      * @since Redis 6.2 and above.
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/zdiff/">redis.io</a> for more details.
      * @param keys The keys of the sorted sets.
      * @return Command Response - An <code>array</code> of elements representing the difference
@@ -2317,9 +2551,10 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     If the first <code>key</code> does not exist, it is treated as an empty sorted set, and the
      *     command returns an empty <code>array</code>.
      */
-    public T zdiff(@NonNull String[] keys) {
-        ArgsArray commandArgs = buildArgs(ArrayUtils.addFirst(keys, Long.toString(keys.length)));
-        protobufTransaction.addCommands(buildCommand(ZDiff, commandArgs));
+    public <ArgType> T zdiff(@NonNull ArgType[] keys) {
+        checkTypeOrThrow(keys);
+        protobufTransaction.addCommands(
+                buildCommand(ZDiff, newArgsBuilder().add(keys.length).add(keys)));
         return getThis();
     }
 
@@ -2327,6 +2562,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * Returns the difference between the first sorted set and all the successive sorted sets.
      *
      * @since Redis 6.2 and above.
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/zdiff/">redis.io</a> for more details.
      * @param keys The keys of the sorted sets.
      * @return Command Response - A <code>Map</code> of elements and their scores representing the
@@ -2334,11 +2571,11 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     If the first <code>key</code> does not exist, it is treated as an empty sorted set, and the
      *     command returns an empty <code>Map</code>.
      */
-    public T zdiffWithScores(@NonNull String[] keys) {
-        String[] arguments = ArrayUtils.addFirst(keys, Long.toString(keys.length));
-        arguments = ArrayUtils.add(arguments, WITH_SCORES_REDIS_API);
-        ArgsArray commandArgs = buildArgs(arguments);
-        protobufTransaction.addCommands(buildCommand(ZDiff, commandArgs));
+    public <ArgType> T zdiffWithScores(@NonNull ArgType[] keys) {
+        checkTypeOrThrow(keys);
+        protobufTransaction.addCommands(
+                buildCommand(
+                        ZDiff, newArgsBuilder().add(keys.length).add(keys).add(WITH_SCORES_REDIS_API)));
         return getThis();
     }
 
@@ -2348,16 +2585,18 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * overwriting it if it already exists. Non-existent keys are treated as empty sets.
      *
      * @since Redis 6.2 and above.
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/zdiffstore/">redis.io</a> for more details.
      * @param destination The key for the resulting sorted set.
      * @param keys The keys of the sorted sets to compare.
      * @return Command Response - The number of members in the resulting sorted set stored at <code>
      *     destination</code>.
      */
-    public T zdiffstore(@NonNull String destination, @NonNull String[] keys) {
-        ArgsArray commandArgs =
-                buildArgs(ArrayUtils.addAll(new String[] {destination, Long.toString(keys.length)}, keys));
-        protobufTransaction.addCommands(buildCommand(ZDiffStore, commandArgs));
+    public <ArgType> T zdiffstore(@NonNull ArgType destination, @NonNull ArgType[] keys) {
+        checkTypeOrThrow(destination);
+        protobufTransaction.addCommands(
+                buildCommand(ZDiffStore, newArgsBuilder().add(destination).add(keys.length).add(keys)));
         return getThis();
     }
 
@@ -2365,6 +2604,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * Returns the number of members in the sorted set stored at <code>key</code> with scores between
      * <code>minScore</code> and <code>maxScore</code>.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/zcount/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param minScore The minimum score to count from. Can be an implementation of {@link
@@ -2378,9 +2619,12 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     returns <code>0</code>.<br>
      *     If <code>maxScore < minScore</code>, <code>0</code> is returned.
      */
-    public T zcount(@NonNull String key, @NonNull ScoreRange minScore, @NonNull ScoreRange maxScore) {
-        ArgsArray commandArgs = buildArgs(key, minScore.toArgs(), maxScore.toArgs());
-        protobufTransaction.addCommands(buildCommand(ZCount, commandArgs));
+    public <ArgType> T zcount(
+            @NonNull ArgType key, @NonNull ScoreRange minScore, @NonNull ScoreRange maxScore) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(
+                buildCommand(
+                        ZCount, newArgsBuilder().add(key).add(minScore.toArgs()).add(maxScore.toArgs())));
         return getThis();
     }
 
@@ -2390,6 +2634,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * indexes with <code>0</code> being the element with the lowest score. These indexes can be
      * negative numbers, where they indicate offsets starting at the element with the highest score.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/zremrangebyrank/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param start The starting point of the range.
@@ -2401,9 +2647,10 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     actual end of the sorted set.<br>
      *     If <code>key</code> does not exist <code>0</code> will be returned.
      */
-    public T zremrangebyrank(@NonNull String key, long start, long end) {
-        ArgsArray commandArgs = buildArgs(key, Long.toString(start), Long.toString(end));
-        protobufTransaction.addCommands(buildCommand(ZRemRangeByRank, commandArgs));
+    public <ArgType> T zremrangebyrank(@NonNull ArgType key, long start, long end) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(
+                buildCommand(ZRemRangeByRank, newArgsBuilder().add(key).add(start).add(end)));
         return getThis();
     }
 
@@ -2412,6 +2659,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * sorted set at <code>destination</code>. If <code>destination</code> doesn't exist, a new sorted
      * set is created; if it exists, it's overwritten.<br>
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/zrangestore/">redis.io</a> for more details.
      * @param destination The key for the destination sorted set.
      * @param source The key of the source sorted set.
@@ -2426,14 +2675,19 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     element with the highest score.
      * @return Command Response - The number of elements in the resulting sorted set.
      */
-    public T zrangestore(
-            @NonNull String destination,
-            @NonNull String source,
+    public <ArgType> T zrangestore(
+            @NonNull ArgType destination,
+            @NonNull ArgType source,
             @NonNull RangeQuery rangeQuery,
             boolean reverse) {
-        ArgsArray commandArgs =
-                buildArgs(RangeOptions.createZRangeStoreArgs(destination, source, rangeQuery, reverse));
-        protobufTransaction.addCommands(buildCommand(ZRangeStore, commandArgs));
+        checkTypeOrThrow(destination);
+        protobufTransaction.addCommands(
+                buildCommand(
+                        ZRangeStore,
+                        newArgsBuilder()
+                                .add(destination)
+                                .add(source)
+                                .add(RangeOptions.createZRangeBaseArgs(rangeQuery, reverse))));
         return getThis();
     }
 
@@ -2442,6 +2696,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * sorted set at <code>destination</code>. If <code>destination</code> doesn't exist, a new sorted
      * set is created; if it exists, it's overwritten.<br>
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/zrangestore/">redis.io</a> for more details.
      * @param destination The key for the destination sorted set.
      * @param source The key of the source sorted set.
@@ -2454,8 +2710,9 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *
      * @return Command Response - The number of elements in the resulting sorted set.
      */
-    public T zrangestore(
-            @NonNull String destination, @NonNull String source, @NonNull RangeQuery rangeQuery) {
+    public <ArgType> T zrangestore(
+            @NonNull ArgType destination, @NonNull ArgType source, @NonNull RangeQuery rangeQuery) {
+        checkTypeOrThrow(destination);
         return getThis().zrangestore(destination, source, rangeQuery, false);
     }
 
@@ -2463,6 +2720,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * Removes all elements in the sorted set stored at <code>key</code> with a lexicographical order
      * between <code>minLex</code> and <code>maxLex</code>.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/zremrangebylex/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param minLex The minimum bound of the lexicographical range. Can be an implementation of
@@ -2476,9 +2735,12 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     returns <code>0</code>.<br>
      *     If <code>minLex</code> is greater than <code>maxLex</code>, <code>0</code> is returned.
      */
-    public T zremrangebylex(@NonNull String key, @NonNull LexRange minLex, @NonNull LexRange maxLex) {
-        ArgsArray commandArgs = buildArgs(key, minLex.toArgs(), maxLex.toArgs());
-        protobufTransaction.addCommands(buildCommand(ZRemRangeByLex, commandArgs));
+    public <ArgType> T zremrangebylex(
+            @NonNull ArgType key, @NonNull LexRange minLex, @NonNull LexRange maxLex) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(
+                buildCommand(
+                        ZRemRangeByLex, newArgsBuilder().add(key).add(minLex.toArgs()).add(maxLex.toArgs())));
         return getThis();
     }
 
@@ -2486,6 +2748,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * Removes all elements in the sorted set stored at <code>key</code> with a score between <code>
      * minScore</code> and <code>maxScore</code>.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/zremrangebyscore/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param minScore The minimum score to remove from. Can be an implementation of {@link
@@ -2499,10 +2763,13 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     returns <code>0</code>.<br>
      *     If <code>minScore</code> is greater than <code>maxScore</code>, <code>0</code> is returned.
      */
-    public T zremrangebyscore(
-            @NonNull String key, @NonNull ScoreRange minScore, @NonNull ScoreRange maxScore) {
-        ArgsArray commandArgs = buildArgs(key, minScore.toArgs(), maxScore.toArgs());
-        protobufTransaction.addCommands(buildCommand(ZRemRangeByScore, commandArgs));
+    public <ArgType> T zremrangebyscore(
+            @NonNull ArgType key, @NonNull ScoreRange minScore, @NonNull ScoreRange maxScore) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(
+                buildCommand(
+                        ZRemRangeByScore,
+                        newArgsBuilder().add(key).add(minScore.toArgs()).add(maxScore.toArgs())));
         return getThis();
     }
 
@@ -2510,6 +2777,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * Returns the number of members in the sorted set stored at <code>key</code> with scores between
      * <code>minLex</code> and <code>maxLex</code>.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/zlexcount/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param minLex The minimum lex to count from. Can be an implementation of {@link InfLexBound}
@@ -2523,9 +2792,12 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     returns <code>0</code>.<br>
      *     If <code>maxLex < minLex</code>, <code>0</code> is returned.
      */
-    public T zlexcount(@NonNull String key, @NonNull LexRange minLex, @NonNull LexRange maxLex) {
-        ArgsArray commandArgs = buildArgs(key, minLex.toArgs(), maxLex.toArgs());
-        protobufTransaction.addCommands(buildCommand(ZLexCount, commandArgs));
+    public <ArgType> T zlexcount(
+            @NonNull ArgType key, @NonNull LexRange minLex, @NonNull LexRange maxLex) {
+        checkTypeOrThrow(key);
+        protobufTransaction.addCommands(
+                buildCommand(
+                        ZLexCount, newArgsBuilder().add(key).add(minLex.toArgs()).add(maxLex.toArgs())));
         return getThis();
     }
 
@@ -2534,6 +2806,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * stores the result in <code>destination</code>. If <code>destination</code> already exists, it
      * is overwritten. Otherwise, a new sorted set will be created.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/zunionstore/">redis.io</a> for more details.
      * @param destination The key of the destination sorted set.
      * @param keysOrWeightedKeys The keys of the sorted sets with possible formats:
@@ -2548,15 +2822,18 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @return Command Response - The number of elements in the resulting sorted set stored at <code>
      *     destination</code>.
      */
-    public T zunionstore(
-            @NonNull String destination,
+    public <ArgType> T zunionstore(
+            @NonNull ArgType destination,
             @NonNull KeysOrWeightedKeys keysOrWeightedKeys,
             @NonNull Aggregate aggregate) {
-        ArgsArray commandArgs =
-                buildArgs(
-                        concatenateArrays(
-                                new String[] {destination}, keysOrWeightedKeys.toArgs(), aggregate.toArgs()));
-        protobufTransaction.addCommands(buildCommand(ZUnionStore, commandArgs));
+        checkTypeOrThrow(destination);
+        protobufTransaction.addCommands(
+                buildCommand(
+                        ZUnionStore,
+                        newArgsBuilder()
+                                .add(destination)
+                                .add(keysOrWeightedKeys.toArgs())
+                                .add(aggregate.toArgs())));
         return getThis();
     }
 
@@ -2565,6 +2842,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * stores the result in <code>destination</code>. If <code>destination</code> already exists, it
      * is overwritten. Otherwise, a new sorted set will be created.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/zunionstore/">redis.io</a> for more details.
      * @param destination The key of the destination sorted set.
      * @param keysOrWeightedKeys The keys of the sorted sets with possible formats:
@@ -2576,11 +2855,12 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @return Command Response - The number of elements in the resulting sorted set stored at <code>
      *     destination</code>.
      */
-    public T zunionstore(
-            @NonNull String destination, @NonNull KeysOrWeightedKeys keysOrWeightedKeys) {
-        ArgsArray commandArgs =
-                buildArgs(concatenateArrays(new String[] {destination}, keysOrWeightedKeys.toArgs()));
-        protobufTransaction.addCommands(buildCommand(ZUnionStore, commandArgs));
+    public <ArgType> T zunionstore(
+            @NonNull ArgType destination, @NonNull KeysOrWeightedKeys keysOrWeightedKeys) {
+        checkTypeOrThrow(destination);
+        protobufTransaction.addCommands(
+                buildCommand(
+                        ZUnionStore, newArgsBuilder().add(destination).add(keysOrWeightedKeys.toArgs())));
         return getThis();
     }
 
@@ -2589,6 +2869,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * , and stores the result in <code>destination</code>. If <code>destination</code> already
      * exists, it is overwritten. Otherwise, a new sorted set will be created.
      *
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/zinterstore/">redis.io</a> for more details.
      * @param destination The key of the destination sorted set.
      * @param keysOrWeightedKeys The keys of the sorted sets with possible formats:
@@ -2603,15 +2885,18 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @return Command Response - The number of elements in the resulting sorted set stored at <code>
      *     destination</code>.
      */
-    public T zinterstore(
-            @NonNull String destination,
+    public <ArgType> T zinterstore(
+            @NonNull ArgType destination,
             @NonNull KeysOrWeightedKeys keysOrWeightedKeys,
             @NonNull Aggregate aggregate) {
-        ArgsArray commandArgs =
-                buildArgs(
-                        concatenateArrays(
-                                new String[] {destination}, keysOrWeightedKeys.toArgs(), aggregate.toArgs()));
-        protobufTransaction.addCommands(buildCommand(ZInterStore, commandArgs));
+        checkTypeOrThrow(destination);
+        protobufTransaction.addCommands(
+                buildCommand(
+                        ZInterStore,
+                        newArgsBuilder()
+                                .add(destination)
+                                .add(keysOrWeightedKeys.toArgs())
+                                .add(aggregate.toArgs())));
         return getThis();
     }
 
@@ -2619,13 +2904,16 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * Returns the cardinality of the intersection of the sorted sets specified by <code>keys</code>.
      *
      * @since Redis 7.0 and above.
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/zintercard/">redis.io</a> for more details.
      * @param keys The keys of the sorted sets to intersect.
      * @return Command Response - The cardinality of the intersection of the given sorted sets.
      */
-    public T zintercard(@NonNull String[] keys) {
-        ArgsArray commandArgs = buildArgs(ArrayUtils.addFirst(keys, Integer.toString(keys.length)));
-        protobufTransaction.addCommands(buildCommand(ZInterCard, commandArgs));
+    public <ArgType> T zintercard(@NonNull ArgType[] keys) {
+        checkTypeOrThrow(keys);
+        protobufTransaction.addCommands(
+                buildCommand(ZInterCard, newArgsBuilder().add(keys.length).add(keys)));
         return getThis();
     }
 
@@ -2635,6 +2923,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * algorithm will exit early and yield <code>limit</code> as the cardinality.
      *
      * @since Redis 7.0 and above.
+     * @implNote ArgType is limited to String or GlideString, any other type will throw
+     *     IllegalArgumentException
      * @see <a href="https://redis.io/commands/zintercard/">redis.io</a> for more details.
      * @param keys The keys of the sorted sets to intersect.
      * @param limit Specifies a maximum number for the intersection cardinality. If limit is set to
@@ -2642,14 +2932,12 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @return Command Response - The cardinality of the intersection of the given sorted sets, or the
      *     <code>limit</code> if reached.
      */
-    public T zintercard(@NonNull String[] keys, long limit) {
-        ArgsArray commandArgs =
-                buildArgs(
-                        concatenateArrays(
-                                new String[] {Integer.toString(keys.length)},
-                                keys,
-                                new String[] {LIMIT_REDIS_API, Long.toString(limit)}));
-        protobufTransaction.addCommands(buildCommand(ZInterCard, commandArgs));
+    public <ArgType> T zintercard(@NonNull ArgType[] keys, long limit) {
+        checkTypeOrThrow(keys);
+        protobufTransaction.addCommands(
+                buildCommand(
+                        ZInterCard,
+                        newArgsBuilder().add(keys.length).add(keys).add(LIMIT_REDIS_API).add(limit)));
         return getThis();
     }
 
@@ -2673,9 +2961,35 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      */
     public T zinterstore(
             @NonNull String destination, @NonNull KeysOrWeightedKeys keysOrWeightedKeys) {
-        ArgsArray commandArgs =
-                buildArgs(concatenateArrays(new String[] {destination}, keysOrWeightedKeys.toArgs()));
-        protobufTransaction.addCommands(buildCommand(ZInterStore, commandArgs));
+        protobufTransaction.addCommands(
+                buildCommand(
+                        ZInterStore, newArgsBuilder().add(destination).add(keysOrWeightedKeys.toArgs())));
+        return getThis();
+    }
+
+    /**
+     * Computes the intersection of sorted sets given by the specified <code>KeysOrWeightedKeys</code>
+     * , and stores the result in <code>destination</code>. If <code>destination</code> already
+     * exists, it is overwritten. Otherwise, a new sorted set will be created.<br>
+     * To perform a <code>zinterstore</code> operation while specifying aggregation settings, use
+     * {@link #zinterstore(String, KeysOrWeightedKeys, Aggregate)}
+     *
+     * @see <a href="https://redis.io/commands/zinterstore/">redis.io</a> for more details.
+     * @param destination The key of the destination sorted set.
+     * @param keysOrWeightedKeys The keys of the sorted sets with possible formats:
+     *     <ul>
+     *       <li>Use {@link KeyArrayBinary} for keys only.
+     *       <li>Use {@link KeysOrWeightedKeysBinary} for weighted keys with score multipliers.
+     *     </ul>
+     *
+     * @return Command Response - The number of elements in the resulting sorted set stored at <code>
+     *     destination</code>.
+     */
+    public T zinterstore(
+            @NonNull GlideString destination, @NonNull KeysOrWeightedKeysBinary keysOrWeightedKeys) {
+        protobufTransaction.addCommands(
+                buildCommand(
+                        ZInterStore, newArgsBuilder().add(destination).add(keysOrWeightedKeys.toArgs())));
         return getThis();
     }
 
@@ -2689,8 +3003,21 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @return Command Response - The resulting sorted set from the union.
      */
     public T zunion(@NonNull KeyArray keys) {
-        ArgsArray commandArgs = buildArgs(keys.toArgs());
-        protobufTransaction.addCommands(buildCommand(ZUnion, commandArgs));
+        protobufTransaction.addCommands(buildCommand(ZUnion, newArgsBuilder().add(keys.toArgs())));
+        return getThis();
+    }
+
+    /**
+     * Returns the union of members from sorted sets specified by the given <code>keys</code>.<br>
+     * To get the elements with their scores, see {@link #zunionWithScores}.
+     *
+     * @since Redis 6.2 and above.
+     * @see <a href="https://redis.io/commands/zunion/">redis.io</a> for more details.
+     * @param keys The keys of the sorted sets.
+     * @return Command Response - The resulting sorted set from the union.
+     */
+    public T zunion(@NonNull KeyArrayBinary keys) {
+        protobufTransaction.addCommands(buildCommand(ZUnion, newArgsBuilder().add(keys.toArgs())));
         return getThis();
     }
 
@@ -2712,13 +3039,41 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      */
     public T zunionWithScores(
             @NonNull KeysOrWeightedKeys keysOrWeightedKeys, @NonNull Aggregate aggregate) {
-        ArgsArray commandArgs =
-                buildArgs(
-                        concatenateArrays(
-                                keysOrWeightedKeys.toArgs(),
-                                aggregate.toArgs(),
-                                new String[] {WITH_SCORES_REDIS_API}));
-        protobufTransaction.addCommands(buildCommand(ZUnion, commandArgs));
+        protobufTransaction.addCommands(
+                buildCommand(
+                        ZUnion,
+                        newArgsBuilder()
+                                .add(keysOrWeightedKeys.toArgs())
+                                .add(aggregate.toArgs())
+                                .add(WITH_SCORES_REDIS_API)));
+        return getThis();
+    }
+
+    /**
+     * Returns the union of members and their scores from sorted sets specified by the given <code>
+     * keysOrWeightedKeys</code>.
+     *
+     * @since Redis 6.2 and above.
+     * @see <a href="https://redis.io/commands/zunion/">redis.io</a> for more details.
+     * @param keysOrWeightedKeys The keys of the sorted sets with possible formats:
+     *     <ul>
+     *       <li>Use {@link KeyArrayBinary} for keys only.
+     *       <li>Use {@link WeightedKeysBinary} for weighted keys with score multipliers.
+     *     </ul>
+     *
+     * @param aggregate Specifies the aggregation strategy to apply when combining the scores of
+     *     elements.
+     * @return Command Response - The resulting sorted set from the union.
+     */
+    public T zunionWithScores(
+            @NonNull KeysOrWeightedKeysBinary keysOrWeightedKeys, @NonNull Aggregate aggregate) {
+        protobufTransaction.addCommands(
+                buildCommand(
+                        ZUnion,
+                        newArgsBuilder()
+                                .add(keysOrWeightedKeys.toArgs())
+                                .add(aggregate.toArgs())
+                                .add(WITH_SCORES_REDIS_API)));
         return getThis();
     }
 
@@ -2739,10 +3094,32 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @return Command Response - The resulting sorted set from the union.
      */
     public T zunionWithScores(@NonNull KeysOrWeightedKeys keysOrWeightedKeys) {
-        ArgsArray commandArgs =
-                buildArgs(
-                        concatenateArrays(keysOrWeightedKeys.toArgs(), new String[] {WITH_SCORES_REDIS_API}));
-        protobufTransaction.addCommands(buildCommand(ZUnion, commandArgs));
+        protobufTransaction.addCommands(
+                buildCommand(
+                        ZUnion, newArgsBuilder().add(keysOrWeightedKeys.toArgs()).add(WITH_SCORES_REDIS_API)));
+        return getThis();
+    }
+
+    /**
+     * Returns the union of members and their scores from sorted sets specified by the given <code>
+     * keysOrWeightedKeys</code>.<br>
+     * To perform a <code>zunion</code> operation while specifying aggregation settings, use {@link
+     * #zunionWithScores(KeysOrWeightedKeys, Aggregate)}.
+     *
+     * @since Redis 6.2 and above.
+     * @see <a href="https://redis.io/commands/zunion/">redis.io</a> for more details.
+     * @param keysOrWeightedKeys The keys of the sorted sets with possible formats:
+     *     <ul>
+     *       <li>Use {@link KeyArrayBinary} for keys only.
+     *       <li>Use {@link WeightedKeysBinary} for weighted keys with score multipliers.
+     *     </ul>
+     *
+     * @return Command Response - The resulting sorted set from the union.
+     */
+    public T zunionWithScores(@NonNull KeysOrWeightedKeysBinary keysOrWeightedKeys) {
+        protobufTransaction.addCommands(
+                buildCommand(
+                        ZUnion, newArgsBuilder().add(keysOrWeightedKeys.toArgs()).add(WITH_SCORES_REDIS_API)));
         return getThis();
     }
 
@@ -2757,8 +3134,22 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @return Command Response - The resulting sorted set from the intersection.
      */
     public T zinter(@NonNull KeyArray keys) {
-        ArgsArray commandArgs = buildArgs(keys.toArgs());
-        protobufTransaction.addCommands(buildCommand(ZInter, commandArgs));
+        protobufTransaction.addCommands(buildCommand(ZInter, newArgsBuilder().add(keys.toArgs())));
+        return getThis();
+    }
+
+    /**
+     * Returns the intersection of members from sorted sets specified by the given <code>keys</code>.
+     * <br>
+     * To get the elements with their scores, see {@link #zinterWithScores}.
+     *
+     * @since Redis 6.2 and above.
+     * @see <a href="https://redis.io/commands/zinter/">redis.io</a> for more details.
+     * @param keys The keys of the sorted sets.
+     * @return Command Response - The resulting sorted set from the intersection.
+     */
+    public T zinter(@NonNull KeyArrayBinary keys) {
+        protobufTransaction.addCommands(buildCommand(ZInter, newArgsBuilder().add(keys.toArgs())));
         return getThis();
     }
 
@@ -2778,10 +3169,31 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @return Command Response - The resulting sorted set from the intersection.
      */
     public T zinterWithScores(@NonNull KeysOrWeightedKeys keysOrWeightedKeys) {
-        ArgsArray commandArgs =
-                buildArgs(
-                        concatenateArrays(keysOrWeightedKeys.toArgs(), new String[] {WITH_SCORES_REDIS_API}));
-        protobufTransaction.addCommands(buildCommand(ZInter, commandArgs));
+        protobufTransaction.addCommands(
+                buildCommand(
+                        ZInter, newArgsBuilder().add(keysOrWeightedKeys.toArgs()).add(WITH_SCORES_REDIS_API)));
+        return getThis();
+    }
+
+    /**
+     * Returns the intersection of members and their scores from sorted sets specified by the given
+     * <code>keysOrWeightedKeys</code>. To perform a <code>zinter</code> operation while specifying
+     * aggregation settings, use {@link #zinterWithScores(KeysOrWeightedKeys, Aggregate)}.
+     *
+     * @since Redis 6.2 and above.
+     * @see <a href="https://redis.io/commands/zinter/">redis.io</a> for more details.
+     * @param keysOrWeightedKeys The keys of the sorted sets with possible formats:
+     *     <ul>
+     *       <li>Use {@link KeyArrayBinary} for keys only.
+     *       <li>Use {@link WeightedKeysBinary} for weighted keys with score multipliers.
+     *     </ul>
+     *
+     * @return Command Response - The resulting sorted set from the intersection.
+     */
+    public T zinterWithScores(@NonNull KeysOrWeightedKeysBinary keysOrWeightedKeys) {
+        protobufTransaction.addCommands(
+                buildCommand(
+                        ZInter, newArgsBuilder().add(keysOrWeightedKeys.toArgs()).add(WITH_SCORES_REDIS_API)));
         return getThis();
     }
 
@@ -2803,13 +3215,41 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      */
     public T zinterWithScores(
             @NonNull KeysOrWeightedKeys keysOrWeightedKeys, @NonNull Aggregate aggregate) {
-        ArgsArray commandArgs =
-                buildArgs(
-                        concatenateArrays(
-                                keysOrWeightedKeys.toArgs(),
-                                aggregate.toArgs(),
-                                new String[] {WITH_SCORES_REDIS_API}));
-        protobufTransaction.addCommands(buildCommand(ZInter, commandArgs));
+        protobufTransaction.addCommands(
+                buildCommand(
+                        ZInter,
+                        newArgsBuilder()
+                                .add(keysOrWeightedKeys.toArgs())
+                                .add(aggregate.toArgs())
+                                .add(WITH_SCORES_REDIS_API)));
+        return getThis();
+    }
+
+    /**
+     * Returns the intersection of members and their scores from sorted sets specified by the given
+     * <code>keysOrWeightedKeys</code>.
+     *
+     * @since Redis 6.2 and above.
+     * @see <a href="https://redis.io/commands/zinter/">redis.io</a> for more details.
+     * @param keysOrWeightedKeys The keys of the sorted sets with possible formats:
+     *     <ul>
+     *       <li>Use {@link KeyArrayBinary} for keys only.
+     *       <li>Use {@link WeightedKeysBinary} for weighted keys with score multipliers.
+     *     </ul>
+     *
+     * @param aggregate Specifies the aggregation strategy to apply when combining the scores of
+     *     elements.
+     * @return Command Response - The resulting sorted set from the intersection.
+     */
+    public T zinterWithScores(
+            @NonNull KeysOrWeightedKeysBinary keysOrWeightedKeys, @NonNull Aggregate aggregate) {
+        protobufTransaction.addCommands(
+                buildCommand(
+                        ZInter,
+                        newArgsBuilder()
+                                .add(keysOrWeightedKeys.toArgs())
+                                .add(aggregate.toArgs())
+                                .add(WITH_SCORES_REDIS_API)));
         return getThis();
     }
 
@@ -4343,9 +4783,10 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
             @NonNull ArgType member1,
             @NonNull ArgType member2,
             @NonNull GeoUnit geoUnit) {
-        ArgsArray commandArgs =
-                buildArgs(key, member1, member2, this.convertTo(key.getClass(), geoUnit.getValkeyAPI()));
-        protobufTransaction.addCommands(buildCommand(GeoDist, commandArgs));
+        protobufTransaction.addCommands(
+                buildCommand(
+                        GeoDist,
+                        newArgsBuilder().add(key).add(member1).add(member2).add(geoUnit.getValkeyAPI())));
         return getThis();
     }
 
@@ -4931,8 +5372,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      *     If <code>key</code> does not exist, an empty <code>Set</code> will be returned.
      */
     public <ArgType> T spopCount(@NonNull ArgType key, long count) {
-        ArgsArray commandArgs = buildArgs(key, this.convertTo(key.getClass(), count));
-        protobufTransaction.addCommands(buildCommand(SPop, commandArgs));
+        protobufTransaction.addCommands(buildCommand(SPop, newArgsBuilder().add(key).add(count)));
         return getThis();
     }
 
@@ -5893,25 +6333,26 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
         return this.newArgsArrayBuilder(args).build();
     }
 
-    /** Convert value to either String or GlideString. If cls is neither, throw an exception */
-    protected <StringType, ValueType> StringType convertTo(Class cls, ValueType value) {
-        if (cls.isInstance(this.GLIDE_STRING)) {
-            return (StringType) GlideString.of(value.toString());
-        } else if (cls.isInstance(this.STRING)) {
-            return (StringType) value.toString();
-        } else {
-            // arguments can be of type String or GlideString
-            throw new IllegalArgumentException(
-                    "Arguments can only be of type String or GlideString. Got: "
-                            + cls.getClass().getSimpleName());
-        }
-    }
-
     protected ArgsBuilder newArgsBuilder() {
         return new ArgsBuilder();
     }
 
-    protected <ArgType> ArgType[] intoArray(ArgType... args) {
-        return args;
+    protected <ArgType> void checkTypeOrThrow(ArgType arg) {
+        if ((arg instanceof String) || (arg instanceof GlideString)) {
+            return;
+        }
+        throw new IllegalArgumentException("Expected String or GlideString");
+    }
+
+    protected <ArgType> void checkTypeOrThrow(ArgType[] args) {
+        if (args.length == 0) {
+            // nothing to check here
+            return;
+        }
+
+        if ((args[0] instanceof String) || (args[0] instanceof GlideString)) {
+            return;
+        }
+        throw new IllegalArgumentException("Expected String or GlideString");
     }
 }

@@ -1496,6 +1496,49 @@ export function runBaseTests<Context>(config: {
         `script test_%p`,
         async (protocol) => {
             await runTest(async (client: BaseClient) => {
+                const key1 = Buffer.from(uuidv4());
+                const key2 = Buffer.from(uuidv4());
+
+                let script = new Script(Buffer.from("return 'Hello'"));
+                checkSimple(await client.invokeScript(script)).toEqual("Hello");
+
+                script = new Script(
+                    Buffer.from("return redis.call('SET', KEYS[1], ARGV[1])"),
+                );
+                checkSimple(
+                    await client.invokeScript(script, {
+                        keys: [key1],
+                        args: [Buffer.from("value1")],
+                    }),
+                ).toEqual("OK");
+
+                /// Reuse the same script with different parameters.
+                checkSimple(
+                    await client.invokeScript(script, {
+                        keys: [key2],
+                        args: [Buffer.from("value2")],
+                    }),
+                ).toEqual("OK");
+
+                script = new Script(
+                    Buffer.from("return redis.call('GET', KEYS[1])"),
+                );
+                checkSimple(
+                    await client.invokeScript(script, { keys: [key1] }),
+                ).toEqual("value1");
+
+                checkSimple(
+                    await client.invokeScript(script, { keys: [key2] }),
+                ).toEqual("value2");
+            }, protocol);
+        },
+        config.timeout,
+    );
+
+    it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
+        `script test_binary_%p`,
+        async (protocol) => {
+            await runTest(async (client: BaseClient) => {
                 const key1 = uuidv4();
                 const key2 = uuidv4();
 

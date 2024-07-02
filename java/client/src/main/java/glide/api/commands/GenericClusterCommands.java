@@ -3,6 +3,7 @@ package glide.api.commands;
 
 import glide.api.models.ClusterTransaction;
 import glide.api.models.ClusterValue;
+import glide.api.models.GlideString;
 import glide.api.models.Transaction;
 import glide.api.models.commands.SortClusterOptions;
 import glide.api.models.configuration.ReadFrom;
@@ -174,6 +175,26 @@ public interface GenericClusterCommands {
     /**
      * Sorts the elements in the list, set, or sorted set at <code>key</code> and returns the result.
      * <br>
+     * The <code>sort</code> command can be used to sort elements based on different criteria and
+     * apply transformations on sorted elements.<br>
+     * To store the result into a new key, see {@link #sortStore(String, String, SortClusterOptions)}.
+     *
+     * @param key The key of the list, set, or sorted set to be sorted.
+     * @param sortClusterOptions The {@link SortClusterOptions}.
+     * @return An <code>Array</code> of sorted elements.
+     * @example
+     *     <pre>{@code
+     * client.lpush(gs("mylist"), new GlideString[] {gs("3"), gs("1"), gs("2"), gs("a")}).get();
+     * GlideString[] payload = client.sort(gs("mylist"), SortClusterOptions.builder().alpha()
+     *          .orderBy(DESC).limit(new SortBaseOptions.Limit(0L, 3L)).build()).get();
+     * assertArrayEquals(new GlideString[] {gs("a"), gs("3"), gs("2")}, payload); // List is sorted in descending order lexicographically starting
+     * }</pre>
+     */
+    CompletableFuture<GlideString[]> sort(GlideString key, SortClusterOptions sortClusterOptions);
+
+    /**
+     * Sorts the elements in the list, set, or sorted set at <code>key</code> and returns the result.
+     * <br>
      * The <code>sortReadOnly</code> command can be used to sort elements based on different criteria
      * and apply transformations on sorted elements.<br>
      * This command is routed depending on the client's {@link ReadFrom} strategy.
@@ -191,6 +212,28 @@ public interface GenericClusterCommands {
      * }</pre>
      */
     CompletableFuture<String[]> sortReadOnly(String key, SortClusterOptions sortClusterOptions);
+
+    /**
+     * Sorts the elements in the list, set, or sorted set at <code>key</code> and returns the result.
+     * <br>
+     * The <code>sortReadOnly</code> command can be used to sort elements based on different criteria
+     * and apply transformations on sorted elements.<br>
+     * This command is routed depending on the client's {@link ReadFrom} strategy.
+     *
+     * @since Redis 7.0 and above.
+     * @param key The key of the list, set, or sorted set to be sorted.
+     * @param sortClusterOptions The {@link SortClusterOptions}.
+     * @return An <code>Array</code> of sorted elements.
+     * @example
+     *     <pre>{@code
+     * client.lpush("mylist", new GlideString[] {gs("3"), gs("1"), gs("2"), gs("a")}).get();
+     * GlideString[] payload = client.sortReadOnly(gs("mylist"), SortClusterOptions.builder().alpha()
+     *          .orderBy(DESC).limit(new SortBaseOptions.Limit(0L, 3L)).build()).get();
+     * assertArrayEquals(new GlideString[] {gs("a"), gs("3"), gs("2")}, payload); // List is sorted in descending order lexicographically starting
+     * }</pre>
+     */
+    CompletableFuture<GlideString[]> sortReadOnly(
+            GlideString key, SortClusterOptions sortClusterOptions);
 
     /**
      * Sorts the elements in the list, set, or sorted set at <code>key</code> and stores the result in
@@ -220,4 +263,33 @@ public interface GenericClusterCommands {
      */
     CompletableFuture<Long> sortStore(
             String key, String destination, SortClusterOptions sortClusterOptions);
+
+    /**
+     * Sorts the elements in the list, set, or sorted set at <code>key</code> and stores the result in
+     * <code>destination</code>. The <code>sort</code> command can be used to sort elements based on
+     * different criteria, apply transformations on sorted elements, and store the result in a new
+     * key.<br>
+     * To get the sort result without storing it into a key, see {@link #sort(String,
+     * SortClusterOptions)} or {@link #sortReadOnly(String, SortClusterOptions)}.
+     *
+     * @apiNote When in cluster mode, <code>key</code> and <code>destination</code> must map to the
+     *     same hash slot.
+     * @param key The key of the list, set, or sorted set to be sorted.
+     * @param destination The key where the sorted result will be stored.
+     * @param sortClusterOptions The {@link SortClusterOptions}.
+     * @return The number of elements in the sorted key stored at <code>destination</code>.
+     * @example
+     *     <pre>{@code
+     * client.lpush(gs("mylist"), new GlideString[] {gs("3"), gs("1"), gs("2"), gs("a")}).get();
+     * Long payload = client.sortStore(gs("mylist"), gs("destination"),
+     *          SortClusterOptions.builder().alpha().orderBy(DESC)
+     *              .limit(new SortBaseOptions.Limit(0L, 3L))build()).get();
+     * assertEquals(3, payload);
+     * assertArrayEquals(
+     *      new GlideString[] {gs("a"), gs("3"), gs("2")},
+     *      client.lrange(gs("destination"), 0, -1).get()); // Sorted list is stored in "destination"
+     * }</pre>
+     */
+    CompletableFuture<Long> sortStore(
+            GlideString key, GlideString destination, SortClusterOptions sortClusterOptions);
 }

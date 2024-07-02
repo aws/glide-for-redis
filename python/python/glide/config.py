@@ -388,7 +388,7 @@ class ClusterClientConfiguration(BaseClientConfiguration):
         Pattern = 1
         """ Use channel name patterns """
         Sharded = 2
-        """ Use sharded pubsub """
+        """ Use sharded pubsub. Available since Redis version 7.0. """
 
     @dataclass
     class PubSubSubscriptions:

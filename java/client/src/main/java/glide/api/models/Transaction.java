@@ -66,8 +66,7 @@ public class Transaction extends BaseTransaction<Transaction> {
      *     exist in the source database.
      */
     public <ArgType> Transaction move(ArgType key, long dbIndex) {
-        protobufTransaction.addCommands(
-                buildCommand(Move, this.buildArgs(key, this.convertTo(key.getClass(), dbIndex))));
+        protobufTransaction.addCommands(buildCommand(Move, newArgsBuilder().add(key).add(dbIndex)));
         return this;
     }
 

@@ -497,7 +497,7 @@ class StandaloneCommands(CoreCommands):
         result = await self._execute_command(RequestType.Sort, args)
         return cast(int, result)
 
-    async def publish(self, message: str, channel: str) -> TOK:
+    async def publish(self, message: str, channel: str) -> int:
         """
         Publish a message on pubsub channel.
         See https://valkey.io/commands/publish for more details.
@@ -507,14 +507,15 @@ class StandaloneCommands(CoreCommands):
             channel (str): Channel to publish the message on.
 
         Returns:
-            TOK: a simple `OK` response.
+            int: Number of subscriptions in primary node that received the message.
+            Note that this value does not include subscriptions that configured on replicas.
 
         Examples:
             >>> await client.publish("Hi all!", "global-channel")
-                "OK"
+                1 # This message was posted to 1 subscription which is configured on primary node
         """
-        await self._execute_command(RequestType.Publish, [channel, message])
-        return cast(TOK, OK)
+        result = await self._execute_command(RequestType.Publish, [channel, message])
+        return cast(int, result)
 
     async def flushall(self, flush_mode: Optional[FlushMode] = None) -> TOK:
         """

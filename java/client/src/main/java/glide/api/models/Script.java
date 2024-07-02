@@ -18,13 +18,18 @@ public class Script implements AutoCloseable {
     /** Hash string representing the code. */
     @Getter private final String hash;
 
+    /** Indicatoin if script invocation output can return binary data. */
+    @Getter private final Boolean binarySafeOutput;
+
     /**
      * Wraps around creating a Script object from <code>code</code>.
      *
      * @param code To execute with a ScriptInvoke call.
+     * @param binarySafeOutput Indicates if the output can return binary data.
      */
-    public Script(String code) {
-        hash = storeScript(code);
+    public <T> Script(T code, Boolean binarySafeOutput) {
+        this.hash = storeScript(GlideString.of(code).getBytes());
+        this.binarySafeOutput = binarySafeOutput;
     }
 
     /** Drop the linked script from glide-rs <code>code</code>. */

@@ -260,8 +260,8 @@ message Command {
 
 message ScriptInvocation {
     string hash = 1;
-    repeated string keys = 2;
-    repeated string args = 3;
+    repeated bytes keys = 2;
+    repeated bytes args = 3;
 }
 
 message Transaction {

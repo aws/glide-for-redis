@@ -89,6 +89,24 @@ public interface StringBaseCommands {
     CompletableFuture<String> getdel(String key);
 
     /**
+     * Gets a string value associated with the given <code>key</code> and deletes the key.
+     *
+     * @see <a href="https://redis.io/docs/latest/commands/getdel/">redis.io</a> for details.
+     * @param key The <code>key</code> to retrieve from the database.
+     * @return If <code>key</code> exists, returns the <code>value</code> of <code>key</code>.
+     *     Otherwise, return <code>null</code>.
+     * @example
+     *     <pre>{@code
+     * GlideString value = client.getdel(gs("key")).get();
+     * assert value.getString().equals("value");
+     *
+     * GlideString value = client.getdel(gs("key")).get();
+     * assert value.equals(null);
+     * }</pre>
+     */
+    CompletableFuture<GlideString> getdel(GlideString key);
+
+    /**
      * Gets the value associated with the given <code>key</code>.
      *
      * @since Redis 6.2.0.
@@ -110,6 +128,22 @@ public interface StringBaseCommands {
      * @since Redis 6.2.0.
      * @see <a href="https://redis.io/docs/latest/commands/getex/">redis.io</a> for details.
      * @param key The <code>key</code> to retrieve from the database.
+     * @return If <code>key</code> exists, return the <code>value</code> of the <code>key</code>.
+     *     Otherwise, return <code>null</code>.
+     * @example
+     *     <pre>{@code
+     * GlideString value = client.getex(gs("key")).get();
+     * assert value.equals(gs("value"));
+     * }</pre>
+     */
+    CompletableFuture<GlideString> getex(GlideString key);
+
+    /**
+     * Gets the value associated with the given <code>key</code>.
+     *
+     * @since Redis 6.2.0.
+     * @see <a href="https://redis.io/docs/latest/commands/getex/">redis.io</a> for details.
+     * @param key The <code>key</code> to retrieve from the database.
      * @param options The {@link GetExOptions} options.
      * @return If <code>key</code> exists, return the <code>value</code> of the <code>key</code>.
      *     Otherwise, return <code>null</code>.
@@ -124,22 +158,23 @@ public interface StringBaseCommands {
     CompletableFuture<String> getex(String key, GetExOptions options);
 
     /**
-     * Gets a string value associated with the given <code>key</code> and deletes the key.
+     * Gets the value associated with the given <code>key</code>.
      *
-     * @see <a href="https://redis.io/docs/latest/commands/getdel/">redis.io</a> for details.
+     * @since Redis 6.2.0.
+     * @see <a href="https://redis.io/docs/latest/commands/getex/">redis.io</a> for details.
      * @param key The <code>key</code> to retrieve from the database.
-     * @return If <code>key</code> exists, returns the <code>value</code> of <code>key</code>.
+     * @param options The {@link GetExOptions} options.
+     * @return If <code>key</code> exists, return the <code>value</code> of the <code>key</code>.
      *     Otherwise, return <code>null</code>.
      * @example
      *     <pre>{@code
-     * GlideString value = client.getdel(gs("key")).get();
-     * assert assert Arrays.equals(value.getString(), "value");
-     *
-     * String value = client.getdel("key").get();
-     * assert value.equals(null);
+     * String response = client.set(gs("key"), gs("value").get();
+     * assert response.equals(OK);
+     * GlideString value = client.getex(gs("key"), GetExOptions.Seconds(10L)).get();
+     * assert value.equals(gs("value"));
      * }</pre>
      */
-    CompletableFuture<GlideString> getdel(GlideString key);
+    CompletableFuture<GlideString> getex(GlideString key, GetExOptions options);
 
     /**
      * Sets the given <code>key</code> with the given value.
@@ -396,6 +431,21 @@ public interface StringBaseCommands {
     CompletableFuture<Long> decr(String key);
 
     /**
+     * Decrements the number stored at <code>key</code> by one. If <code>key</code> does not exist, it
+     * is set to 0 before performing the operation.
+     *
+     * @see <a href="https://redis.io/commands/decr/">redis.io</a> for details.
+     * @param key The key to decrement its value.
+     * @return The value of <code>key</code> after the decrement.
+     * @example
+     *     <pre>{@code
+     * Long num = client.decr(gs("key")).get();
+     * assert num == 4L;
+     * }</pre>
+     */
+    CompletableFuture<Long> decr(GlideString key);
+
+    /**
      * Decrements the number stored at <code>key</code> by <code>amount</code>. If <code>key</code>
      * does not exist, it is set to 0 before performing the operation.
      *
@@ -410,6 +460,22 @@ public interface StringBaseCommands {
      * }</pre>
      */
     CompletableFuture<Long> decrBy(String key, long amount);
+
+    /**
+     * Decrements the number stored at <code>key</code> by <code>amount</code>. If <code>key</code>
+     * does not exist, it is set to 0 before performing the operation.
+     *
+     * @see <a href="https://redis.io/commands/decrby/">redis.io</a> for details.
+     * @param key The key to decrement its value.
+     * @param amount The amount to decrement.
+     * @return The value of <code>key</code> after the decrement.
+     * @example
+     *     <pre>{@code
+     * Long num = client.decrBy(gs("key"), 2).get();
+     * assert num == 2L;
+     * }</pre>
+     */
+    CompletableFuture<Long> decrBy(GlideString key, long amount);
 
     /**
      * Returns the length of the string value stored at <code>key</code>.
@@ -474,6 +540,29 @@ public interface StringBaseCommands {
     CompletableFuture<Long> setrange(String key, int offset, String value);
 
     /**
+     * Overwrites part of the GlideString stored at <code>key</code>, starting at the specified <code>
+     * offset</code>, for the entire length of <code>value</code>.<br>
+     * If the <code>offset</code> is larger than the current length of the GlideString at <code>key
+     * </code>, the GlideString is padded with zero bytes to make <code>offset</code> fit. Creates the
+     * <code>key
+     * </code> if it doesn't exist.
+     *
+     * @see <a href="https://redis.io/commands/setrange/">redis.io</a> for details.
+     * @param key The key of the GlideString to update.
+     * @param offset The position in the GlideString where <code>value</code> should be written.
+     * @param value The GlideString written with <code>offset</code>.
+     * @return The length of the GlideString stored at <code>key</code> after it was modified.
+     * @example
+     *     <pre>{@code
+     * Long len = client.setrange(gs("key"), 6, gs("GLIDE")).get();
+     * assert len == 11L; // New key was created with length of 11 symbols
+     * GlideString value = client.get(gs("key")).get();
+     * assert value.equals(gs("\0\0\0\0\0\0GLIDE")); // The string was padded with zero bytes
+     * }</pre>
+     */
+    CompletableFuture<Long> setrange(GlideString key, int offset, GlideString value);
+
+    /**
      * Returns the substring of the string value stored at <code>key</code>, determined by the offsets
      * <code>start</code> and <code>end</code> (both are inclusive). Negative offsets can be used in
      * order to provide an offset starting from the end of the string. So <code>-1</code> means the
@@ -494,6 +583,28 @@ public interface StringBaseCommands {
      * }</pre>
      */
     CompletableFuture<String> getrange(String key, int start, int end);
+
+    /**
+     * Returns the subGlideString of the GlideString value stored at <code>key</code>, determined by
+     * the offsets <code>start</code> and <code>end</code> (both are inclusive). Negative offsets can
+     * be used in order to provide an offset starting from the end of the GlideString. So <code>-1
+     * </code> means the last character, <code>-2</code> the penultimate and so forth.
+     *
+     * @see <a href="https://redis.io/commands/getrange/">redis.io</a> for details.
+     * @param key The key of the GlideString.
+     * @param start The starting offset.
+     * @param end The ending offset.
+     * @return A subGlideString extracted from the value stored at <code>key</code>..
+     * @example
+     *     <pre>{@code
+     * client.set(gs("mykey"), gs("This is a GlideString")).get();
+     * GlideString subGlideString = client.getrange(gs("mykey"), 0, 3).get();
+     * assert subGlideString.equals(gs("This"));
+     * GlideString subGlideString = client.getrange(gs("mykey"), -3, -1).get();
+     * assert subGlideString.equals(gs("ing")); // extracted last 3 characters of a GlideString
+     * }</pre>
+     */
+    CompletableFuture<GlideString> getrange(GlideString key, int start, int end);
 
     /**
      * Appends a <code>value</code> to a <code>key</code>. If <code>key</code> does not exist it is

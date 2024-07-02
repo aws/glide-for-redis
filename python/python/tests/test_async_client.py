@@ -7041,7 +7041,6 @@ class TestCommands:
     @pytest.mark.parametrize("cluster_mode", [True, False])
     @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
     async def test_function_load(self, redis_client: TGlideClient):
-        # TODO: Test function with FCALL
         # TODO: Test with FUNCTION LIST
         min_version = "7.0.0"
         if await check_if_server_version_lt(redis_client, min_version):
@@ -7053,11 +7052,7 @@ class TestCommands:
 
         assert await redis_client.function_load(code) == lib_name.encode()
 
-        # TODO: change when FCALL is implemented
-        assert (
-            await redis_client.custom_command(["FCALL", func_name, "0", "one", "two"])
-            == b"one"
-        )
+        assert await redis_client.fcall(func_name, arguments=["one", "two"]) == b"one"
         assert (
             await redis_client.fcall_ro(func_name, arguments=["one", "two"]) == b"one"
         )
@@ -7080,7 +7075,7 @@ class TestCommands:
 
         assert await redis_client.function_load(new_code, True) == lib_name.encode()
 
-        # TODO: add when FCALL is implemented
+        assert await redis_client.fcall(func2_name, arguments=["one", "two"]) == 2
         assert await redis_client.fcall_ro(func2_name, arguments=["one", "two"]) == 2
 
         assert await redis_client.function_flush(FlushMode.SYNC) is OK
@@ -7091,7 +7086,6 @@ class TestCommands:
     async def test_function_load_cluster_with_route(
         self, redis_client: GlideClusterClient, single_route: bool
     ):
-        # TODO: Test function with FCALL
         # TODO: Test with FUNCTION LIST
         min_version = "7.0.0"
         if await check_if_server_version_lt(redis_client, min_version):
@@ -7104,14 +7098,17 @@ class TestCommands:
 
         assert await redis_client.function_load(code, False, route) == lib_name.encode()
 
-        # TODO: change when FCALL is implemented.
-        assert (
-            await redis_client.custom_command(
-                ["FCALL", func_name, "0", "one", "two"],
-                SlotKeyRoute(SlotType.PRIMARY, "1"),
-            )
-            == b"one"
+        result = await redis_client.fcall_route(
+            func_name, arguments=["one", "two"], route=route
         )
+
+        if single_route:
+            assert result == b"one"
+        else:
+            assert isinstance(result, dict)
+            for nodeResponse in result.values():
+                assert nodeResponse == b"one"
+
         result = await redis_client.fcall_ro_route(
             func_name, arguments=["one", "two"], route=route
         )
@@ -7143,7 +7140,17 @@ class TestCommands:
             await redis_client.function_load(new_code, True, route) == lib_name.encode()
         )
 
-        # TODO: add when FCALL is implemented.
+        result = await redis_client.fcall_route(
+            func2_name, arguments=["one", "two"], route=route
+        )
+
+        if single_route:
+            assert result == 2
+        else:
+            assert isinstance(result, dict)
+            for nodeResponse in result.values():
+                assert nodeResponse == 2
+
         result = await redis_client.fcall_ro_route(
             func2_name, arguments=["one", "two"], route=route
         )
@@ -7291,25 +7298,32 @@ class TestCommands:
         assert await redis_client.function_flush(FlushMode.SYNC, route) is OK
         assert await redis_client.function_load(code, False, route) == lib_name.encode()
 
-        # TODO: add when FCALL is implemented.
+        assert (
+            await redis_client.fcall(func_name, keys=keys, arguments=[])
+            == key1.encode()
+        )
+
         assert (
             await redis_client.fcall_ro(func_name, keys=keys, arguments=[])
             == key1.encode()
         )
 
         transaction = ClusterTransaction()
-        # TODO: add when FCALL is implemented.
+
+        transaction.fcall(func_name, keys=keys, arguments=[])
         transaction.fcall_ro(func_name, keys=keys, arguments=[])
 
         # check response from a routed transaction request
         result = await redis_client.exec(transaction, route)
         assert result is not None
         assert result[0] == key1.encode()
+        assert result[1] == key1.encode()
 
         # if no route given, GLIDE should detect it automatically
         result = await redis_client.exec(transaction)
         assert result is not None
         assert result[0] == key1.encode()
+        assert result[1] == key1.encode()
 
         assert await redis_client.function_flush(FlushMode.SYNC, route) is OK
 
@@ -7332,7 +7346,12 @@ class TestCommands:
         assert await redis_client.function_load(code, False) == lib_name.encode()
 
         # On a replica node should fail, because a function isn't guaranteed to be RO
-        # TODO: add when FCALL is implemented.
+        with pytest.raises(RequestError) as e:
+            assert await redis_client.fcall_route(
+                func_name, arguments=[], route=replicaRoute
+            )
+        assert "You can't write against a read only replica." in str(e)
+
         with pytest.raises(RequestError) as e:
             assert await redis_client.fcall_ro_route(
                 func_name, arguments=[], route=replicaRoute
@@ -7899,6 +7918,59 @@ class TestCommands:
     async def test_unwatch_with_route(self, redis_client: GlideClusterClient):
         assert await redis_client.unwatch(RandomNode()) == OK
 
+    @pytest.mark.parametrize("cluster_mode", [True, False])
+    @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
+    async def test_lpos(self, redis_client: TGlideClient):
+        min_version = "6.0.6"
+        if await check_if_server_version_lt(redis_client, min_version):
+            # TODO: change it to pytest fixture after we'll implement a sync client
+            return pytest.mark.skip(reason=f"Redis version required >= {min_version}")
+        key = f"{{key}}-1{get_random_string(5)}"
+        non_list_key = f"{{key}}-2{get_random_string(5)}"
+        mylist = ["a", "a", "b", "c", "a", "b"]
+
+        # basic case
+        await redis_client.rpush(key, mylist)
+        assert await redis_client.lpos(key, "b") == 2
+
+        # reverse traversal
+        assert await redis_client.lpos(key, "b", -2) == 2
+
+        # unlimited comparisons
+        assert await redis_client.lpos(key, "a", 1, None, 0) == 0
+
+        # limited comparisons
+        assert await redis_client.lpos(key, "c", 1, None, 2) is None
+
+        # element does not exist
+        assert await redis_client.lpos(key, "non_existing") is None
+
+        # with count
+        assert await redis_client.lpos(key, "a", 1, 0, 0) == [0, 1, 4]
+
+        # with count and rank
+        assert await redis_client.lpos(key, "a", -2, 0, 0) == [1, 0]
+
+        # key does not exist
+        assert await redis_client.lpos("non_existing", "non_existing") is None
+
+        # invalid rank value
+        with pytest.raises(RequestError):
+            await redis_client.lpos(key, "a", 0)
+
+        # invalid count
+        with pytest.raises(RequestError):
+            await redis_client.lpos(non_list_key, "a", None, -1)
+
+        # invalid max_len
+        with pytest.raises(RequestError):
+            await redis_client.lpos(non_list_key, "a", None, None, -1)
+
+        # wrong data type
+        await redis_client.set(non_list_key, "non_list_value")
+        with pytest.raises(RequestError):
+            await redis_client.lpos(non_list_key, "a")
+
 
 class TestMultiKeyCommandCrossSlot:
     @pytest.mark.parametrize("cluster_mode", [True])
@@ -7967,6 +8039,7 @@ class TestMultiKeyCommandCrossSlot:
                     redis_client.lcs("abc", "def"),
                     redis_client.lcs_len("abc", "def"),
                     redis_client.lcs_idx("abc", "def"),
+                    redis_client.fcall("func", ["abc", "zxy", "lkn"], []),
                     redis_client.fcall_ro("func", ["abc", "zxy", "lkn"], []),
                 ]
             )
@@ -8626,6 +8699,37 @@ class TestScripts:
             == "OK"
         )
         script = Script("return redis.call('GET', KEYS[1])")
+        assert (
+            await redis_client.invoke_script(script, keys=[key1]) == "value1".encode()
+        )
+        assert (
+            await redis_client.invoke_script(script, keys=[key2]) == "value2".encode()
+        )
+
+    @pytest.mark.smoke_test
+    @pytest.mark.parametrize("cluster_mode", [True, False])
+    @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
+    async def test_script_binary(self, redis_client: TGlideClient):
+        key1 = bytes(get_random_string(10), "utf-8")
+        key2 = bytes(get_random_string(10), "utf-8")
+        script = Script(bytes("return 'Hello'", "utf-8"))
+        assert await redis_client.invoke_script(script) == "Hello".encode()
+
+        script = Script(bytes("return redis.call('SET', KEYS[1], ARGV[1])", "utf-8"))
+        assert (
+            await redis_client.invoke_script(
+                script, keys=[key1], args=[bytes("value1", "utf-8")]
+            )
+            == "OK"
+        )
+        # Reuse the same script with different parameters.
+        assert (
+            await redis_client.invoke_script(
+                script, keys=[key2], args=[bytes("value2", "utf-8")]
+            )
+            == "OK"
+        )
+        script = Script(bytes("return redis.call('GET', KEYS[1])", "utf-8"))
         assert (
             await redis_client.invoke_script(script, keys=[key1]) == "value1".encode()
         )

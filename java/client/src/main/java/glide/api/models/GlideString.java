@@ -7,7 +7,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.Getter;
 
 // TODO docs for the god of docs
-public class GlideString {
+public class GlideString implements Comparable<GlideString> {
 
     @Getter private byte[] bytes;
     private String string = null;
@@ -66,6 +66,10 @@ public class GlideString {
 
         assert canConvertToString() : "Value cannot be represented as a string";
         return string;
+    }
+
+    public int compareTo(GlideString o) {
+        return Arrays.compare(this.bytes, o.bytes);
     }
 
     public boolean canConvertToString() {

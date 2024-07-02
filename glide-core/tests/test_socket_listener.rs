@@ -1211,7 +1211,7 @@ mod socket_listener {
         let key = generate_random_string(KEY_LENGTH);
         let value = generate_random_string(VALUE_LENGTH);
         let script = r#"redis.call("SET", KEYS[1], ARGV[1]); return redis.call("GET", KEYS[1])"#;
-        let hash = add_script(script);
+        let hash = add_script(script.as_bytes());
 
         let approx_message_length = hash.len() + value.len() + key.len() + APPROX_RESP_HEADER_LEN;
         let mut buffer = Vec::with_capacity(approx_message_length);

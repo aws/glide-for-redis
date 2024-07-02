@@ -91,6 +91,7 @@ async def transaction_test(
     key22 = "{{{}}}:{}".format(keyslot, get_random_string(3))  # getex
     key23 = "{{{}}}:{}".format(keyslot, get_random_string(3))  # string
     key24 = "{{{}}}:{}".format(keyslot, get_random_string(3))  # string
+    key25 = "{{{}}}:{}".format(keyslot, get_random_string(3))  # list
 
     value = datetime.now(timezone.utc).strftime("%m/%d/%Y, %H:%M:%S")
     value_bytes = value.encode()
@@ -108,6 +109,10 @@ async def transaction_test(
         args.append(lib_name.encode())
         transaction.function_load(code, True)
         args.append(lib_name.encode())
+        transaction.fcall(func_name, [], arguments=["one", "two"])
+        args.append(b"one")
+        transaction.fcall(func_name, [key], arguments=["one", "two"])
+        args.append(b"one")
         transaction.fcall_ro(func_name, [], arguments=["one", "two"])
         args.append(b"one")
         transaction.fcall_ro(func_name, [key], arguments=["one", "two"])
@@ -634,6 +639,15 @@ async def transaction_test(
     transaction.random_key()
     args.append(key.encode())
 
+    min_version = "6.0.6"
+    if not await check_if_server_version_lt(redis_client, min_version):
+        transaction.rpush(key25, ["a", "a", "b", "c", "a", "b"])
+        args.append(6)
+        transaction.lpos(key25, "a")
+        args.append(0)
+        transaction.lpos(key25, "a", 1, 0, 0)
+        args.append([0, 1, 4])
+
     min_version = "6.2.0"
     if not await check_if_server_version_lt(redis_client, min_version):
         transaction.flushall(FlushMode.SYNC)
@@ -760,6 +774,10 @@ class TestTransaction:
         keyslot = get_random_string(3)
         transaction = ClusterTransaction()
         transaction.info()
+        if await check_if_server_version_lt(redis_client, "7.0.0"):
+            transaction.publish("test_message", keyslot, False)
+        else:
+            transaction.publish("test_message", keyslot, True)
         expected = await transaction_test(transaction, keyslot, redis_client)
         result = await redis_client.exec(transaction)
         assert isinstance(result, list)
@@ -768,7 +786,8 @@ class TestTransaction:
         assert isinstance(result[0], str)
         # Making sure the "info" command is indeed a return at position 0
         assert "# Memory" in result[0]
-        assert result[1:] == expected
+        assert result[1] == 0
+        assert result[2:] == expected
 
     @pytest.mark.parametrize("cluster_mode", [True, False])
     @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
@@ -845,6 +864,7 @@ class TestTransaction:
         )
         transaction.select(0)
         transaction.get(key)
+        transaction.publish("test_message", "test_channel")
         expected = await transaction_test(transaction, keyslot, redis_client)
         result = await redis_client.exec(transaction)
         assert isinstance(result, list)
@@ -853,8 +873,8 @@ class TestTransaction:
         assert isinstance(result[0], str)
         assert "# Memory" in result[0]
         assert result[1:5] == [OK, False, OK, value.encode()]
-        assert result[5:12] == [2, 2, 2, [b"Bob", b"Alice"], 2, OK, None]
-        assert result[12:] == expected
+        assert result[5:13] == [2, 2, 2, [b"Bob", b"Alice"], 2, OK, None, 0]
+        assert result[13:] == expected
 
     def test_transaction_clear(self):
         transaction = Transaction()

@@ -516,6 +516,46 @@ public interface BitmapBaseCommands {
     CompletableFuture<Long[]> bitfield(String key, BitFieldSubCommands[] subCommands);
 
     /**
+     * Reads or modifies the array of bits representing the string that is held at <code>key</code>
+     * based on the specified <code>subCommands</code>.
+     *
+     * @see <a href="https://valkey.io/commands/bitfield/">valkey.io</a> for details.
+     * @param key The key of the string.
+     * @param subCommands The subCommands to be performed on the binary value of the string at <code>
+     *     key</code>, which could be any of the following:
+     *     <ul>
+     *       <li>{@link BitFieldGet}.
+     *       <li>{@link BitFieldSet}.
+     *       <li>{@link BitFieldIncrby}.
+     *       <li>{@link BitFieldOverflow}.
+     *     </ul>
+     *
+     * @return An <code>array</code> of results from the executed subcommands.
+     *     <ul>
+     *       <li>{@link BitFieldGet} returns the value in {@link Offset} or {@link OffsetMultiplier}.
+     *       <li>{@link BitFieldSet} returns the old value in {@link Offset} or {@link
+     *           OffsetMultiplier}.
+     *       <li>{@link BitFieldIncrby} returns the new value in {@link Offset} or {@link
+     *           OffsetMultiplier}.
+     *       <li>{@link BitFieldOverflow} determines the behaviour of <code>SET</code> and <code>
+     *           INCRBY</code> when an overflow occurs. <code>OVERFLOW</code> does not return a value
+     *           and does not contribute a value to the array response.
+     *     </ul>
+     *
+     * @example
+     *     <pre>{@code
+     * client.set(gs("sampleKey"), gs("A")); // string "A" has binary value 01000001
+     * BitFieldSubCommands[] subcommands = new BitFieldSubCommands[] {
+     *      new BitFieldSet(new UnsignedEncoding(2), new Offset(1), 3), // Sets the new binary value to 01100001
+     *      new BitFieldGet(new UnsignedEncoding(2), new Offset(1)) // Gets value from 0(11)00001
+     * };
+     * Long[] payload = client.bitfield(gs("sampleKey"), subcommands).get();
+     * assertArrayEquals(payload, new Long[] {2L, 3L});
+     * }</pre>
+     */
+    CompletableFuture<Long[]> bitfield(GlideString key, BitFieldSubCommands[] subCommands);
+
+    /**
      * Reads the array of bits representing the string that is held at <code>key</code> based on the
      * specified <code>subCommands</code>.<br>
      * This command is routed depending on the client's {@link ReadFrom} strategy.
@@ -540,4 +580,31 @@ public interface BitmapBaseCommands {
      * }</pre>
      */
     CompletableFuture<Long[]> bitfieldReadOnly(String key, BitFieldReadOnlySubCommands[] subCommands);
+
+    /**
+     * Reads the array of bits representing the string that is held at <code>key</code> based on the
+     * specified <code>subCommands</code>.<br>
+     * This command is routed depending on the client's {@link ReadFrom} strategy.
+     *
+     * @since Redis 6.0 and above
+     * @see <a href="https://valkey.io/commands/bitfield_ro/">valkey.io</a> for details.
+     * @param key The key of the string.
+     * @param subCommands The <code>GET</code> subCommands to be performed.
+     * @return An array of results from the <code>GET</code> subcommands.
+     * @example
+     *     <pre>{@code
+     * client.set(gs("sampleKey"), gs("A")); //string "A" has binary value 01000001
+     * Long[] payload =
+     *      client.
+     *          bitfieldReadOnly(
+     *              gs("sampleKey"),
+     *              new BitFieldReadOnlySubCommands[] {
+     *                  new BitFieldGet(new UnsignedEncoding(2), new Offset(1))
+     *              })
+     *          .get();
+     * assertArrayEquals(payload, new Long[] {2L}); // Value is from 0(10)00001
+     * }</pre>
+     */
+    CompletableFuture<Long[]> bitfieldReadOnly(
+            GlideString key, BitFieldReadOnlySubCommands[] subCommands);
 }

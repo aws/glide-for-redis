@@ -39,6 +39,20 @@ public interface ConnectionManagementCommands {
     CompletableFuture<String> ping(String message);
 
     /**
+     * Pings the Redis server.
+     *
+     * @see <a href="https://redis.io/commands/ping/">redis.io</a> for details.
+     * @param message The server will respond with a copy of the message.
+     * @return <code>GlideString</code> with a copy of the argument <code>message</code>.
+     * @example
+     *     <pre>{@code
+     * GlideString payload = client.ping(gs("GLIDE")).get();
+     * assert payload.equals(gs("GLIDE"));
+     * }</pre>
+     */
+    CompletableFuture<GlideString> ping(GlideString message);
+
+    /**
      * Gets the current connection id.
      *
      * @see <a href="https://redis.io/commands/client-id/">redis.io</a> for details.

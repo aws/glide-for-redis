@@ -316,8 +316,11 @@ async fn invoke_script(
     mut client: Client,
     routing: Option<RoutingInfo>,
 ) -> ClientUsageResult<Value> {
+    // convert Vec<bytes> to vec<[u8]>
+    let keys: Vec<&[u8]> = script.keys.iter().map(|e| e.as_ref()).collect();
+    let args: Vec<&[u8]> = script.args.iter().map(|e| e.as_ref()).collect();
     client
-        .invoke_script(&script.hash, script.keys, script.args, routing)
+        .invoke_script(&script.hash, &keys, &args, routing)
         .await
         .map_err(|err| err.into())
 }

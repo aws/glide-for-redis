@@ -17,8 +17,8 @@ import java.util.stream.Stream;
 public class ArrayTransformUtils {
 
     /**
-     * Converts a map of string keys and values of any type in to an array of strings with alternating
-     * keys and values.
+     * Converts a map of string keys and values of any type that can be converted in to an array of
+     * strings with alternating keys and values.
      *
      * @param args Map of string keys to values of any type to convert.
      * @return Array of strings [key1, value1.toString(), key2, value2.toString(), ...].
@@ -84,6 +84,24 @@ public class ArrayTransformUtils {
                                         Double.toString(entry.getValue().getLatitude()),
                                         entry.getKey()))
                 .toArray(String[]::new);
+    }
+
+    /**
+     * Converts a geospatial members to geospatial data mapping in to an array of arguments in the
+     * form of [Longitude, Latitude, Member ...].
+     *
+     * @param args A mapping of member names to their corresponding positions.
+     * @return An array of GlideStrings to be used in {@link GeospatialIndicesBaseCommands#geoadd}.
+     */
+    public static GlideString[] mapGeoDataToGlideStringArray(Map<GlideString, GeospatialData> args) {
+        return args.entrySet().stream()
+                .flatMap(
+                        entry ->
+                                Stream.of(
+                                        gs(Double.toString(entry.getValue().getLongitude())),
+                                        gs(Double.toString(entry.getValue().getLatitude())),
+                                        entry.getKey()))
+                .toArray(GlideString[]::new);
     }
 
     /**
@@ -172,9 +190,10 @@ public class ArrayTransformUtils {
      * @param clazz The class of the array values to cast to.
      * @return A Map of arrays of type U[][], containing the key/values from the input Map.
      * @param <T> The target type which the elements are cast.
+     * @param <S> String type, could be either {@link String} or {@link GlideString}.
      */
-    public static <T> Map<String, T[][]> castMapOf2DArray(
-            Map<String, Object[][]> mapOfArrays, Class<T> clazz) {
+    public static <S, T> Map<S, T[][]> castMapOf2DArray(
+            Map<S, Object[][]> mapOfArrays, Class<T> clazz) {
         if (mapOfArrays == null) {
             return null;
         }
@@ -202,12 +221,29 @@ public class ArrayTransformUtils {
      * keys and values.
      *
      * @param args Map of keys to values of any type to convert.
-     * @return Array of strings [key1, value1, key2, value2, ...].
+     * @return Array of GlideString [key1, value1, key2, value2, ...].
      */
     public static GlideString[] flattenMapToGlideStringArray(Map<?, ?> args) {
         return args.entrySet().stream()
                 .flatMap(
                         entry -> Stream.of(GlideString.of(entry.getKey()), GlideString.of(entry.getValue())))
+                .toArray(GlideString[]::new);
+    }
+
+    /**
+     * Converts a map of any type of keys and values in to an array of GlideString with alternating
+     * values and keys.
+     *
+     * <p>This method is similar to flattenMapToGlideStringArray, but it places the value before the
+     * key
+     *
+     * @param args Map of keys to values of any type to convert.
+     * @return Array of GlideString [value1, key1, value2, key2...].
+     */
+    public static GlideString[] flattenMapToGlideStringArrayValueFirst(Map<?, ?> args) {
+        return args.entrySet().stream()
+                .flatMap(
+                        entry -> Stream.of(GlideString.of(entry.getValue()), GlideString.of(entry.getKey())))
                 .toArray(GlideString[]::new);
     }
 

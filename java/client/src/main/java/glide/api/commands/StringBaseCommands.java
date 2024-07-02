@@ -292,13 +292,15 @@ public interface StringBaseCommands {
      * @see <a href="https://redis.io/commands/mset/">redis.io</a> for details.
      * @param keyValueMap A key-value map consisting of keys and their respective values to set.
      * @return Always <code>OK</code>.
+     * @param ArgType you can only pass Keys and Values of types {@link String} and {@link
+     *     GlideString} Key and Value must be of same type.
      * @example
      *     <pre>{@code
      * String result = client.mset(Map.of("key1", "value1", "key2", "value2"}).get();
      * assert result.equals("OK"));
      * }</pre>
      */
-    CompletableFuture<String> mset(Map<String, String> keyValueMap);
+    <ArgType> CompletableFuture<String> mset(Map<ArgType, ArgType> keyValueMap);
 
     /**
      * Sets multiple keys to values if the key does not exist. The operation is atomic, and if one or
@@ -307,15 +309,17 @@ public interface StringBaseCommands {
      * @apiNote When in cluster mode, all keys in <code>keyValueMap</code> must map to the same hash
      *     slot.
      * @see <a href="https://redis.io/commands/msetnx/">redis.io</a> for details.
-     * @param keyValueMap A key-value map consisting of keys and their respective values to set.
+     * @param keyValueMap A key-value map consisting of keys and their respective values to set. Note
      * @return <code>true</code> if all keys were set. <code>false</code> if no key was set.
+     * @param ArgType you can only pass Keys and Values of types {@link String} and {@link
+     *     GlideString} Key and Value must be of same type.
      * @example
      *     <pre>{@code
      * Boolean result = client.msetnx(Map.of("key1", "value1", "key2", "value2"}).get();
      * assert result;
      * }</pre>
      */
-    CompletableFuture<Boolean> msetnx(Map<String, String> keyValueMap);
+    <ArgType> CompletableFuture<Boolean> msetnx(Map<ArgType, ArgType> keyValueMap);
 
     /**
      * Increments the number stored at <code>key</code> by one. If <code>key</code> does not exist, it
@@ -616,6 +620,28 @@ public interface StringBaseCommands {
      * }</pre>
      */
     CompletableFuture<String> lcs(String key1, String key2);
+
+    /**
+     * Returns the longest common subsequence between strings stored at <code>key1</code> and <code>
+     * key2</code>.
+     *
+     * @since Redis 7.0 and above.
+     * @apiNote When in cluster mode, <code>key1</code> and <code>key2</code> must map to the same
+     *     hash slot.
+     * @see <a href="https://valkey.io/commands/lcs/">valkey.io</a> for details.
+     * @param key1 The key that stores the first string.
+     * @param key2 The key that stores the second string.
+     * @return A <code>String</code> containing the longest common subsequence between the 2 strings.
+     *     An empty <code>String</code> is returned if the keys do not exist or have no common
+     *     subsequences.
+     * @example
+     *     <pre>{@code
+     * // testKey1 = abcd, testKey2 = axcd
+     * GlideString result = client.lcs(gs("testKey1"), gs("testKey2")).get();
+     * assert result.equals(gs("acd"));
+     * }</pre>
+     */
+    CompletableFuture<GlideString> lcs(GlideString key1, GlideString key2);
 
     /**
      * Returns the length of the longest common subsequence between strings stored at <code>key1

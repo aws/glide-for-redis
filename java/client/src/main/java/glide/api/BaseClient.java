@@ -771,9 +771,24 @@ public abstract class BaseClient
     }
 
     @Override
-    public CompletableFuture<String> mset(@NonNull Map<String, String> keyValueMap) {
-        String[] args = convertMapToKeyValueStringArray(keyValueMap);
-        return commandManager.submitNewCommand(MSet, args, this::handleStringResponse);
+    public <ArgType> CompletableFuture<String> mset(@NonNull Map<ArgType, ArgType> keyValueMap) {
+        if (keyValueMap.isEmpty()) {
+            throw new IllegalArgumentException("empty map");
+        }
+
+        ArgType firstValue = keyValueMap.keySet().iterator().next();
+
+        Object[] args;
+        if (firstValue instanceof String) {
+            args = convertMapToKeyValueStringArray((Map<String, ?>) keyValueMap);
+            return commandManager.submitNewCommand(MSet, (String[]) args, this::handleStringResponse);
+        } else if (firstValue instanceof GlideString) {
+            args = convertMapToKeyValueGlideStringArray((Map<GlideString, GlideString>) keyValueMap);
+            return commandManager.submitNewCommand(
+                    MSet, (GlideString[]) args, this::handleStringResponse);
+        } else {
+            throw new IllegalArgumentException("Expected String or GlideString");
+        }
     }
 
     @Override
@@ -3124,15 +3139,36 @@ public abstract class BaseClient
     }
 
     @Override
-    public CompletableFuture<Boolean> msetnx(@NonNull Map<String, String> keyValueMap) {
-        String[] args = convertMapToKeyValueStringArray(keyValueMap);
-        return commandManager.submitNewCommand(MSetNX, args, this::handleBooleanResponse);
+    public <ArgType> CompletableFuture<Boolean> msetnx(@NonNull Map<ArgType, ArgType> keyValueMap) {
+        if (keyValueMap.isEmpty()) {
+            throw new IllegalArgumentException("empty map");
+        }
+
+        ArgType firstValue = keyValueMap.keySet().iterator().next();
+
+        Object[] args;
+        if (firstValue instanceof String) {
+            args = convertMapToKeyValueStringArray((Map<String, ?>) keyValueMap);
+            return commandManager.submitNewCommand(MSetNX, (String[]) args, this::handleBooleanResponse);
+        } else if (firstValue instanceof GlideString) {
+            args = convertMapToKeyValueGlideStringArray((Map<GlideString, GlideString>) keyValueMap);
+            return commandManager.submitNewCommand(
+                    MSetNX, (GlideString[]) args, this::handleBooleanResponse);
+        } else {
+            throw new IllegalArgumentException("Expected String or GlideString");
+        }
     }
 
     @Override
     public CompletableFuture<String> lcs(@NonNull String key1, @NonNull String key2) {
         String[] arguments = new String[] {key1, key2};
         return commandManager.submitNewCommand(LCS, arguments, this::handleStringResponse);
+    }
+
+    @Override
+    public CompletableFuture<GlideString> lcs(@NonNull GlideString key1, @NonNull GlideString key2) {
+        GlideString[] arguments = new GlideString[] {key1, key2};
+        return commandManager.submitNewCommand(LCS, arguments, this::handleGlideStringResponse);
     }
 
     @Override

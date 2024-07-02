@@ -1715,12 +1715,72 @@ public class RedisClientTest {
 
     @SneakyThrows
     @Test
+    public void mset_returns_success_binary() {
+        // setup
+        Map<GlideString, GlideString> keyValueMap = new LinkedHashMap<>();
+        keyValueMap.put(gs("key1"), gs("value1"));
+        keyValueMap.put(gs("key2"), gs("value2"));
+        GlideString[] args = {gs("key1"), gs("value1"), gs("key2"), gs("value2")};
+
+        CompletableFuture<String> testResponse = new CompletableFuture<>();
+        testResponse.complete(OK);
+
+        // match on protobuf request
+        when(commandManager.<String>submitNewCommand(eq(MSet), eq(args), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<String> response = service.mset(keyValueMap);
+        String payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(OK, payload);
+    }
+
+    @SneakyThrows
+    @Test
+    public void mset_withIllegalArgument_throws_exception() {
+        // setup
+        Map<Integer, Integer> keyValueMap = new LinkedHashMap<>();
+        keyValueMap.put(2, 8);
+        assertThrows(IllegalArgumentException.class, () -> service.mset(keyValueMap));
+    }
+
+    @SneakyThrows
+    @Test
     public void msetnx_returns_success() {
         // setup
         Map<String, String> keyValueMap = new LinkedHashMap<>();
         keyValueMap.put("key1", "value1");
         keyValueMap.put("key2", "value2");
         String[] args = {"key1", "value1", "key2", "value2"};
+        Boolean value = true;
+
+        CompletableFuture<Boolean> testResponse = new CompletableFuture<>();
+        testResponse.complete(value);
+
+        // match on protobuf request
+        when(commandManager.<Boolean>submitNewCommand(eq(MSetNX), eq(args), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<Boolean> response = service.msetnx(keyValueMap);
+        Boolean payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(value, payload);
+    }
+
+    @SneakyThrows
+    @Test
+    public void msetnx_returns_success_binary() {
+        // setup
+        Map<GlideString, GlideString> keyValueMap = new LinkedHashMap<>();
+        keyValueMap.put(gs("key1"), gs("value1"));
+        keyValueMap.put(gs("key2"), gs("value2"));
+        GlideString[] args = {gs("key1"), gs("value1"), gs("key2"), gs("value2")};
         Boolean value = true;
 
         CompletableFuture<Boolean> testResponse = new CompletableFuture<>();
@@ -9860,6 +9920,31 @@ public class RedisClientTest {
         // exercise
         CompletableFuture<String> response = service.lcs(key1, key2);
         String payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(value, payload);
+    }
+
+    @SneakyThrows
+    @Test
+    public void lcs_binary() {
+        // setup
+        GlideString key1 = gs("testKey1");
+        GlideString key2 = gs("testKey2");
+        GlideString[] arguments = new GlideString[] {key1, key2};
+        GlideString value = gs("foo");
+
+        CompletableFuture<GlideString> testResponse = new CompletableFuture<>();
+        testResponse.complete(value);
+
+        // match on protobuf request
+        when(commandManager.<GlideString>submitNewCommand(eq(LCS), eq(arguments), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<GlideString> response = service.lcs(key1, key2);
+        GlideString payload = response.get();
 
         // verify
         assertEquals(testResponse, response);

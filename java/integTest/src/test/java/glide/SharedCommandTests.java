@@ -618,13 +618,30 @@ public class SharedCommandTests {
     @SneakyThrows
     @ParameterizedTest(autoCloseArguments = false)
     @MethodSource("getClients")
-    public void mset_mget_binary(BaseClient client) {
+    public void mset_mget_success(BaseClient client) {
         // keys are from different slots
         String key1 = UUID.randomUUID().toString();
         String key2 = UUID.randomUUID().toString();
         String key3 = UUID.randomUUID().toString();
         String value = UUID.randomUUID().toString();
         Map<String, String> keyValueMap = Map.of(key1, value, key2, value, key3, value);
+
+        assertEquals(OK, client.mset(keyValueMap).get());
+        assertArrayEquals(
+                new String[] {value, value, value}, client.mget(new String[] {key1, key2, key3}).get());
+    }
+
+    @SneakyThrows
+    @ParameterizedTest(autoCloseArguments = false)
+    @MethodSource("getClients")
+    public void mset_mget_binary(BaseClient client) {
+        // keys are from different slots
+        String key1 = UUID.randomUUID().toString();
+        String key2 = UUID.randomUUID().toString();
+        String key3 = UUID.randomUUID().toString();
+        String value = UUID.randomUUID().toString();
+        Map<GlideString, GlideString> keyValueMap =
+                Map.of(gs(key1), gs(value), gs(key2), gs(value), gs(key3), gs(value));
 
         assertEquals(OK, client.mset(keyValueMap).get());
         assertArrayEquals(
@@ -8314,6 +8331,30 @@ public class SharedCommandTests {
     @SneakyThrows
     @ParameterizedTest(autoCloseArguments = false)
     @MethodSource("getClients")
+    public void msetnx_binary(BaseClient client) {
+        // keys are from different slots
+        GlideString key1 = gs("{key}-1" + UUID.randomUUID());
+        GlideString key2 = gs("{key}-2" + UUID.randomUUID());
+        GlideString key3 = gs("{key}-3" + UUID.randomUUID());
+        GlideString nonExisting = gs(UUID.randomUUID().toString());
+        GlideString value = gs(UUID.randomUUID().toString());
+        Map<GlideString, GlideString> keyValueMap1 = Map.of(key1, value, key2, value);
+        Map<GlideString, GlideString> keyValueMap2 = Map.of(key2, value, key3, value);
+
+        // all keys are empty, successfully set
+        assertTrue(client.msetnx(keyValueMap1).get());
+        assertArrayEquals(
+                new GlideString[] {value, value, null},
+                client.mget(new GlideString[] {key1, key2, nonExisting}).get());
+
+        // one of the keys is already set, nothing gets set
+        assertFalse(client.msetnx(keyValueMap2).get());
+        assertNull(client.get(key3).get());
+    }
+
+    @SneakyThrows
+    @ParameterizedTest(autoCloseArguments = false)
+    @MethodSource("getClients")
     public void lcs(BaseClient client) {
         assumeTrue(REDIS_VERSION.isGreaterThanOrEqualTo("7.0.0"), "This feature added in redis 7.0.0");
         // setup
@@ -8336,6 +8377,36 @@ public class SharedCommandTests {
 
         // non set keys are used
         client.sadd(nonStringKey, new String[] {"setmember"}).get();
+        ExecutionException executionException =
+                assertThrows(ExecutionException.class, () -> client.lcs(nonStringKey, key1).get());
+        assertInstanceOf(RequestException.class, executionException.getCause());
+    }
+
+    @SneakyThrows
+    @ParameterizedTest(autoCloseArguments = false)
+    @MethodSource("getClients")
+    public void lcs_binary(BaseClient client) {
+        assumeTrue(REDIS_VERSION.isGreaterThanOrEqualTo("7.0.0"), "This feature added in redis 7.0.0");
+        // setup
+        GlideString key1 = gs("{key}-1" + UUID.randomUUID());
+        GlideString key2 = gs("{key}-2" + UUID.randomUUID());
+        GlideString key3 = gs("{key}-3" + UUID.randomUUID());
+        GlideString nonStringKey = gs("{key}-4" + UUID.randomUUID());
+
+        // keys does not exist or is empty
+        assertEquals(gs(""), client.lcs(key1, key2).get());
+
+        // setting string values
+        client.set(key1, gs("abcd"));
+        client.set(key2, gs("bcde"));
+        client.set(key3, gs("wxyz"));
+
+        // getting the lcs
+        assertEquals(gs(""), client.lcs(key1, key3).get());
+        assertEquals(gs("bcd"), client.lcs(key1, key2).get());
+
+        // non set keys are used
+        client.sadd(nonStringKey, new GlideString[] {gs("setmember")}).get();
         ExecutionException executionException =
                 assertThrows(ExecutionException.class, () -> client.lcs(nonStringKey, key1).get());
         assertInstanceOf(RequestException.class, executionException.getCause());

@@ -6,17 +6,24 @@ import glide.api.models.commands.RangeOptions.InfLexBound;
 import glide.api.models.commands.RangeOptions.InfScoreBound;
 import glide.api.models.commands.RangeOptions.LexBoundary;
 import glide.api.models.commands.RangeOptions.LexRange;
+import glide.api.models.commands.RangeOptions.LexRangeBinary;
 import glide.api.models.commands.RangeOptions.RangeByIndex;
 import glide.api.models.commands.RangeOptions.RangeByLex;
 import glide.api.models.commands.RangeOptions.RangeByScore;
 import glide.api.models.commands.RangeOptions.RangeQuery;
+import glide.api.models.commands.RangeOptions.RangeQueryBinary;
 import glide.api.models.commands.RangeOptions.ScoreBoundary;
 import glide.api.models.commands.RangeOptions.ScoreRange;
+import glide.api.models.commands.RangeOptions.ScoreRangeBinary;
 import glide.api.models.commands.RangeOptions.ScoredRangeQuery;
+import glide.api.models.commands.RangeOptions.ScoredRangeQueryBinary;
 import glide.api.models.commands.ScoreFilter;
 import glide.api.models.commands.WeightAggregateOptions.Aggregate;
+import glide.api.models.commands.WeightAggregateOptions.AggregateBinary;
 import glide.api.models.commands.WeightAggregateOptions.KeyArray;
+import glide.api.models.commands.WeightAggregateOptions.KeyArrayBinary;
 import glide.api.models.commands.WeightAggregateOptions.KeysOrWeightedKeys;
+import glide.api.models.commands.WeightAggregateOptions.KeysOrWeightedKeysBinary;
 import glide.api.models.commands.WeightAggregateOptions.WeightedKeys;
 import glide.api.models.commands.ZAddOptions;
 import glide.api.models.commands.scan.ZScanOptions;
@@ -77,6 +84,35 @@ public interface SortedSetBaseCommands {
      * @param key The key of the sorted set.
      * @param membersScoresMap A <code>Map</code> of members to their corresponding scores.
      * @param options The ZAdd options.
+     * @param changed Modify the return value from the number of new elements added, to the total
+     *     number of elements changed.
+     * @return The number of elements added to the sorted set.<br>
+     *     If <code>changed</code> is set, returns the number of elements updated in the sorted set.
+     * @example
+     *     <pre>{@code
+     * ZaddOptions options = ZaddOptions.builder().conditionalChange(ONLY_IF_DOES_NOT_EXIST).build();
+     * Long num = client.zadd(gs("mySortedSet"), Map.of(gs("member1"), 10.5, gs("member2"), 8.2), options, false).get();
+     * assert num == 2L; // Indicates that two elements have been to the sorted set "mySortedSet".
+     *
+     * options = ZaddOptions.builder().conditionalChange(ONLY_IF_EXISTS).build();
+     * Long num = client.zadd(gs("existingSortedSet"), Map.of(gs("member1"), 15.0, gs("member2"), 5.5), options, false).get();
+     * assert num == 2L; // Updates the scores of two existing members in the sorted set "existingSortedSet".
+     * }</pre>
+     */
+    CompletableFuture<Long> zadd(
+            GlideString key,
+            Map<GlideString, Double> membersScoresMap,
+            ZAddOptions options,
+            boolean changed);
+
+    /**
+     * Adds members with their scores to the sorted set stored at <code>key</code>.<br>
+     * If a member is already a part of the sorted set, its score is updated.
+     *
+     * @see <a href="https://redis.io/commands/zadd/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param membersScoresMap A <code>Map</code> of members to their corresponding scores.
+     * @param options The ZAdd options.
      * @return The number of elements added to the sorted set.
      * @example
      *     <pre>{@code
@@ -91,6 +127,29 @@ public interface SortedSetBaseCommands {
      */
     CompletableFuture<Long> zadd(
             String key, Map<String, Double> membersScoresMap, ZAddOptions options);
+
+    /**
+     * Adds members with their scores to the sorted set stored at <code>key</code>.<br>
+     * If a member is already a part of the sorted set, its score is updated.
+     *
+     * @see <a href="https://redis.io/commands/zadd/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param membersScoresMap A <code>Map</code> of members to their corresponding scores.
+     * @param options The ZAdd options.
+     * @return The number of elements added to the sorted set.
+     * @example
+     *     <pre>{@code
+     * ZaddOptions options = ZaddOptions.builder().conditionalChange(ONLY_IF_DOES_NOT_EXIST).build();
+     * Long num = client.zadd(gs("mySortedSet"), Map.of(gs("member1"), 10.5, gs("member2"), 8.2), options).get();
+     * assert num == 2L; // Indicates that two elements have been added to the sorted set "mySortedSet".
+     *
+     * options = ZaddOptions.builder().conditionalChange(ONLY_IF_EXISTS).build();
+     * Long num = client.zadd(gs("existingSortedSet"), Map.of(gs("member1"), 15.0, gs("member2"), 5.5), options).get();
+     * assert num == 0L; // No new members were added to the sorted set "existingSortedSet".
+     * }</pre>
+     */
+    CompletableFuture<Long> zadd(
+            GlideString key, Map<GlideString, Double> membersScoresMap, ZAddOptions options);
 
     /**
      * Adds members with their scores to the sorted set stored at <code>key</code>.<br>
@@ -118,6 +177,26 @@ public interface SortedSetBaseCommands {
      * @see <a href="https://redis.io/commands/zadd/">redis.io</a> for more details.
      * @param key The key of the sorted set.
      * @param membersScoresMap A <code>Map</code> of members to their corresponding scores.
+     * @param changed Modify the return value from the number of new elements added, to the total
+     *     number of elements changed.
+     * @return The number of elements added to the sorted set.<br>
+     *     If <code>changed</code> is set, returns the number of elements updated in the sorted set.
+     * @example
+     *     <pre>{@code
+     * Long num = client.zadd(gs("mySortedSet"), Map.of(gs("member1"), 10.5, gs("member2"), 8.2), true).get();
+     * assert num == 2L; // Indicates that two elements have been added or updated in the sorted set "mySortedSet".
+     * }</pre>
+     */
+    CompletableFuture<Long> zadd(
+            GlideString key, Map<GlideString, Double> membersScoresMap, boolean changed);
+
+    /**
+     * Adds members with their scores to the sorted set stored at <code>key</code>.<br>
+     * If a member is already a part of the sorted set, its score is updated.
+     *
+     * @see <a href="https://redis.io/commands/zadd/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param membersScoresMap A <code>Map</code> of members to their corresponding scores.
      * @return The number of elements added to the sorted set.
      * @example
      *     <pre>{@code
@@ -126,6 +205,22 @@ public interface SortedSetBaseCommands {
      * }</pre>
      */
     CompletableFuture<Long> zadd(String key, Map<String, Double> membersScoresMap);
+
+    /**
+     * Adds members with their scores to the sorted set stored at <code>key</code>.<br>
+     * If a member is already a part of the sorted set, its score is updated.
+     *
+     * @see <a href="https://redis.io/commands/zadd/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param membersScoresMap A <code>Map</code> of members to their corresponding scores.
+     * @return The number of elements added to the sorted set.
+     * @example
+     *     <pre>{@code
+     * Long num = client.zadd(gs("mySortedSet"), Map.of(gs("member1"), 10.5, gs("member2"), 8.2)).get();
+     * assert num == 2L; // Indicates that two elements have been added to the sorted set "mySortedSet".
+     * }</pre>
+     */
+    CompletableFuture<Long> zadd(GlideString key, Map<GlideString, Double> membersScoresMap);
 
     /**
      * Increments the score of member in the sorted set stored at <code>key</code> by <code>increment
@@ -164,6 +259,37 @@ public interface SortedSetBaseCommands {
      * If <code>member</code> does not exist in the sorted set, it is added with <code>
      * increment</code> as its score (as if its previous score was <code>0.0</code>).<br>
      * If <code>key</code> does not exist, a new sorted set with the specified member as its sole
+     * member is created.<br>
+     * <code>zaddIncr</code> with empty option acts as {@link #zincrby(String, double, String)}.
+     *
+     * @see <a href="https://redis.io/commands/zadd/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param member A member in the sorted set to increment.
+     * @param increment The score to increment the member.
+     * @param options The ZAdd options.
+     * @return The score of the member.<br>
+     *     If there was a conflict with the options, the operation aborts and <code>null</code> is
+     *     returned.
+     * @example
+     *     <pre>{@code
+     * ZAddOptions options = ZaddOptions.builder().conditionalChange(ONLY_IF_DOES_NOT_EXIST).build();
+     * Double num = client.zaddIncr(gs("mySortedSet"), member, 5.0, options).get();
+     * assert num == 5.0;
+     *
+     * options = ZAddOptions.builder().updateOptions(SCORE_LESS_THAN_CURRENT).build();
+     * Double num = client.zaddIncr(gs("existingSortedSet"), member, 3.0, options).get();
+     * assert num == null;
+     * }</pre>
+     */
+    CompletableFuture<Double> zaddIncr(
+            GlideString key, GlideString member, double increment, ZAddOptions options);
+
+    /**
+     * Increments the score of member in the sorted set stored at <code>key</code> by <code>increment
+     * </code>.<br>
+     * If <code>member</code> does not exist in the sorted set, it is added with <code>
+     * increment</code> as its score (as if its previous score was <code>0.0</code>).<br>
+     * If <code>key</code> does not exist, a new sorted set with the specified member as its sole
      * member is created.
      *
      * @see <a href="https://redis.io/commands/zadd/">redis.io</a> for more details.
@@ -178,6 +304,27 @@ public interface SortedSetBaseCommands {
      * }</pre>
      */
     CompletableFuture<Double> zaddIncr(String key, String member, double increment);
+
+    /**
+     * Increments the score of member in the sorted set stored at <code>key</code> by <code>increment
+     * </code>.<br>
+     * If <code>member</code> does not exist in the sorted set, it is added with <code>
+     * increment</code> as its score (as if its previous score was <code>0.0</code>).<br>
+     * If <code>key</code> does not exist, a new sorted set with the specified member as its sole
+     * member is created.
+     *
+     * @see <a href="https://redis.io/commands/zadd/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param member A member in the sorted set to increment.
+     * @param increment The score to increment the member.
+     * @return The score of the member.
+     * @example
+     *     <pre>{@code
+     * Double num = client.zaddIncr(gs("mySortedSet"), member, 5.0).get();
+     * assert num == 5.0;
+     * }</pre>
+     */
+    CompletableFuture<Double> zaddIncr(GlideString key, GlideString member, double increment);
 
     /**
      * Removes the specified members from the sorted set stored at <code>key</code>.<br>
@@ -484,6 +631,39 @@ public interface SortedSetBaseCommands {
      *       <li>For range queries by score, use {@link RangeByScore}.
      *     </ul>
      *
+     * @param reverse If true, reverses the sorted set, with index 0 as the element with the highest
+     *     score.
+     * @return An array of elements within the specified range. If <code>key</code> does not exist, it
+     *     is treated as an empty sorted set, and the command returns an empty array.
+     * @example
+     *     <pre>{@code
+     * RangeByScoreBinary query1 = new RangeByScoreBinary(new ScoreBoundaryBinary(10), new ScoreBoundaryBinary(20));
+     * GlideString[] payload1 = client.zrange(gs("mySortedSet"), query1, true).get(); // Returns members with scores between 10 and 20.
+     * assert Arrays.equals(payload1, new GlideString[] {gs("member3"), gs("member2"), gs("member1")}); // Returns all members in descending order.
+     *
+     * RangeByScoreBinary query2 = new RangeByScoreBinary(InfScoreBoundBinary.NEGATIVE_INFINITY, new ScoreBoundaryBinary(3));
+     * GlideString[] payload2 = client.zrange(gs("mySortedSet"), query2, false).get();
+     * assert Arrays.equals(payload2, new GlideString[] {gs("member2"), gs("member3")}); // Returns members with scores within the range of negative infinity to 3, in ascending order.
+     * }</pre>
+     */
+    CompletableFuture<GlideString[]> zrange(
+            GlideString key, RangeQueryBinary rangeQuery, boolean reverse);
+
+    /**
+     * Returns the specified range of elements in the sorted set stored at <code>key</code>.<br>
+     * <code>ZRANGE</code> can perform different types of range queries: by index (rank), by the
+     * score, or by lexicographical order.<br>
+     * To get the elements with their scores, see {@link #zrangeWithScores}.
+     *
+     * @see <a href="https://redis.io/commands/zrange/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param rangeQuery The range query object representing the type of range query to perform.<br>
+     *     <ul>
+     *       <li>For range queries by index (rank), use {@link RangeByIndex}.
+     *       <li>For range queries by lexicographical order, use {@link RangeByLex}.
+     *       <li>For range queries by score, use {@link RangeByScore}.
+     *     </ul>
+     *
      * @return An of array elements within the specified range. If <code>key</code> does not exist, it
      *     is treated as an empty sorted set, and the command returns an empty array.
      * @example
@@ -498,6 +678,39 @@ public interface SortedSetBaseCommands {
      * }</pre>
      */
     CompletableFuture<String[]> zrange(String key, RangeQuery rangeQuery);
+
+    /**
+     * Returns the specified range of elements in the sorted set stored at <code>key</code>.<br>
+     * <code>ZRANGE</code> can perform different types of range queries: by index (rank), by the
+     * score, or by lexicographical order.<br>
+     * To get the elements with their scores, see {@link #zrangeWithScores}.
+     *
+     * @see <a href="https://redis.io/commands/zrange/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param rangeQuery The range query object representing the type of range query to perform.<br>
+     *     <ul>
+     *       <li>For range queries by index (rank), use {@link RangeByIndex}.
+     *       <li>For range queries by lexicographical order, use {@link RangeByLex}.
+     *       <li>For range queries by score, use {@link RangeByScore}.
+     *     </ul>
+     *
+     * @return An of array elements within the specified range. If <code>key</code> does not exist, it
+     *     is treated as an empty sorted set, and the command returns an empty array.
+     * @example
+     *     <pre>{@code
+     * RangeByIndexBinary query1 = new RangeByIndexBinary(0, -1);
+     * GlideString[] payload1 = client.zrange(gs("mySortedSet"),query1).get();
+     * assert payload1.equals(new String[] {gs("member1")
+     * , gs("member2")
+     * , gs("member3")
+     * }); // Returns all members in ascending order.
+     *
+     * RangeByScoreBinary query2 = new RangeByScoreBinary(InfScoreBoundBinary.NEGATIVE_INFINITY, new ScoreBoundaryBinary(3));
+     * GlideString[] payload2 = client.zrange(gs("mySortedSet"), query2).get();
+     * assert Arrays.equals(payload2, new GlideString[] {gs("member2"), gs("member3")}); // Returns members with scores within the range of negative infinity to 3, in ascending order.
+     * }</pre>
+     */
+    CompletableFuture<GlideString[]> zrange(GlideString key, RangeQueryBinary rangeQuery);
 
     /**
      * Returns the specified range of elements with their scores in the sorted set stored at <code>key
@@ -542,6 +755,37 @@ public interface SortedSetBaseCommands {
      *       <li>For range queries by score, use {@link RangeByScore}.
      *     </ul>
      *
+     * @param reverse If true, reverses the sorted set, with index 0 as the element with the highest
+     *     score.
+     * @return A <code>Map</code> of elements and their scores within the specified range. If <code>
+     *     key</code> does not exist, it is treated as an empty sorted set, and the command returns an
+     *     empty <code>Map</code>.
+     * @example
+     *     <pre>{@code
+     * RangeByScoreBinary query1 = new RangeByScoreBinary(new ScoreBoundaryBinary(10), new ScoreBoundaryBinary(20));
+     * Map<GlideString, Double> payload1 = client.zrangeWithScores(gs("mySortedSet"), query1, true).get();
+     * assert payload1.equals(Map.of(gs("member2"), 15.2, gs("member1"), 10.5)); // Returns members with scores between 10 and 20 (inclusive) with their scores.
+     *
+     * RangeByScoreBinary query2 = new RangeByScoreBinary(InfScoreBoundBinary.NEGATIVE_INFINITY, new ScoreBoundaryBinary(3));
+     * Map<GlideString, Double> payload2 = client.zrangeWithScores(gs("mySortedSet"), query2, false).get();
+     * assert payload2.equals(Map.of(gs("member4"), -2.0, gs("member7"), 1.5)); // Returns members with with scores within the range of negative infinity to 3, with their scores.
+     * }</pre>
+     */
+    CompletableFuture<Map<GlideString, Double>> zrangeWithScores(
+            GlideString key, ScoredRangeQueryBinary rangeQuery, boolean reverse);
+
+    /**
+     * Returns the specified range of elements with their scores in the sorted set stored at <code>key
+     * </code>. Similar to {@link #zrange} but with a <code>WITHSCORE</code> flag.
+     *
+     * @see <a href="https://redis.io/commands/zrange/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param rangeQuery The range query object representing the type of range query to perform.<br>
+     *     <ul>
+     *       <li>For range queries by index (rank), use {@link RangeByIndex}.
+     *       <li>For range queries by score, use {@link RangeByScore}.
+     *     </ul>
+     *
      * @return A <code>Map</code> of elements and their scores within the specified range. If <code>
      *     key</code> does not exist, it is treated as an empty sorted set, and the command returns an
      *     empty <code>Map</code>.
@@ -557,6 +801,35 @@ public interface SortedSetBaseCommands {
      * }</pre>
      */
     CompletableFuture<Map<String, Double>> zrangeWithScores(String key, ScoredRangeQuery rangeQuery);
+
+    /**
+     * Returns the specified range of elements with their scores in the sorted set stored at <code>key
+     * </code>. Similar to {@link #zrange} but with a <code>WITHSCORE</code> flag.
+     *
+     * @see <a href="https://redis.io/commands/zrange/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param rangeQuery The range query object representing the type of range query to perform.<br>
+     *     <ul>
+     *       <li>For range queries by index (rank), use {@link RangeByIndex}.
+     *       <li>For range queries by score, use {@link RangeByScore}.
+     *     </ul>
+     *
+     * @return A <code>Map</code> of elements and their scores within the specified range. If <code>
+     *     key</code> does not exist, it is treated as an empty sorted set, and the command returns an
+     *     empty <code>Map</code>.
+     * @example
+     *     <pre>{@code
+     * RangeByScoreBinary query1 = new RangeByScoreBinary(new ScoreBoundaryBinary(10), new ScoreBoundaryBinary(20));
+     * Map<GlideString, Double> payload1 = client.zrangeWithScores(gs("mySortedSet"), query1).get();
+     * assert payload1.equals(Map.of(gs("member1"), 10.5, gs("member2"), 15.2)); // Returns members with scores between 10 and 20 (inclusive) with their scores.
+     *
+     * RangeByScoreBinary query2 = new RangeByScoreBinary(InfScoreBoundBinary.NEGATIVE_INFINITY, new ScoreBoundaryBinary(3));
+     * Map<GlideString, Double> payload2 = client.zrangeWithScores(gs("mySortedSet"), query2).get();
+     * assert payload2.equals(Map.of(gs("member4"), -2.0, gs("member7"), 1.5)); // Returns members with with scores within the range of negative infinity to 3, with their scores.
+     * }</pre>
+     */
+    CompletableFuture<Map<GlideString, Double>> zrangeWithScores(
+            GlideString key, ScoredRangeQueryBinary rangeQuery);
 
     /**
      * Stores a specified range of elements from the sorted set at <code>source</code>, into a new
@@ -609,6 +882,40 @@ public interface SortedSetBaseCommands {
      *       <li>For range queries by score, use {@link RangeByScore}.
      *     </ul>
      *
+     * @param reverse If <code>true</code>, reverses the sorted set, with index <code>0</code> as the
+     *     element with the highest score.
+     * @return The number of elements in the resulting sorted set.
+     * @example
+     *     <pre>{@code
+     * RangeByIndex query1 = new RangeByIndex(0, -1); // Query for all members.
+     * Long payload1 = client.zrangestore("destinationKey", "mySortedSet", query1, true).get();
+     * assert payload1 == 7L;
+     *
+     * RangeByScoreBinary query2 = new RangeByScoreBinary(InfScoreBoundBinary.NEGATIVE_INFINITY, new ScoreBoundaryBinary(3)); // Query for members with scores within the range of negative infinity to 3.
+     * Long payload2 = client.zrangestore(gs("destinationKey"), gs("mySortedSet"), query2, false).get();
+     * assert payload2 == 5L;
+     * }</pre>
+     */
+    CompletableFuture<Long> zrangestore(
+            GlideString destination, GlideString source, RangeQueryBinary rangeQuery, boolean reverse);
+
+    /**
+     * Stores a specified range of elements from the sorted set at <code>source</code>, into a new
+     * sorted set at <code>destination</code>. If <code>destination</code> doesn't exist, a new sorted
+     * set is created; if it exists, it's overwritten.<br>
+     *
+     * @apiNote When in cluster mode, <code>destination</code> and <code>source</code> must map to the
+     *     same hash slot.
+     * @see <a href="https://redis.io/commands/zrangestore/">redis.io</a> for more details.
+     * @param destination The key for the destination sorted set.
+     * @param source The key of the source sorted set.
+     * @param rangeQuery The range query object representing the type of range query to perform.<br>
+     *     <ul>
+     *       <li>For range queries by index (rank), use {@link RangeByIndex}.
+     *       <li>For range queries by lexicographical order, use {@link RangeByLex}.
+     *       <li>For range queries by score, use {@link RangeByScore}.
+     *     </ul>
+     *
      * @return The number of elements in the resulting sorted set.
      * @example
      *     <pre>{@code
@@ -622,6 +929,38 @@ public interface SortedSetBaseCommands {
      * }</pre>
      */
     CompletableFuture<Long> zrangestore(String destination, String source, RangeQuery rangeQuery);
+
+    /**
+     * Stores a specified range of elements from the sorted set at <code>source</code>, into a new
+     * sorted set at <code>destination</code>. If <code>destination</code> doesn't exist, a new sorted
+     * set is created; if it exists, it's overwritten.<br>
+     *
+     * @apiNote When in cluster mode, <code>destination</code> and <code>source</code> must map to the
+     *     same hash slot.
+     * @see <a href="https://redis.io/commands/zrangestore/">redis.io</a> for more details.
+     * @param destination The key for the destination sorted set.
+     * @param source The key of the source sorted set.
+     * @param rangeQuery The range query object representing the type of range query to perform.<br>
+     *     <ul>
+     *       <li>For range queries by index (rank), use {@link RangeByIndex}.
+     *       <li>For range queries by lexicographical order, use {@link RangeByLex}.
+     *       <li>For range queries by score, use {@link RangeByScore}.
+     *     </ul>
+     *
+     * @return The number of elements in the resulting sorted set.
+     * @example
+     *     <pre>{@code
+     * RangeByIndexBinary query1 = new RangeByIndexBinary(0, -1); // Query for all members.
+     * Long payload1 = client.zrangestore(gs("destinationKey"), gs("mySortedSet"), query1).get();
+     * assert payload1 == 7L;
+     *
+     * RangeByScoreBinary query2 = new RangeByScoreBinary(InfScoreBoundBinary.NEGATIVE_INFINITY, new ScoreBoundaryBinary(3)); // Query for members with scores within the range of negative infinity to 3.
+     * Long payload2 = client.zrangestore(gs("destinationKey"), gs("mySortedSet"), query2).get();
+     * assert payload2 == 5L;
+     * }</pre>
+     */
+    CompletableFuture<Long> zrangestore(
+            GlideString destination, GlideString source, RangeQueryBinary rangeQuery);
 
     /**
      * Returns the rank of <code>member</code> in the sorted set stored at <code>key</code>, with
@@ -713,6 +1052,29 @@ public interface SortedSetBaseCommands {
     CompletableFuture<Long> zrevrank(String key, String member);
 
     /**
+     * Returns the rank of <code>member</code> in the sorted set stored at <code>key</code>, where
+     * scores are ordered from the highest to lowest, starting from <code>0</code>.<br>
+     * To get the rank of <code>member</code> with its score, see {@link #zrevrankWithScore}.
+     *
+     * @see <a href="https://redis.io/commands/zrevrank/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param member The member whose rank is to be retrieved.
+     * @return The rank of <code>member</code> in the sorted set, where ranks are ordered from high to
+     *     low based on scores.<br>
+     *     If <code>key</code> doesn't exist, or if <code>member</code> is not present in the set,
+     *     <code>null</code> will be returned.
+     * @example
+     *     <pre>{@code
+     * Long num1 = client.zrevrank(gs("mySortedSet"), gs("member2")).get();
+     * assert num1 == 1L; // Indicates that "member2" has the second-highest score in the sorted set "mySortedSet".
+     *
+     * Long num2 = client.zrevrank(gs("mySortedSet"), gs("nonExistingMember")).get();
+     * assert num2 == null; // Indicates that "nonExistingMember" is not present in the sorted set "mySortedSet".
+     * }</pre>
+     */
+    CompletableFuture<Long> zrevrank(GlideString key, GlideString member);
+
+    /**
      * Returns the rank of <code>member</code> in the sorted set stored at <code>key</code> with its
      * score, where scores are ordered from the highest to lowest, starting from <code>0</code>.
      *
@@ -734,6 +1096,29 @@ public interface SortedSetBaseCommands {
      * }</pre>
      */
     CompletableFuture<Object[]> zrevrankWithScore(String key, String member);
+
+    /**
+     * Returns the rank of <code>member</code> in the sorted set stored at <code>key</code> with its
+     * score, where scores are ordered from the highest to lowest, starting from <code>0</code>.
+     *
+     * @see <a href="https://redis.io/commands/zrevrank/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param member The member whose rank is to be retrieved.
+     * @return An array containing the rank (as <code>Long</code>) and score (as <code>Double</code>)
+     *     of <code>member</code> in the sorted set, where ranks are ordered from high to low based on
+     *     scores.<br>
+     *     If <code>key</code> doesn't exist, or if <code>member</code> is not present in the set,
+     *     <code>null</code> will be returned.
+     * @example
+     *     <pre>{@code
+     * Object[] result1 = client.zrevrankWithScore(gs("mySortedSet"), gs("member2")).get();
+     * assert ((Long) result1[0]) == 1L && ((Double) result1[1]) == 6.0; // Indicates that "member2" with score 6.0 has the second-highest score in the sorted set "mySortedSet".
+     *
+     * Object[] result2 = client.zrevrankWithScore(gs("mySortedSet"), gs("nonExistingMember")).get();
+     * assert result2 == null; // Indicates that "nonExistingMember" is not present in the sorted set "mySortedSet".
+     * }</pre>
+     */
+    CompletableFuture<Object[]> zrevrankWithScore(GlideString key, GlideString member);
 
     /**
      * Returns the scores associated with the specified <code>members</code> in the sorted set stored
@@ -792,6 +1177,26 @@ public interface SortedSetBaseCommands {
     CompletableFuture<String[]> zdiff(String[] keys);
 
     /**
+     * Returns the difference between the first sorted set and all the successive sorted sets.<br>
+     * To get the elements with their scores, see {@link #zdiffWithScores}.
+     *
+     * @apiNote When in cluster mode, all <code>keys</code> must map to the same hash slot.
+     * @since Redis 6.2 and above.
+     * @see <a href="https://redis.io/commands/zdiff/">redis.io</a> for more details.
+     * @param keys The keys of the sorted sets.
+     * @return An <code>array</code> of elements representing the difference between the sorted sets.
+     *     <br>
+     *     If the first <code>key</code> does not exist, it is treated as an empty sorted set, and the
+     *     command returns an empty <code>array</code>.
+     * @example
+     *     <pre>{@code
+     * GlideString[] payload = client.zdiff(new GlideString[] {gs("sortedSet1"), gs("sortedSet2"), gs("sortedSet3")}).get();
+     * assert payload.equals(new GlideString[]{gs("element1")});
+     * }</pre>
+     */
+    CompletableFuture<GlideString[]> zdiff(GlideString[] keys);
+
+    /**
      * Returns the difference between the first sorted set and all the successive sorted sets.
      *
      * @apiNote When in cluster mode, all <code>keys</code> must map to the same hash slot.
@@ -809,6 +1214,25 @@ public interface SortedSetBaseCommands {
      * }</pre>
      */
     CompletableFuture<Map<String, Double>> zdiffWithScores(String[] keys);
+
+    /**
+     * Returns the difference between the first sorted set and all the successive sorted sets.
+     *
+     * @apiNote When in cluster mode, all <code>keys</code> must map to the same hash slot.
+     * @since Redis 6.2 and above.
+     * @see <a href="https://redis.io/commands/zdiff/">redis.io</a> for more details.
+     * @param keys The keys of the sorted sets.
+     * @return A <code>Map</code> of elements and their scores representing the difference between the
+     *     sorted sets.<br>
+     *     If the first <code>key</code> does not exist, it is treated as an empty sorted set, and the
+     *     command returns an empty <code>Map</code>.
+     * @example
+     *     <pre>{@code
+     * Map<GlideString, Double> payload = client.zdiffWithScores(new GlideString[] {gs("sortedSet1"), gs("sortedSet2"), gs("sortedSet3")}).get();
+     * assert payload.equals(Map.of(gs("element1"), 1.0));
+     * }</pre>
+     */
+    CompletableFuture<Map<GlideString, Double>> zdiffWithScores(GlideString[] keys);
 
     /**
      * Calculates the difference between the first sorted set and all the successive sorted sets at
@@ -876,6 +1300,34 @@ public interface SortedSetBaseCommands {
      * }</pre>
      */
     CompletableFuture<Long> zcount(String key, ScoreRange minScore, ScoreRange maxScore);
+
+    /**
+     * Returns the number of members in the sorted set stored at <code>key</code> with scores between
+     * <code>minScore</code> and <code>maxScore</code>.
+     *
+     * @see <a href="https://redis.io/commands/zcount/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param minScore The minimum score to count from. Can be an implementation of {@link
+     *     InfScoreBound} representing positive/negative infinity, or {@link ScoreBoundary}
+     *     representing a specific score and inclusivity.
+     * @param maxScore The maximum score to count up to. Can be an implementation of {@link
+     *     InfScoreBound} representing positive/negative infinity, or {@link ScoreBoundary}
+     *     representing a specific score and inclusivity.
+     * @return The number of members in the specified score range.<br>
+     *     If <code>key</code> does not exist, it is treated as an empty sorted set, and the command
+     *     returns <code>0</code>.<br>
+     *     If <code>maxScore < minScore</code>, <code>0</code> is returned.
+     * @example
+     *     <pre>{@code
+     * Long num1 = client.zcount(gs("my_sorted_set"), new ScoreBoundaryBinary(5.0, true), InfScoreBoundBinary.POSITIVE_INFINITY).get();
+     * assert num1 == 2L; // Indicates that there are 2 members with scores between 5.0 (inclusive) and +inf in the sorted set "my_sorted_set".
+     *
+     * Long num2 = client.zcount(gs("my_sorted_set"), new ScoreBoundaryBinary(5.0, true), new ScoreBoundaryBinary(10.0, false)).get();
+     * assert num2 == 1L; // Indicates that there is one member with ScoreBoundary 5.0 <= score < 10.0 in the sorted set "my_sorted_set".
+     * }</pre>
+     */
+    CompletableFuture<Long> zcount(
+            GlideString key, ScoreRangeBinary minScore, ScoreRangeBinary maxScore);
 
     /**
      * Removes all elements in the sorted set stored at <code>key</code> with rank between <code>start
@@ -959,6 +1411,34 @@ public interface SortedSetBaseCommands {
     CompletableFuture<Long> zremrangebylex(String key, LexRange minLex, LexRange maxLex);
 
     /**
+     * Removes all elements in the sorted set stored at <code>key</code> with a lexicographical order
+     * between <code>minLex</code> and <code>maxLex</code>.
+     *
+     * @see <a href="https://redis.io/commands/zremrangebylex/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param minLex The minimum bound of the lexicographical range. Can be an implementation of
+     *     {@link InfLexBound} representing positive/negative infinity, or {@link LexBoundary}
+     *     representing a specific lex and inclusivity.
+     * @param maxLex The maximum bound of the lexicographical range. Can be an implementation of
+     *     {@link InfLexBound} representing positive/negative infinity, or {@link LexBoundary}
+     *     representing a specific lex and inclusivity.
+     * @return The number of members removed from the sorted set.<br>
+     *     If <code>key</code> does not exist, it is treated as an empty sorted set, and the command
+     *     returns <code>0</code>.<br>
+     *     If <code>minLex</code> is greater than <code>maxLex</code>, <code>0</code> is returned.
+     * @example
+     *     <pre>{@code
+     * Long payload1 = client.zremrangebylex(gs("mySortedSet"), new LexBoundaryBinary(gs("a"), false), new LexBoundaryBinary(gs("e"))).get();
+     * assert payload1 == 4L; // Indicates that 4 members, with lexicographical values ranging from "a" (exclusive) to "e" (inclusive), have been removed from "mySortedSet".
+     *
+     * Long payload2 = client.zremrangebylex(gs("mySortedSet"), InfLexBoundBinary.NEGATIVE_INFINITY, new LexBoundaryBinary(gs("e"))).get();
+     * assert payload2 == 0L; // Indicates that no elements were removed.
+     * }</pre>
+     */
+    CompletableFuture<Long> zremrangebylex(
+            GlideString key, LexRangeBinary minLex, LexRangeBinary maxLex);
+
+    /**
      * Removes all elements in the sorted set stored at <code>key</code> with a score between <code>
      * minScore</code> and <code>maxScore</code>.
      *
@@ -986,6 +1466,34 @@ public interface SortedSetBaseCommands {
     CompletableFuture<Long> zremrangebyscore(String key, ScoreRange minScore, ScoreRange maxScore);
 
     /**
+     * Removes all elements in the sorted set stored at <code>key</code> with a score between <code>
+     * minScore</code> and <code>maxScore</code>.
+     *
+     * @see <a href="https://redis.io/commands/zremrangebyscore/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param minScore The minimum score to remove from. Can be an implementation of {@link
+     *     InfScoreBound} representing positive/negative infinity, or {@link ScoreBoundary}
+     *     representing a specific score and inclusivity.
+     * @param maxScore The maximum score to remove to. Can be an implementation of {@link
+     *     InfScoreBound} representing positive/negative infinity, or {@link ScoreBoundary}
+     *     representing a specific score and inclusivity.
+     * @return The number of members removed.<br>
+     *     If <code>key</code> does not exist, it is treated as an empty sorted set, and the command
+     *     returns <code>0</code>.<br>
+     *     If <code>minScore</code> is greater than <code>maxScore</code>, <code>0</code> is returned.
+     * @example
+     *     <pre>{@code
+     * Long payload1 = client.zremrangebyscore(gs("mySortedSet"), new ScoreBoundary(1, false), new ScoreBoundary(5)).get();
+     * assert payload1 == 4L; // Indicates that 4 members, with scores ranging from 1 (exclusive) to 5 (inclusive), have been removed from "mySortedSet".
+     *
+     * Long payload2 = client.zremrangebyscore(gs("mySortedSet"), InfScoreBound.NEGATIVE_INFINITY, new ScoreBoundary(-42)).get();
+     * assert payload2 == 0L; // Indicates that no elements were removed.
+     * }</pre>
+     */
+    CompletableFuture<Long> zremrangebyscore(
+            GlideString key, ScoreRangeBinary minScore, ScoreRangeBinary maxScore);
+
+    /**
      * Returns the number of members in the sorted set stored at <code>key</code> with scores between
      * <code>minLex</code> and <code>maxLex</code>.
      *
@@ -1011,6 +1519,33 @@ public interface SortedSetBaseCommands {
      * }</pre>
      */
     CompletableFuture<Long> zlexcount(String key, LexRange minLex, LexRange maxLex);
+
+    /**
+     * Returns the number of members in the sorted set stored at <code>key</code> with scores between
+     * <code>minLex</code> and <code>maxLex</code>.
+     *
+     * @see <a href="https://redis.io/commands/zlexcount/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param minLex The minimum lex to count from. Can be an implementation of {@link InfLexBound}
+     *     representing positive/negative infinity, or {@link LexBoundary} representing a specific lex
+     *     and inclusivity.
+     * @param maxLex The maximum lex to count up to. Can be an implementation of {@link InfLexBound}
+     *     representing positive/negative infinity, or {@link LexBoundary} representing a specific lex
+     *     and inclusivity.
+     * @return The number of members in the specified lex range.<br>
+     *     If <code>key</code> does not exist, it is treated as an empty sorted set, and the command
+     *     returns <code>0</code>.<br>
+     *     If <code>maxLex < minLex</code>, <code>0</code> is returned.
+     * @example
+     *     <pre>{@code
+     * Long num1 = client.zlexcount(gs("my_sorted_set"), new LexBoundaryBinary(gs("c"), true), InfLexBoundBinary.POSITIVE_INFINITY).get();
+     * assert num1 == 2L; // Indicates that there are 2 members with lex scores between "c" (inclusive) and positive infinity in the sorted set "my_sorted_set".
+     *
+     * Long num2 = client.zlexcount(gs("my_sorted_set"), new ScoreBoundaryBinary(gs("c"), true), new ScoreBoundaryBinary(gs("k"), false)).get();
+     * assert num2 == 1L; // Indicates that there is one member with LexBoundary "c" <= score < "k" in the sorted set "my_sorted_set".
+     * }</pre>
+     */
+    CompletableFuture<Long> zlexcount(GlideString key, LexRangeBinary minLex, LexRangeBinary maxLex);
 
     /**
      * Computes the union of sorted sets given by the specified <code>KeysOrWeightedKeys</code>, and
@@ -1094,6 +1629,36 @@ public interface SortedSetBaseCommands {
             String destination, KeysOrWeightedKeys keysOrWeightedKeys, Aggregate aggregate);
 
     /**
+     * Computes the intersection of sorted sets given by the specified <code>keysOrWeightedKeys</code>
+     * , and stores the result in <code>destination</code>. If <code>destination</code> already
+     * exists, it is overwritten. Otherwise, a new sorted set will be created.
+     *
+     * @apiNote When in cluster mode, <code>destination</code> and all keys in <code>
+     *     keysOrWeightedKeys</code> must map to the same hash slot.
+     * @see <a href="https://redis.io/commands/zinterstore/">redis.io</a> for more details.
+     * @param destination The key of the destination sorted set.
+     * @param keysOrWeightedKeys The keys of the sorted sets with possible formats:
+     *     <ul>
+     *       <li>Use {@link KeyArray} for keys only.
+     *       <li>Use {@link WeightedKeys} for weighted keys with score multipliers.
+     *     </ul>
+     *
+     * @param aggregate Specifies the aggregation strategy to apply when combining the scores of
+     *     elements.
+     * @return The number of elements in the resulting sorted set stored at <code>destination</code>.
+     * @example
+     *     <pre>{@code
+     * WeightedKeysBinary weightedKeys = new WeightedKeysBinary(List.of(Pair.of(gs("mySortedSet1"), 1.0), Pair.of(gs("mySortedSet2"), 2.0)));
+     * Long payload = client.zinterstore(gs("newSortedSet"), weightedKeys, Aggregate.MAX).get()
+     * assert payload == 3L; // Indicates the new sorted set contains three members from the intersection of "mySortedSet1" and "mySortedSet2".
+     * }</pre>
+     */
+    CompletableFuture<Long> zinterstore(
+            GlideString destination,
+            KeysOrWeightedKeysBinary keysOrWeightedKeys,
+            AggregateBinary aggregate);
+
+    /**
      * Computes the intersection of sorted sets given by the specified <code>KeysOrWeightedKeys</code>
      * , and stores the result in <code>destination</code>. If <code>destination</code> already
      * exists, it is overwritten. Otherwise, a new sorted set will be created.
@@ -1117,6 +1682,32 @@ public interface SortedSetBaseCommands {
      * }</pre>
      */
     CompletableFuture<Long> zinterstore(String destination, KeysOrWeightedKeys keysOrWeightedKeys);
+
+    /**
+     * Computes the intersection of sorted sets given by the specified <code>KeysOrWeightedKeys</code>
+     * , and stores the result in <code>destination</code>. If <code>destination</code> already
+     * exists, it is overwritten. Otherwise, a new sorted set will be created.
+     *
+     * @apiNote When in cluster mode, <code>destination</code> and all keys in <code>
+     *     keysOrWeightedKeys</code> must map to the same hash slot.
+     * @see <a href="https://redis.io/commands/zinterstore/">redis.io</a> for more details.
+     * @param destination The key of the destination sorted set.
+     * @param keysOrWeightedKeys The keys of the sorted sets with possible formats:
+     *     <ul>
+     *       <li>Use {@link KeyArray} for keys only.
+     *       <li>Use {@link WeightedKeys} for weighted keys with score multipliers.
+     *     </ul>
+     *
+     * @return The number of elements in the resulting sorted set stored at <code>destination</code>.
+     * @example
+     *     <pre>{@code
+     * KeyArrayBinary keyArray = new KeyArrayBinary(new GlideString[] {gs("mySortedSet1"), gs("mySortedSet2")});
+     * Long payload = client.zinterstore(gs("newSortedSet"), keyArray).get()
+     * assert payload == 3L; // Indicates the new sorted set contains three members from the intersection of "mySortedSet1" and "mySortedSet2".
+     * }</pre>
+     */
+    CompletableFuture<Long> zinterstore(
+            GlideString destination, KeysOrWeightedKeysBinary keysOrWeightedKeys);
 
     /**
      * Pops a member-score pair from the first non-empty sorted set, with the given <code>keys</code>
@@ -1343,6 +1934,29 @@ public interface SortedSetBaseCommands {
     CompletableFuture<String[]> zinter(KeyArray keys);
 
     /**
+     * Returns the intersection of members from sorted sets specified by the given <code>keys</code>.
+     * <br>
+     * To get the elements with their scores, see {@link #zinterWithScores}.
+     *
+     * @apiNote When in cluster mode, all keys in <code>keys</code> must map to the same hash slot.
+     * @since Redis 6.2 and above.
+     * @see <a href="https://redis.io/commands/zinter/">redis.io</a> for more details.
+     * @param keys The keys of the sorted sets.
+     * @return The resulting sorted set from the intersection.
+     * @example
+     *     <pre>{@code
+     * KeyArrayBinary keyArray = new KeyArrayBinary(new GlideString[] {gs("mySortedSet1"), gs("mySortedSet2")});
+     * GlideString[] payload = client.zinter(keyArray).get()
+     * assert payload.equals(new GlideString[] {gs("elem1"), gs("elem2"), gs("elem3")});
+     *
+     * WeightedKeysBinary weightedKeys = new WeightedKeysBinary(List.of(Pair.of(gs("mySortedSet1"), 2.0), Pair.of(gs("mySortedSet2"), 2.0)));
+     * GlideString[] payload = client.zinter(weightedKeys).get()
+     * assert payload.equals(new GlideString[] {gs("elem1"), gs("elem2"), gs("elem3")});
+     * }</pre>
+     */
+    CompletableFuture<GlideString[]> zinter(KeyArrayBinary keys);
+
+    /**
      * Returns the intersection of members and their scores from sorted sets specified by the given
      * <code>keysOrWeightedKeys</code>. To perform a <code>zinter</code> operation while specifying
      * aggregation settings, use {@link #zinterWithScores(KeysOrWeightedKeys, Aggregate)}.
@@ -1370,6 +1984,36 @@ public interface SortedSetBaseCommands {
      * }</pre>
      */
     CompletableFuture<Map<String, Double>> zinterWithScores(KeysOrWeightedKeys keysOrWeightedKeys);
+
+    /**
+     * Returns the intersection of members and their scores from sorted sets specified by the given
+     * <code>keysOrWeightedKeys</code>. To perform a <code>zinter</code> operation while specifying
+     * aggregation settings, use {@link #zinterWithScores(KeysOrWeightedKeys, Aggregate)}.
+     *
+     * @apiNote When in cluster mode, all keys in <code>keysOrWeightedKeys</code> must map to the same
+     *     hash slot.
+     * @since Redis 6.2 and above.
+     * @see <a href="https://redis.io/commands/zinter/">redis.io</a> for more details.
+     * @param keysOrWeightedKeys The keys of the sorted sets with possible formats:
+     *     <ul>
+     *       <li>Use {@link KeyArray} for keys only.
+     *       <li>Use {@link WeightedKeys} for weighted keys with score multipliers.
+     *     </ul>
+     *
+     * @return The resulting sorted set from the intersection.
+     * @example
+     *     <pre>{@code
+     * KeyArrayBinary keyArray = new KeyArray(new String[] {"mySortedSet1", "mySortedSet2"});
+     * Map<GlideString, Double> payload1 = client.zinterWithScores(keyArray).get();
+     * assert payload1.equals(Map.of(gs("elem1"), 1.0, gs("elem2"), 2.0, gs("elem3"), 3.0));
+     *
+     * WeightedKeysBinary weightedKeys = new WeightedKeysBinary(List.of(Pair.of(gs("mySortedSet1"), 2.0), Pair.of(gs("mySortedSet2"), 2.0)));
+     * Map<GlideString, Double> payload2 = client.zinterWithScores(weightedKeys).get();
+     * assert payload2.equals(Map.of(gs("elem1"), 2.0, gs("elem2"), 4.0, gs("elem3"), 6.0));
+     * }</pre>
+     */
+    CompletableFuture<Map<GlideString, Double>> zinterWithScores(
+            KeysOrWeightedKeysBinary keysOrWeightedKeys);
 
     /**
      * Returns the intersection of members and their scores from sorted sets specified by the given
@@ -1403,6 +2047,37 @@ public interface SortedSetBaseCommands {
             KeysOrWeightedKeys keysOrWeightedKeys, Aggregate aggregate);
 
     /**
+     * Returns the intersection of members and their scores from sorted sets specified by the given
+     * <code>keysOrWeightedKeys</code>.
+     *
+     * @apiNote When in cluster mode, all keys in <code>keysOrWeightedKeys</code> must map to the same
+     *     hash slot.
+     * @since Redis 6.2 and above.
+     * @see <a href="https://redis.io/commands/zinter/">redis.io</a> for more details.
+     * @param keysOrWeightedKeys The keys of the sorted sets with possible formats:
+     *     <ul>
+     *       <li>Use {@link KeyArray} for keys only.
+     *       <li>Use {@link WeightedKeys} for weighted keys with score multipliers.
+     *     </ul>
+     *
+     * @param aggregate Specifies the aggregation strategy to apply when combining the scores of
+     *     elements.
+     * @return The resulting sorted set from the intersection.
+     * @example
+     *     <pre>{@code
+     * KeyArrayBinary keyArray = new KeyArrayBinary(new GlideString[] {gs("mySortedSet1"), gs("mySortedSet2")});
+     * Map<GlideString, Double> payload1 = client.zinterWithScores(keyArray, AggregateBinary.MAX).get();
+     * assert payload1.equals(Map.of(gs("elem1"), 1.0, gs("elem2"), 2.0, gs("elem3"), 3.0));
+     *
+     * WeightedKeysBinary weightedKeys = new WeightedKeysBinary(List.of(Pair.of(gs("mySortedSet1"), 2.0), Pair.of(gs("mySortedSet2"), 2.0)));
+     * Map<GlideString, Double> payload2 = client.zinterWithScores(weightedKeys, AggregateBinary.SUM).get();
+     * assert payload2.equals(Map.of(gs("elem1"), 2.0, gs("elem2"), 4.0, gs("elem3"), 6.0));
+     * }</pre>
+     */
+    CompletableFuture<Map<GlideString, Double>> zinterWithScores(
+            KeysOrWeightedKeysBinary keysOrWeightedKeys, AggregateBinary aggregate);
+
+    /**
      * Returns a random element from the sorted set stored at <code>key</code>.
      *
      * @see <a href="https://redis.io/commands/zrandmember/">redis.io</a> for more details.
@@ -1419,6 +2094,24 @@ public interface SortedSetBaseCommands {
      * }</pre>
      */
     CompletableFuture<String> zrandmember(String key);
+
+    /**
+     * Returns a random element from the sorted set stored at <code>key</code>.
+     *
+     * @see <a href="https://redis.io/commands/zrandmember/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @return A <code>String</code> representing a random element from the sorted set.<br>
+     *     If the sorted set does not exist or is empty, the response will be <code>null</code>.
+     * @example
+     *     <pre>{@code
+     * GlideString payload1 = client.zrandmember(gs("mySortedSet")).get();
+     * assert payload1.equals(gs("GLIDE"));
+     *
+     * GlideString payload2 = client.zrandmember(gs("nonExistingSortedSet")).get();
+     * assert payload2 == null;
+     * }</pre>
+     */
+    CompletableFuture<GlideString> zrandmember(GlideString key);
 
     /**
      * Retrieves random elements from the sorted set stored at <code>key</code>.
@@ -1443,6 +2136,28 @@ public interface SortedSetBaseCommands {
     CompletableFuture<String[]> zrandmemberWithCount(String key, long count);
 
     /**
+     * Retrieves random elements from the sorted set stored at <code>key</code>.
+     *
+     * @see <a href="https://redis.io/commands/zrandmember/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param count The number of elements to return.<br>
+     *     If <code>count</code> is positive, returns unique elements.<br>
+     *     If negative, allows for duplicates.<br>
+     * @return An <code>array</code> of elements from the sorted set.<br>
+     *     If the sorted set does not exist or is empty, the response will be an empty <code>array
+     *     </code>.
+     * @example
+     *     <pre>{@code
+     * GlideString[] payload1 = client.zrandmemberWithCount(gs("mySortedSet"), -3).get();
+     * assert payload1.equals(new GlideString[] {"GLIDE", "GLIDE", "JAVA"});
+     *
+     * GlideString[] payload2 = client.zrandmemberWithCount("nonExistingSortedSet", 3).get();
+     * assert payload2.length == 0;
+     * }</pre>
+     */
+    CompletableFuture<GlideString[]> zrandmemberWithCount(GlideString key, long count);
+
+    /**
      * Retrieves random elements along with their scores from the sorted set stored at <code>key
      * </code>.
      *
@@ -1465,6 +2180,30 @@ public interface SortedSetBaseCommands {
      * }</pre>
      */
     CompletableFuture<Object[][]> zrandmemberWithCountWithScores(String key, long count);
+
+    /**
+     * Retrieves random elements along with their scores from the sorted set stored at <code>key
+     * </code>.
+     *
+     * @see <a href="https://redis.io/commands/zrandmember/">redis.io</a> for more details.
+     * @param key The key of the sorted set.
+     * @param count The number of elements to return.<br>
+     *     If <code>count</code> is positive, returns unique elements.<br>
+     *     If negative, allows duplicates.<br>
+     * @return An <code>array</code> of <code>[element, score]</code> <code>arrays</code>, where
+     *     element is a <code>String</code> and score is a <code>Double</code>.<br>
+     *     If the sorted set does not exist or is empty, the response will be an empty <code>array
+     *     </code>.
+     * @example
+     *     <pre>{@code
+     * Object[][] data = client.zrandmemberWithCountWithScores(gs("mySortedSet"), -3).get();
+     * assert data.length == 3;
+     * for (Object[] memberScorePair : data) {
+     *     System.out.printf("Member: '%s', score: %d", memberScorePair[0], memberScorePair[1]);
+     * }
+     * }</pre>
+     */
+    CompletableFuture<Object[][]> zrandmemberWithCountWithScores(GlideString key, long count);
 
     /**
      * Increments the score of <code>member</code> in the sorted set stored at <code>key</code> by

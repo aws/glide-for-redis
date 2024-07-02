@@ -2,9 +2,11 @@
 package glide.api.models.commands;
 
 import static glide.api.commands.SortedSetBaseCommands.WITH_SCORES_REDIS_API;
+import static glide.api.models.GlideString.gs;
 import static glide.utils.ArrayTransformUtils.concatenateArrays;
 
 import glide.api.commands.SortedSetBaseCommands;
+import glide.api.models.GlideString;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +40,10 @@ public class RangeOptions {
         String toArgs();
     }
 
+    public interface ScoreRangeBinary {
+        GlideString toArgs();
+    }
+
     /** Enumeration representing numeric positive and negative infinity bounds for a sorted set. */
     @RequiredArgsConstructor
     public enum InfScoreBound implements ScoreRange {
@@ -48,6 +54,19 @@ public class RangeOptions {
 
         public String toArgs() {
             return redisApi;
+        }
+    }
+
+    /** Enumeration representing numeric positive and negative infinity bounds for a sorted set. */
+    @RequiredArgsConstructor
+    public enum InfScoreBoundBinary implements ScoreRangeBinary {
+        POSITIVE_INFINITY("+inf"),
+        NEGATIVE_INFINITY("-inf");
+
+        private final String redisApi;
+
+        public GlideString toArgs() {
+            return gs(redisApi);
         }
     }
 
@@ -82,6 +101,37 @@ public class RangeOptions {
         }
     }
 
+    /** Represents a specific numeric score boundary in a sorted set. */
+    public static class ScoreBoundaryBinary implements ScoreRangeBinary {
+        private final double bound;
+        private final boolean isInclusive;
+
+        /**
+         * Creates a specific numeric score boundary in a sorted set.
+         *
+         * @param bound The score value.
+         * @param isInclusive Whether the score value is inclusive. Defaults to true if not set.
+         */
+        public ScoreBoundaryBinary(double bound, boolean isInclusive) {
+            this.bound = bound;
+            this.isInclusive = isInclusive;
+        }
+
+        /**
+         * Creates a specific numeric score boundary in a sorted set.
+         *
+         * @param bound The score value.
+         */
+        public ScoreBoundaryBinary(double bound) {
+            this(bound, true);
+        }
+
+        /** Convert the score boundary to the Redis protocol format. */
+        public GlideString toArgs() {
+            return gs((isInclusive ? "" : "(") + bound);
+        }
+    }
+
     /**
      * Basic interface. Please use one of the following implementations:
      *
@@ -92,6 +142,18 @@ public class RangeOptions {
      */
     public interface LexRange {
         String toArgs();
+    }
+
+    /**
+     * Basic interface. Please use one of the following implementations:
+     *
+     * <ul>
+     *   <li>{@link InfLexBound}
+     *   <li>{@link LexBoundary}
+     * </ul>
+     */
+    public interface LexRangeBinary {
+        GlideString toArgs();
     }
 
     /**
@@ -107,6 +169,22 @@ public class RangeOptions {
         @Override
         public String toArgs() {
             return redisApi;
+        }
+    }
+
+    /**
+     * Enumeration representing lexicographic positive and negative infinity bounds for sorted set.
+     */
+    @RequiredArgsConstructor
+    public enum InfLexBoundBinary implements LexRangeBinary {
+        POSITIVE_INFINITY("+"),
+        NEGATIVE_INFINITY("-");
+
+        private final String redisApi;
+
+        @Override
+        public GlideString toArgs() {
+            return gs(redisApi);
         }
     }
 
@@ -142,6 +220,38 @@ public class RangeOptions {
         }
     }
 
+    /** Represents a specific lexicographic boundary in a sorted set. */
+    public static class LexBoundaryBinary implements LexRangeBinary {
+        private final GlideString value;
+        private final boolean isInclusive;
+
+        /**
+         * Creates a specific lexicographic boundary in a sorted set.
+         *
+         * @param value The lex value.
+         * @param isInclusive Whether the lex value is inclusive. Defaults to true if not set.
+         */
+        public LexBoundaryBinary(@NonNull GlideString value, boolean isInclusive) {
+            this.value = value;
+            this.isInclusive = isInclusive;
+        }
+
+        /**
+         * Creates a specific lexicographic boundary in a sorted set.
+         *
+         * @param value The lex value.
+         */
+        public LexBoundaryBinary(@NonNull GlideString value) {
+            this(value, true);
+        }
+
+        /** Convert the lex boundary to the Redis protocol format. */
+        @Override
+        public GlideString toArgs() {
+            return gs(isInclusive ? "[" : "(").concat(value);
+        }
+    }
+
     /**
      * Represents a limit argument for a range query in a sorted set.<br>
      * The optional <code>LIMIT</code> argument can be used to obtain a sub-range from the matching
@@ -173,6 +283,23 @@ public class RangeOptions {
         String getStart();
 
         String getEnd();
+
+        Limit getLimit();
+    }
+
+    /**
+     * Basic interface. Please use one of the following implementations:
+     *
+     * <ul>
+     *   <li>{@link RangeByIndex}
+     *   <li>{@link RangeByScore}
+     *   <li>{@link RangeByLex}
+     * </ul>
+     */
+    public interface RangeQueryBinary {
+        GlideString getStart();
+
+        GlideString getEnd();
 
         Limit getLimit();
     }
@@ -219,6 +346,45 @@ public class RangeOptions {
         }
     }
 
+    @Getter
+    public static class RangeByLexBinary implements RangeQueryBinary {
+        private final GlideString start;
+        private final GlideString end;
+        private final Limit limit;
+
+        /**
+         * Creates a range by lexicographical order in a sorted set.<br>
+         * The <code>start</code> and <code>stop</code> arguments represent lexicographical boundaries.
+         *
+         * @param start The start lexicographic boundary.
+         * @param end The stop lexicographic boundary.
+         * @param limit The limit argument for a range query. Defaults to null. See <code>Limit</code>
+         *     class for more information.
+         */
+        public RangeByLexBinary(
+                @NonNull RangeOptions.LexRangeBinary start,
+                @NonNull RangeOptions.LexRangeBinary end,
+                @NonNull Limit limit) {
+            this.start = start.toArgs();
+            this.end = end.toArgs();
+            this.limit = limit;
+        }
+
+        /**
+         * Creates a range by lexicographical order in a sorted set.<br>
+         * The <code>start</code> and <code>stop</code> arguments represent lexicographical boundaries.
+         *
+         * @param start The start lexicographic boundary.
+         * @param end The stop lexicographic boundary.
+         */
+        public RangeByLexBinary(
+                @NonNull RangeOptions.LexRangeBinary start, @NonNull RangeOptions.LexRangeBinary end) {
+            this.start = start.toArgs();
+            this.end = end.toArgs();
+            this.limit = null;
+        }
+    }
+
     /**
      * Basic interface. Please use one of the following implementations:
      *
@@ -228,6 +394,16 @@ public class RangeOptions {
      * </ul>
      */
     public interface ScoredRangeQuery extends RangeQuery {}
+
+    /**
+     * Basic interface. Please use one of the following implementations:
+     *
+     * <ul>
+     *   <li>{@link RangeByIndex}
+     *   <li>{@link RangeByScore}
+     * </ul>
+     */
+    public interface ScoredRangeQueryBinary extends RangeQueryBinary {}
 
     /**
      * Represents a range by index (rank) in a sorted set.<br>
@@ -248,6 +424,33 @@ public class RangeOptions {
         public RangeByIndex(long start, long end) {
             this.start = Long.toString(start);
             this.end = Long.toString(end);
+        }
+
+        @Override
+        public Limit getLimit() {
+            return null;
+        }
+    }
+
+    /**
+     * Represents a range by index (rank) in a sorted set.<br>
+     * The <code>start</code> and <code>stop</code> arguments represent zero-based indexes.
+     */
+    @Getter
+    public static class RangeByIndexBinary implements ScoredRangeQueryBinary {
+        private final GlideString start;
+        private final GlideString end;
+
+        /**
+         * Creates a range by index (rank) in a sorted set.<br>
+         * The <code>start</code> and <code>stop</code> arguments represent zero-based indexes.
+         *
+         * @param start The start index of the range.
+         * @param end The stop index of the range.
+         */
+        public RangeByIndexBinary(long start, long end) {
+            this.start = gs(Long.toString(start));
+            this.end = gs(Long.toString(end));
         }
 
         @Override
@@ -299,6 +502,49 @@ public class RangeOptions {
         }
     }
 
+    /**
+     * Represents a range by score in a sorted set.<br>
+     * The <code>start</code> and <code>stop</code> arguments represent score boundaries.
+     */
+    @Getter
+    public static class RangeByScoreBinary implements ScoredRangeQueryBinary {
+        private final GlideString start;
+        private final GlideString end;
+        private final Limit limit;
+
+        /**
+         * Creates a range by score in a sorted set.<br>
+         * The <code>start</code> and <code>stop</code> arguments represent score boundaries.
+         *
+         * @param start The start score boundary.
+         * @param end The stop score boundary.
+         * @param limit The limit argument for a range query. Defaults to null. See <code>Limit</code>
+         *     class for more information.
+         */
+        public RangeByScoreBinary(
+                @NonNull RangeOptions.ScoreRangeBinary start,
+                @NonNull RangeOptions.ScoreRangeBinary end,
+                @NonNull Limit limit) {
+            this.start = start.toArgs();
+            this.end = end.toArgs();
+            this.limit = limit;
+        }
+
+        /**
+         * Creates a range by score in a sorted set.<br>
+         * The <code>start</code> and <code>stop</code> arguments represent score boundaries.
+         *
+         * @param start The start score boundary.
+         * @param end The stop score boundary.
+         */
+        public RangeByScoreBinary(
+                @NonNull RangeOptions.ScoreRangeBinary start, @NonNull RangeOptions.ScoreRangeBinary end) {
+            this.start = start.toArgs();
+            this.end = end.toArgs();
+            this.limit = null;
+        }
+    }
+
     public static String[] createZRangeArgs(
             String key, RangeQuery rangeQuery, boolean reverse, boolean withScores) {
         String[] arguments =
@@ -310,10 +556,27 @@ public class RangeOptions {
         return arguments;
     }
 
+    public static GlideString[] createZRangeArgsBinary(
+            GlideString key, RangeQueryBinary rangeQuery, boolean reverse, boolean withScores) {
+        GlideString[] arguments =
+                concatenateArrays(new GlideString[] {key}, createZRangeBaseArgsBinary(rangeQuery, reverse));
+        if (withScores) {
+            arguments = concatenateArrays(arguments, new GlideString[] {gs(WITH_SCORES_REDIS_API)});
+        }
+
+        return arguments;
+    }
+
     public static String[] createZRangeStoreArgs(
             String destination, String source, RangeQuery rangeQuery, boolean reverse) {
         return concatenateArrays(
                 new String[] {destination, source}, createZRangeBaseArgs(rangeQuery, reverse));
+    }
+
+    public static GlideString[] createZRangeStoreArgsBinary(
+            GlideString destination, GlideString source, RangeQueryBinary rangeQuery, boolean reverse) {
+        return concatenateArrays(
+                new GlideString[] {destination, source}, createZRangeBaseArgsBinary(rangeQuery, reverse));
     }
 
     public static String[] createZRangeBaseArgs(RangeQuery rangeQuery, boolean reverse) {
@@ -337,6 +600,34 @@ public class RangeOptions {
                                 "LIMIT",
                                 Long.toString(rangeQuery.getLimit().getOffset()),
                                 Long.toString(rangeQuery.getLimit().getCount())
+                            });
+        }
+
+        return arguments;
+    }
+
+    public static GlideString[] createZRangeBaseArgsBinary(
+            RangeQueryBinary rangeQuery, boolean reverse) {
+        GlideString[] arguments = new GlideString[] {rangeQuery.getStart(), rangeQuery.getEnd()};
+
+        if (rangeQuery instanceof RangeByScoreBinary) {
+            arguments = concatenateArrays(arguments, new GlideString[] {gs("BYSCORE")});
+        } else if (rangeQuery instanceof RangeByLexBinary) {
+            arguments = concatenateArrays(arguments, new GlideString[] {gs("BYLEX")});
+        }
+
+        if (reverse) {
+            arguments = concatenateArrays(arguments, new GlideString[] {gs("REV")});
+        }
+
+        if (rangeQuery.getLimit() != null) {
+            arguments =
+                    concatenateArrays(
+                            arguments,
+                            new GlideString[] {
+                                gs("LIMIT"),
+                                gs(Long.toString(rangeQuery.getLimit().getOffset())),
+                                gs(Long.toString(rangeQuery.getLimit().getCount()))
                             });
         }
 

@@ -115,4 +115,12 @@ public class GlideString implements Comparable<GlideString> {
     public int hashCode() {
         return Arrays.hashCode(bytes);
     }
+
+    // Method to concatenate two GlideString objects
+    public GlideString concat(GlideString other) {
+        byte[] concatenatedBytes = new byte[this.bytes.length + other.bytes.length];
+        System.arraycopy(this.bytes, 0, concatenatedBytes, 0, this.bytes.length);
+        System.arraycopy(other.bytes, 0, concatenatedBytes, this.bytes.length, other.bytes.length);
+        return GlideString.of(concatenatedBytes);
+    }
 }

@@ -56,6 +56,19 @@ public class ArrayTransformUtils {
     }
 
     /**
+     * Converts a map of string keys and values of any type into an array of strings with alternating
+     * values and keys.
+     *
+     * @param args Map of string keys to values of any type to convert.
+     * @return Array of strings [value1.toString(), key1, value2.toString(), key2, ...].
+     */
+    public static GlideString[] convertMapToValueKeyStringArrayBinary(Map<GlideString, ?> args) {
+        return args.entrySet().stream()
+                .flatMap(entry -> Stream.of(gs(entry.getValue().toString()), entry.getKey()))
+                .toArray(GlideString[]::new);
+    }
+
+    /**
      * Converts a geospatial members to geospatial data mapping in to an array of arguments in the
      * form of [Longitude, Latitude, Member ...].
      *

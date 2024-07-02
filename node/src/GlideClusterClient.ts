@@ -302,7 +302,7 @@ export class GlideClusterClient extends BaseClient {
     }
 
     /** Ping the Redis server.
-     * See https://redis.io/commands/ping/ for details.
+     * See https://valkey.io/commands/ping/ for details.
      *
      * @param message - An optional message to include in the PING command.
      * If not provided, the server will respond with "PONG".
@@ -333,7 +333,7 @@ export class GlideClusterClient extends BaseClient {
     }
 
     /** Get information and statistics about the Redis server.
-     *  See https://redis.io/commands/info/ for details.
+     *  See https://valkey.io/commands/info/ for details.
      *
      * @param options - A list of InfoSection values specifying which sections of information to retrieve.
      *  When no parameter is provided, the default option is assumed.
@@ -353,7 +353,7 @@ export class GlideClusterClient extends BaseClient {
     }
 
     /** Get the name of the connection to which the request is routed.
-     *  See https://redis.io/commands/client-getname/ for more details.
+     *  See https://valkey.io/commands/client-getname/ for more details.
      *
      * @param route - The command will be routed a random node, unless `route` is provided, in which
      *   case the client will route the command to the nodes defined by `route`.
@@ -386,7 +386,7 @@ export class GlideClusterClient extends BaseClient {
     }
 
     /** Rewrite the configuration file with the current configuration.
-     * See https://redis.io/commands/config-rewrite/ for details.
+     * See https://valkey.io/commands/config-rewrite/ for details.
      *
      * @param route - The command will be routed to all nodes, unless `route` is provided, in which
      *   case the client will route the command to the nodes defined by `route`.
@@ -408,7 +408,7 @@ export class GlideClusterClient extends BaseClient {
     }
 
     /** Resets the statistics reported by Redis using the INFO and LATENCY HISTOGRAM commands.
-     * See https://redis.io/commands/config-resetstat/ for details.
+     * See https://valkey.io/commands/config-resetstat/ for details.
      *
      * @param route - The command will be routed to all nodes, unless `route` is provided, in which
      *   case the client will route the command to the nodes defined by `route`.
@@ -430,7 +430,7 @@ export class GlideClusterClient extends BaseClient {
     }
 
     /** Returns the current connection id.
-     * See https://redis.io/commands/client-id/ for details.
+     * See https://valkey.io/commands/client-id/ for details.
      *
      * @param route - The command will be routed to a random node, unless `route` is provided, in which
      *   case the client will route the command to the nodes defined by `route`.
@@ -445,7 +445,7 @@ export class GlideClusterClient extends BaseClient {
     }
 
     /** Reads the configuration parameters of a running Redis server.
-     *  See https://redis.io/commands/config-get/ for details.
+     *  See https://valkey.io/commands/config-get/ for details.
      *
      * @param parameters - A list of configuration parameter names to retrieve values for.
      * @param route - The command will be routed to a random node, unless `route` is provided, in which
@@ -480,7 +480,7 @@ export class GlideClusterClient extends BaseClient {
     }
 
     /** Set configuration parameters to the specified values.
-     *   See https://redis.io/commands/config-set/ for details.
+     *   See https://valkey.io/commands/config-set/ for details.
      *
      * @param parameters - A List of keyValuePairs consisting of configuration parameters and their respective values to set.
      * @param route - The command will be routed to all nodes, unless `route` is provided, in which
@@ -507,7 +507,7 @@ export class GlideClusterClient extends BaseClient {
     }
 
     /** Echoes the provided `message` back.
-     * See https://redis.io/commands/echo for more details.
+     * See https://valkey.io/commands/echo for more details.
      *
      * @param message - The message to be echoed back.
      * @param route - The command will be routed to a random node, unless `route` is provided, in which
@@ -539,7 +539,7 @@ export class GlideClusterClient extends BaseClient {
     }
 
     /** Returns the server time.
-     * See https://redis.io/commands/time/ for details.
+     * See https://valkey.io/commands/time/ for details.
      *
      * @param route - The command will be routed to a random node, unless `route` is provided, in which
      *  case the client will route the command to the nodes defined by `route`.

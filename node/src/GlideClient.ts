@@ -130,7 +130,7 @@ export class GlideClient extends BaseClient {
     }
 
     /** Ping the Redis server.
-     * See https://redis.io/commands/ping/ for details.
+     * See https://valkey.io/commands/ping/ for details.
      *
      * @param message - An optional message to include in the PING command.
      * If not provided, the server will respond with "PONG".
@@ -156,7 +156,7 @@ export class GlideClient extends BaseClient {
     }
 
     /** Get information and statistics about the Redis server.
-     *  See https://redis.io/commands/info/ for details.
+     *  See https://valkey.io/commands/info/ for details.
      *
      * @param options - A list of InfoSection values specifying which sections of information to retrieve.
      *  When no parameter is provided, the default option is assumed.
@@ -167,7 +167,7 @@ export class GlideClient extends BaseClient {
     }
 
     /** Change the currently selected Redis database.
-     * See https://redis.io/commands/select/ for details.
+     * See https://valkey.io/commands/select/ for details.
      *
      * @param index - The index of the database to select.
      * @returns A simple OK response.
@@ -184,7 +184,7 @@ export class GlideClient extends BaseClient {
     }
 
     /** Get the name of the primary's connection.
-     *  See https://redis.io/commands/client-getname/ for more details.
+     *  See https://valkey.io/commands/client-getname/ for more details.
      *
      * @returns the name of the client connection as a string if a name is set, or null if no name is assigned.
      *
@@ -200,7 +200,7 @@ export class GlideClient extends BaseClient {
     }
 
     /** Rewrite the configuration file with the current configuration.
-     * See https://redis.io/commands/config-rewrite/ for details.
+     * See https://valkey.io/commands/config-rewrite/ for details.
      *
      * @returns "OK" when the configuration was rewritten properly. Otherwise, an error is thrown.
      *
@@ -216,7 +216,7 @@ export class GlideClient extends BaseClient {
     }
 
     /** Resets the statistics reported by Redis using the INFO and LATENCY HISTOGRAM commands.
-     * See https://redis.io/commands/config-resetstat/ for details.
+     * See https://valkey.io/commands/config-resetstat/ for details.
      *
      * @returns always "OK".
      *
@@ -232,7 +232,7 @@ export class GlideClient extends BaseClient {
     }
 
     /** Returns the current connection id.
-     * See https://redis.io/commands/client-id/ for details.
+     * See https://valkey.io/commands/client-id/ for details.
      *
      * @returns the id of the client.
      */
@@ -241,7 +241,7 @@ export class GlideClient extends BaseClient {
     }
 
     /** Reads the configuration parameters of a running Redis server.
-     *  See https://redis.io/commands/config-get/ for details.
+     *  See https://valkey.io/commands/config-get/ for details.
      *
      * @param parameters - A list of configuration parameter names to retrieve values for.
      *
@@ -259,7 +259,7 @@ export class GlideClient extends BaseClient {
     }
 
     /** Set configuration parameters to the specified values.
-     *   See https://redis.io/commands/config-set/ for details.
+     *   See https://valkey.io/commands/config-set/ for details.
      *
      * @param parameters - A List of keyValuePairs consisting of configuration parameters and their respective values to set.
      *
@@ -277,7 +277,7 @@ export class GlideClient extends BaseClient {
     }
 
     /** Echoes the provided `message` back.
-     * See https://redis.io/commands/echo for more details.
+     * See https://valkey.io/commands/echo for more details.
      *
      * @param message - The message to be echoed back.
      * @returns The provided `message`.
@@ -294,7 +294,7 @@ export class GlideClient extends BaseClient {
     }
 
     /** Returns the server time
-     * See https://redis.io/commands/time/ for details.
+     * See https://valkey.io/commands/time/ for details.
      *
      * @returns - The current server time as a two items `array`:
      * A Unix timestamp and the amount of microseconds already elapsed in the current second.

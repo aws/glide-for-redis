@@ -985,7 +985,7 @@ type SortedSetRange<T> = {
     /**
      * The limit argument for a range query.
      * Represents a limit argument for a range query in a sorted set to
-     * be used in [ZRANGE](https://redis.io/commands/zrange) command.
+     * be used in [ZRANGE](https://valkey.io/commands/zrange) command.
      *
      * The optional LIMIT argument can be used to obtain a sub-range from the
      * matching elements (similar to SELECT LIMIT offset, count in SQL).

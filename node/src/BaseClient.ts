@@ -458,7 +458,7 @@ export class BaseClient {
     }
 
     /** Get the value associated with the given key, or null if no such value exists.
-     * See https://redis.io/commands/get/ for details.
+     * See https://valkey.io/commands/get/ for details.
      *
      * @param key - The key to retrieve from the database.
      * @returns If `key` exists, returns the value of `key` as a string. Otherwise, return null.
@@ -475,7 +475,7 @@ export class BaseClient {
     }
 
     /** Set the given key with the given value. Return value is dependent on the passed options.
-     * See https://redis.io/commands/set/ for details.
+     * See https://valkey.io/commands/set/ for details.
      *
      * @param key - The key to store.
      * @param value - The value to store with the given key.
@@ -512,7 +512,7 @@ export class BaseClient {
     }
 
     /** Removes the specified keys. A key is ignored if it does not exist.
-     * See https://redis.io/commands/del/ for details.
+     * See https://valkey.io/commands/del/ for details.
      *
      * @param keys - the keys we wanted to remove.
      * @returns the number of keys that were removed.
@@ -537,7 +537,7 @@ export class BaseClient {
     }
 
     /** Retrieve the values of multiple keys.
-     * See https://redis.io/commands/mget/ for details.
+     * See https://valkey.io/commands/mget/ for details.
      *
      * @remarks When in cluster mode, the command may route to multiple nodes when `keys` map to different hash slots.
      * @param keys - A list of keys to retrieve values for.
@@ -558,7 +558,7 @@ export class BaseClient {
     }
 
     /** Set multiple keys to multiple values in a single operation.
-     * See https://redis.io/commands/mset/ for details.
+     * See https://valkey.io/commands/mset/ for details.
      *
      * @remarks When in cluster mode, the command may route to multiple nodes when keys in `keyValueMap` map to different hash slots.
      * @param keyValueMap - A key-value map consisting of keys and their respective values to set.
@@ -576,7 +576,7 @@ export class BaseClient {
     }
 
     /** Increments the number stored at `key` by one. If `key` does not exist, it is set to 0 before performing the operation.
-     * See https://redis.io/commands/incr/ for details.
+     * See https://valkey.io/commands/incr/ for details.
      *
      * @param key - The key to increment its value.
      * @returns the value of `key` after the increment.
@@ -594,7 +594,7 @@ export class BaseClient {
     }
 
     /** Increments the number stored at `key` by `amount`. If `key` does not exist, it is set to 0 before performing the operation.
-     * See https://redis.io/commands/incrby/ for details.
+     * See https://valkey.io/commands/incrby/ for details.
      *
      * @param key - The key to increment its value.
      * @param amount - The amount to increment.
@@ -615,7 +615,7 @@ export class BaseClient {
     /** Increment the string representing a floating point number stored at `key` by `amount`.
      * By using a negative increment value, the result is that the value stored at `key` is decremented.
      * If `key` does not exist, it is set to 0 before performing the operation.
-     * See https://redis.io/commands/incrbyfloat/ for details.
+     * See https://valkey.io/commands/incrbyfloat/ for details.
      *
      * @param key - The key to increment its value.
      * @param amount - The amount to increment.
@@ -634,7 +634,7 @@ export class BaseClient {
     }
 
     /** Decrements the number stored at `key` by one. If `key` does not exist, it is set to 0 before performing the operation.
-     * See https://redis.io/commands/decr/ for details.
+     * See https://valkey.io/commands/decr/ for details.
      *
      * @param key - The key to decrement its value.
      * @returns the value of `key` after the decrement.
@@ -652,7 +652,7 @@ export class BaseClient {
     }
 
     /** Decrements the number stored at `key` by `amount`. If `key` does not exist, it is set to 0 before performing the operation.
-     * See https://redis.io/commands/decrby/ for details.
+     * See https://valkey.io/commands/decrby/ for details.
      *
      * @param key - The key to decrement its value.
      * @param amount - The amount to decrement.
@@ -671,7 +671,7 @@ export class BaseClient {
     }
 
     /** Retrieve the value associated with `field` in the hash stored at `key`.
-     * See https://redis.io/commands/hget/ for details.
+     * See https://valkey.io/commands/hget/ for details.
      *
      * @param key - The key of the hash.
      * @param field - The field in the hash stored at `key` to retrieve from the database.
@@ -697,7 +697,7 @@ export class BaseClient {
     }
 
     /** Sets the specified fields to their respective values in the hash stored at `key`.
-     * See https://redis.io/commands/hset/ for details.
+     * See https://valkey.io/commands/hset/ for details.
      *
      * @param key - The key of the hash.
      * @param fieldValueMap - A field-value map consisting of fields and their corresponding values
@@ -721,7 +721,7 @@ export class BaseClient {
     /** Sets `field` in the hash stored at `key` to `value`, only if `field` does not yet exist.
      * If `key` does not exist, a new key holding a hash is created.
      * If `field` already exists, this operation has no effect.
-     * See https://redis.io/commands/hsetnx/ for more details.
+     * See https://valkey.io/commands/hsetnx/ for more details.
      *
      * @param key - The key of the hash.
      * @param field - The field to set the value for.
@@ -748,7 +748,7 @@ export class BaseClient {
 
     /** Removes the specified fields from the hash stored at `key`.
      * Specified fields that do not exist within this hash are ignored.
-     * See https://redis.io/commands/hdel/ for details.
+     * See https://valkey.io/commands/hdel/ for details.
      *
      * @param key - The key of the hash.
      * @param fields - The fields to remove from the hash stored at `key`.
@@ -767,7 +767,7 @@ export class BaseClient {
     }
 
     /** Returns the values associated with the specified fields in the hash stored at `key`.
-     * See https://redis.io/commands/hmget/ for details.
+     * See https://valkey.io/commands/hmget/ for details.
      *
      * @param key - The key of the hash.
      * @param fields - The fields in the hash stored at `key` to retrieve from the database.
@@ -787,7 +787,7 @@ export class BaseClient {
     }
 
     /** Returns if `field` is an existing field in the hash stored at `key`.
-     * See https://redis.io/commands/hexists/ for details.
+     * See https://valkey.io/commands/hexists/ for details.
      *
      * @param key - The key of the hash.
      * @param field - The field to check in the hash stored at `key`.
@@ -812,7 +812,7 @@ export class BaseClient {
     }
 
     /** Returns all fields and values of the hash stored at `key`.
-     * See https://redis.io/commands/hgetall/ for details.
+     * See https://valkey.io/commands/hgetall/ for details.
      *
      * @param key - The key of the hash.
      * @returns a list of fields and their values stored in the hash. Every field name in the list is followed by its value.
@@ -832,7 +832,7 @@ export class BaseClient {
     /** Increments the number stored at `field` in the hash stored at `key` by increment.
      * By using a negative increment value, the value stored at `field` in the hash stored at `key` is decremented.
      * If `field` or `key` does not exist, it is set to 0 before performing the operation.
-     * See https://redis.io/commands/hincrby/ for details.
+     * See https://valkey.io/commands/hincrby/ for details.
      *
      * @param key - The key of the hash.
      * @param amount - The amount to increment.
@@ -857,7 +857,7 @@ export class BaseClient {
     /** Increment the string representing a floating point number stored at `field` in the hash stored at `key` by increment.
      * By using a negative increment value, the value stored at `field` in the hash stored at `key` is decremented.
      * If `field` or `key` does not exist, it is set to 0 before performing the operation.
-     * See https://redis.io/commands/hincrbyfloat/ for details.
+     * See https://valkey.io/commands/hincrbyfloat/ for details.
      *
      * @param key - The key of the hash.
      * @param amount - The amount to increment.
@@ -880,7 +880,7 @@ export class BaseClient {
     }
 
     /** Returns the number of fields contained in the hash stored at `key`.
-     * See https://redis.io/commands/hlen/ for more details.
+     * See https://valkey.io/commands/hlen/ for more details.
      *
      * @param key - The key of the hash.
      * @returns The number of fields in the hash, or 0 when the key does not exist.
@@ -904,7 +904,7 @@ export class BaseClient {
     }
 
     /** Returns all values in the hash stored at key.
-     * See https://redis.io/commands/hvals/ for more details.
+     * See https://valkey.io/commands/hvals/ for more details.
      *
      * @param key - The key of the hash.
      * @returns a list of values in the hash, or an empty list when the key does not exist.
@@ -923,7 +923,7 @@ export class BaseClient {
     /** Inserts all the specified values at the head of the list stored at `key`.
      * `elements` are inserted one after the other to the head of the list, from the leftmost element to the rightmost element.
      * If `key` does not exist, it is created as empty list before performing the push operations.
-     * See https://redis.io/commands/lpush/ for details.
+     * See https://valkey.io/commands/lpush/ for details.
      *
      * @param key - The key of the list.
      * @param elements - The elements to insert at the head of the list stored at `key`.
@@ -949,7 +949,7 @@ export class BaseClient {
 
     /** Removes and returns the first elements of the list stored at `key`.
      * The command pops a single element from the beginning of the list.
-     * See https://redis.io/commands/lpop/ for details.
+     * See https://valkey.io/commands/lpop/ for details.
      *
      * @param key - The key of the list.
      * @returns The value of the first element.
@@ -974,7 +974,7 @@ export class BaseClient {
     }
 
     /** Removes and returns up to `count` elements of the list stored at `key`, depending on the list's length.
-     * See https://redis.io/commands/lpop/ for details.
+     * See https://valkey.io/commands/lpop/ for details.
      *
      * @param key - The key of the list.
      * @param count - The count of the elements to pop from the list.
@@ -1003,7 +1003,7 @@ export class BaseClient {
      * The offsets `start` and `end` are zero-based indexes, with 0 being the first element of the list, 1 being the next element and so on.
      * These offsets can also be negative numbers indicating offsets starting at the end of the list,
      * with -1 being the last element of the list, -2 being the penultimate, and so on.
-     * See https://redis.io/commands/lrange/ for details.
+     * See https://valkey.io/commands/lrange/ for details.
      *
      * @param key - The key of the list.
      * @param start - The starting point of the range.
@@ -1039,7 +1039,7 @@ export class BaseClient {
     }
 
     /** Returns the length of the list stored at `key`.
-     * See https://redis.io/commands/llen/ for details.
+     * See https://valkey.io/commands/llen/ for details.
      *
      * @param key - The key of the list.
      * @returns the length of the list at `key`.
@@ -1060,7 +1060,7 @@ export class BaseClient {
      * The offsets `start` and `end` are zero-based indexes, with 0 being the first element of the list, 1 being the next element and so on.
      * These offsets can also be negative numbers indicating offsets starting at the end of the list,
      * with -1 being the last element of the list, -2 being the penultimate, and so on.
-     * See https://redis.io/commands/ltrim/ for details.
+     * See https://valkey.io/commands/ltrim/ for details.
      *
      * @param key - The key of the list.
      * @param start - The starting point of the range.
@@ -1106,7 +1106,7 @@ export class BaseClient {
     /** Inserts all the specified values at the tail of the list stored at `key`.
      * `elements` are inserted one after the other to the tail of the list, from the leftmost element to the rightmost element.
      * If `key` does not exist, it is created as empty list before performing the push operations.
-     * See https://redis.io/commands/rpush/ for details.
+     * See https://valkey.io/commands/rpush/ for details.
      *
      * @param key - The key of the list.
      * @param elements - The elements to insert at the tail of the list stored at `key`.
@@ -1132,7 +1132,7 @@ export class BaseClient {
 
     /** Removes and returns the last elements of the list stored at `key`.
      * The command pops a single element from the end of the list.
-     * See https://redis.io/commands/rpop/ for details.
+     * See https://valkey.io/commands/rpop/ for details.
      *
      * @param key - The key of the list.
      * @returns The value of the last element.
@@ -1157,7 +1157,7 @@ export class BaseClient {
     }
 
     /** Removes and returns up to `count` elements from the list stored at `key`, depending on the list's length.
-     * See https://redis.io/commands/rpop/ for details.
+     * See https://valkey.io/commands/rpop/ for details.
      *
      * @param key - The key of the list.
      * @param count - The count of the elements to pop from the list.
@@ -1184,7 +1184,7 @@ export class BaseClient {
 
     /** Adds the specified members to the set stored at `key`. Specified members that are already a member of this set are ignored.
      * If `key` does not exist, a new set is created before adding `members`.
-     * See https://redis.io/commands/sadd/ for details.
+     * See https://valkey.io/commands/sadd/ for details.
      *
      * @param key - The key to store the members to its set.
      * @param members - A list of members to add to the set stored at `key`.
@@ -1202,7 +1202,7 @@ export class BaseClient {
     }
 
     /** Removes the specified members from the set stored at `key`. Specified members that are not a member of this set are ignored.
-     * See https://redis.io/commands/srem/ for details.
+     * See https://valkey.io/commands/srem/ for details.
      *
      * @param key - The key to remove the members from its set.
      * @param members - A list of members to remove from the set stored at `key`.
@@ -1221,7 +1221,7 @@ export class BaseClient {
     }
 
     /** Returns all the members of the set value stored at `key`.
-     * See https://redis.io/commands/smembers/ for details.
+     * See https://valkey.io/commands/smembers/ for details.
      *
      * @param key - The key to return its members.
      * @returns A `Set` containing all members of the set.
@@ -1268,7 +1268,7 @@ export class BaseClient {
     }
 
     /** Returns the set cardinality (number of elements) of the set stored at `key`.
-     * See https://redis.io/commands/scard/ for details.
+     * See https://valkey.io/commands/scard/ for details.
      *
      * @param key - The key to return the number of its members.
      * @returns The cardinality (number of elements) of the set, or 0 if key does not exist.
@@ -1334,7 +1334,7 @@ export class BaseClient {
     }
 
     /** Returns if `member` is a member of the set stored at `key`.
-     * See https://redis.io/commands/sismember/ for more details.
+     * See https://valkey.io/commands/sismember/ for more details.
      *
      * @param key - The key of the set.
      * @param member - The member to check for existence in the set.
@@ -1360,7 +1360,7 @@ export class BaseClient {
     }
 
     /** Removes and returns one random member from the set value store at `key`.
-     * See https://redis.io/commands/spop/ for details.
+     * See https://valkey.io/commands/spop/ for details.
      * To pop multiple members, see `spopCount`.
      *
      * @param key - The key of the set.
@@ -1386,7 +1386,7 @@ export class BaseClient {
     }
 
     /** Removes and returns up to `count` random members from the set value store at `key`, depending on the set's length.
-     * See https://redis.io/commands/spop/ for details.
+     * See https://valkey.io/commands/spop/ for details.
      *
      * @param key - The key of the set.
      * @param count - The count of the elements to pop from the set.
@@ -1414,7 +1414,7 @@ export class BaseClient {
     }
 
     /** Returns the number of keys in `keys` that exist in the database.
-     * See https://redis.io/commands/exists/ for details.
+     * See https://valkey.io/commands/exists/ for details.
      *
      * @param keys - The keys list to check.
      * @returns The number of keys that exist. If the same existing key is mentioned in `keys` multiple times,
@@ -1433,8 +1433,8 @@ export class BaseClient {
 
     /** Removes the specified keys. A key is ignored if it does not exist.
      * This command, similar to DEL, removes specified keys and ignores non-existent ones.
-     * However, this command does not block the server, while [DEL](https://redis.io/commands/del) does.
-     * See https://redis.io/commands/unlink/ for details.
+     * However, this command does not block the server, while [DEL](https://valkey.io/commands/del) does.
+     * See https://valkey.io/commands/unlink/ for details.
      *
      * @param keys - The keys we wanted to unlink.
      * @returns The number of keys that were unlinked.
@@ -1454,7 +1454,7 @@ export class BaseClient {
      * If `key` already has an existing expire set, the time to live is updated to the new value.
      * If `seconds` is non-positive number, the key will be deleted rather than expired.
      * The timeout will only be cleared by commands that delete or overwrite the contents of `key`.
-     * See https://redis.io/commands/expire/ for details.
+     * See https://valkey.io/commands/expire/ for details.
      *
      * @param key - The key to set timeout on it.
      * @param seconds - The timeout in seconds.
@@ -1488,7 +1488,7 @@ export class BaseClient {
      * A timestamp in the past will delete the key immediately. After the timeout has expired, the key will automatically be deleted.
      * If `key` already has an existing expire set, the time to live is updated to the new value.
      * The timeout will only be cleared by commands that delete or overwrite the contents of `key`.
-     * See https://redis.io/commands/expireat/ for details.
+     * See https://valkey.io/commands/expireat/ for details.
      *
      * @param key - The key to set timeout on it.
      * @param unixSeconds - The timeout in an absolute Unix timestamp.
@@ -1517,7 +1517,7 @@ export class BaseClient {
      * If `key` already has an existing expire set, the time to live is updated to the new value.
      * If `milliseconds` is non-positive number, the key will be deleted rather than expired.
      * The timeout will only be cleared by commands that delete or overwrite the contents of `key`.
-     * See https://redis.io/commands/pexpire/ for details.
+     * See https://valkey.io/commands/pexpire/ for details.
      *
      * @param key - The key to set timeout on it.
      * @param milliseconds - The timeout in milliseconds.
@@ -1546,7 +1546,7 @@ export class BaseClient {
      * A timestamp in the past will delete the key immediately. After the timeout has expired, the key will automatically be deleted.
      * If `key` already has an existing expire set, the time to live is updated to the new value.
      * The timeout will only be cleared by commands that delete or overwrite the contents of `key`.
-     * See https://redis.io/commands/pexpireat/ for details.
+     * See https://valkey.io/commands/pexpireat/ for details.
      *
      * @param key - The key to set timeout on it.
      * @param unixMilliseconds - The timeout in an absolute Unix timestamp.
@@ -1572,7 +1572,7 @@ export class BaseClient {
     }
 
     /** Returns the remaining time to live of `key` that has a timeout.
-     * See https://redis.io/commands/ttl/ for details.
+     * See https://valkey.io/commands/ttl/ for details.
      *
      * @param key - The key to return its timeout.
      * @returns TTL in seconds, -2 if `key` does not exist or -1 if `key` exists but has no associated expire.
@@ -1606,7 +1606,7 @@ export class BaseClient {
      * This method simplifies the process of invoking scripts on a Redis server by using an object that represents a Lua script.
      * The script loading, argument preparation, and execution will all be handled internally. If the script has not already been loaded,
      * it will be loaded automatically using the Redis `SCRIPT LOAD` command. After that, it will be invoked using the Redis `EVALSHA` command
-     * See https://redis.io/commands/script-load/ and https://redis.io/commands/evalsha/ for details.
+     * See https://valkey.io/commands/script-load/ and https://valkey.io/commands/evalsha/ for details.
      *
      * @param script - The Lua script to execute.
      * @param options - The script option that contains keys and arguments for the script.
@@ -1653,7 +1653,7 @@ export class BaseClient {
 
     /** Adds members with their scores to the sorted set stored at `key`.
      * If a member is already a part of the sorted set, its score is updated.
-     * See https://redis.io/commands/zadd/ for more details.
+     * See https://valkey.io/commands/zadd/ for more details.
      *
      * @param key - The key of the sorted set.
      * @param membersScoresMap - A mapping of members to their corresponding scores.
@@ -1695,7 +1695,7 @@ export class BaseClient {
     /** Increments the score of member in the sorted set stored at `key` by `increment`.
      * If `member` does not exist in the sorted set, it is added with `increment` as its score (as if its previous score was 0.0).
      * If `key` does not exist, a new sorted set with the specified member as its sole member is created.
-     * See https://redis.io/commands/zadd/ for more details.
+     * See https://valkey.io/commands/zadd/ for more details.
      *
      * @param key - The key of the sorted set.
      * @param member - A member in the sorted set to increment.
@@ -1731,7 +1731,7 @@ export class BaseClient {
 
     /** Removes the specified members from the sorted set stored at `key`.
      * Specified members that are not a member of this set are ignored.
-     * See https://redis.io/commands/zrem/ for more details.
+     * See https://valkey.io/commands/zrem/ for more details.
      *
      * @param key - The key of the sorted set.
      * @param members - A list of members to remove from the sorted set.
@@ -1757,7 +1757,7 @@ export class BaseClient {
     }
 
     /** Returns the cardinality (number of elements) of the sorted set stored at `key`.
-     * See https://redis.io/commands/zcard/ for more details.
+     * See https://valkey.io/commands/zcard/ for more details.
      *
      * @param key - The key of the sorted set.
      * @returns The number of elements in the sorted set.
@@ -1805,7 +1805,7 @@ export class BaseClient {
     }
 
     /** Returns the score of `member` in the sorted set stored at `key`.
-     * See https://redis.io/commands/zscore/ for more details.
+     * See https://valkey.io/commands/zscore/ for more details.
      *
      * @param key - The key of the sorted set.
      * @param member - The member whose score is to be retrieved.
@@ -1839,7 +1839,7 @@ export class BaseClient {
     }
 
     /** Returns the number of members in the sorted set stored at `key` with scores between `minScore` and `maxScore`.
-     * See https://redis.io/commands/zcount/ for more details.
+     * See https://valkey.io/commands/zcount/ for more details.
      *
      * @param key - The key of the sorted set.
      * @param minScore - The minimum score to count from. Can be positive/negative infinity, or specific score and inclusivity.
@@ -1873,7 +1873,7 @@ export class BaseClient {
     /** Returns the specified range of elements in the sorted set stored at `key`.
      * ZRANGE can perform different types of range queries: by index (rank), by the score, or by lexicographical order.
      *
-     * See https://redis.io/commands/zrange/ for more details.
+     * See https://valkey.io/commands/zrange/ for more details.
      * To get the elements with their scores, see `zrangeWithScores`.
      *
      * @param key - The key of the sorted set.
@@ -1912,7 +1912,7 @@ export class BaseClient {
 
     /** Returns the specified range of elements with their scores in the sorted set stored at `key`.
      * Similar to ZRANGE but with a WITHSCORE flag.
-     * See https://redis.io/commands/zrange/ for more details.
+     * See https://valkey.io/commands/zrange/ for more details.
      *
      * @param key - The key of the sorted set.
      * @param rangeQuery - The range query object representing the type of range query to perform.
@@ -1992,7 +1992,7 @@ export class BaseClient {
     }
 
     /** Returns the length of the string value stored at `key`.
-     * See https://redis.io/commands/strlen/ for more details.
+     * See https://valkey.io/commands/strlen/ for more details.
      *
      * @param key - The key to check its length.
      * @returns - The length of the string value stored at key
@@ -2018,7 +2018,7 @@ export class BaseClient {
     }
 
     /** Returns the string representation of the type of the value stored at `key`.
-     * See https://redis.io/commands/type/ for more details.
+     * See https://valkey.io/commands/type/ for more details.
      *
      * @param key - The `key` to check its data type.
      * @returns If the `key` exists, the type of the stored value is returned. Otherwise, a "none" string is returned.
@@ -2046,7 +2046,7 @@ export class BaseClient {
     /** Removes and returns the members with the lowest scores from the sorted set stored at `key`.
      * If `count` is provided, up to `count` members with the lowest scores are removed and returned.
      * Otherwise, only one member with the lowest score is removed and returned.
-     * See https://redis.io/commands/zpopmin for more details.
+     * See https://valkey.io/commands/zpopmin for more details.
      *
      * @param key - The key of the sorted set.
      * @param count - Specifies the quantity of members to pop. If not specified, pops one member.
@@ -2078,7 +2078,7 @@ export class BaseClient {
     /** Removes and returns the members with the highest scores from the sorted set stored at `key`.
      * If `count` is provided, up to `count` members with the highest scores are removed and returned.
      * Otherwise, only one member with the highest score is removed and returned.
-     * See https://redis.io/commands/zpopmax for more details.
+     * See https://valkey.io/commands/zpopmax for more details.
      *
      * @param key - The key of the sorted set.
      * @param count - Specifies the quantity of members to pop. If not specified, pops one member.
@@ -2108,7 +2108,7 @@ export class BaseClient {
     }
 
     /** Returns the remaining time to live of `key` that has a timeout, in milliseconds.
-     * See https://redis.io/commands/pttl for more details.
+     * See https://valkey.io/commands/pttl for more details.
      *
      * @param key - The key to return its timeout.
      * @returns TTL in milliseconds. -2 if `key` does not exist, -1 if `key` exists but has no associated expire.
@@ -2141,7 +2141,7 @@ export class BaseClient {
     /** Removes all elements in the sorted set stored at `key` with rank between `start` and `end`.
      * Both `start` and `end` are zero-based indexes with 0 being the element with the lowest score.
      * These indexes can be negative numbers, where they indicate offsets starting at the element with the highest score.
-     * See https://redis.io/commands/zremrangebyrank/ for more details.
+     * See https://valkey.io/commands/zremrangebyrank/ for more details.
      *
      * @param key - The key of the sorted set.
      * @param start - The starting point of the range.
@@ -2167,7 +2167,7 @@ export class BaseClient {
     }
 
     /** Removes all elements in the sorted set stored at `key` with a score between `minScore` and `maxScore`.
-     * See https://redis.io/commands/zremrangebyscore/ for more details.
+     * See https://valkey.io/commands/zremrangebyscore/ for more details.
      *
      * @param key - The key of the sorted set.
      * @param minScore - The minimum score to remove from. Can be positive/negative infinity, or specific score and inclusivity.
@@ -2201,7 +2201,7 @@ export class BaseClient {
     }
 
     /** Returns the rank of `member` in the sorted set stored at `key`, with scores ordered from low to high.
-     * See https://redis.io/commands/zrank for more details.
+     * See https://valkey.io/commands/zrank for more details.
      * To get the rank of `member` with its score, see `zrankWithScore`.
      *
      * @param key - The key of the sorted set.
@@ -2228,7 +2228,7 @@ export class BaseClient {
     }
 
     /** Returns the rank of `member` in the sorted set stored at `key` with its score, where scores are ordered from the lowest to highest.
-     * See https://redis.io/commands/zrank for more details.
+     * See https://valkey.io/commands/zrank for more details.
      *
      * @param key - The key of the sorted set.
      * @param member - The member whose rank is to be retrieved.
@@ -2260,7 +2260,7 @@ export class BaseClient {
 
     /**
      * Adds an entry to the specified stream stored at `key`. If the `key` doesn't exist, the stream is created.
-     * See https://redis.io/commands/xadd/ for more details.
+     * See https://valkey.io/commands/xadd/ for more details.
      *
      * @param key - The key of the stream.
      * @param values - field-value pairs to be added to the entry.
@@ -2276,7 +2276,7 @@ export class BaseClient {
 
     /**
      * Trims the stream stored at `key` by evicting older entries.
-     * See https://redis.io/commands/xtrim/ for more details.
+     * See https://valkey.io/commands/xtrim/ for more details.
      *
      * @param key - the key of the stream
      * @param options - options detailing how to trim the stream.
@@ -2288,7 +2288,7 @@ export class BaseClient {
 
     /**
      * Reads entries from the given streams.
-     * See https://redis.io/commands/xread/ for more details.
+     * See https://valkey.io/commands/xread/ for more details.
      *
      * @param keys_and_ids - pairs of keys and entry ids to read from. A pair is composed of a stream's key and the id of the entry after which the stream will be read.
      * @param options - options detailing how to read the stream.
@@ -2344,7 +2344,7 @@ export class BaseClient {
      * The index is zero-based, so 0 means the first element, 1 the second element and so on.
      * Negative indices can be used to designate elements starting at the tail of the list.
      * Here, -1 means the last element, -2 means the penultimate and so forth.
-     * See https://redis.io/commands/lindex/ for more details.
+     * See https://valkey.io/commands/lindex/ for more details.
      *
      * @param key - The `key` of the list.
      * @param index - The `index` of the element in the list to retrieve.
@@ -2402,7 +2402,7 @@ export class BaseClient {
 
     /** Remove the existing timeout on `key`, turning the key from volatile (a key with an expire set) to
      * persistent (a key that will never expire as no timeout is associated).
-     * See https://redis.io/commands/persist/ for more details.
+     * See https://valkey.io/commands/persist/ for more details.
      *
      * @param key - The key to remove the existing timeout on.
      * @returns `false` if `key` does not exist or does not have an associated timeout, `true` if the timeout has been removed.
@@ -2421,7 +2421,7 @@ export class BaseClient {
     /**
      * Renames `key` to `newkey`.
      * If `newkey` already exists it is overwritten.
-     * See https://redis.io/commands/rename/ for more details.
+     * See https://valkey.io/commands/rename/ for more details.
      *
      * @remarks When in cluster mode, `key` and `newKey` must map to the same hash slot.
      * @param key - The key to rename.
@@ -2442,7 +2442,7 @@ export class BaseClient {
 
     /**
      * Renames `key` to `newkey` if `newkey` does not yet exist.
-     * See https://redis.io/commands/renamenx/ for more details.
+     * See https://valkey.io/commands/renamenx/ for more details.
      *
      * @remarks When in cluster mode, `key` and `newKey` must map to the same hash slot.
      * @param key - The key to rename.
@@ -2466,7 +2466,7 @@ export class BaseClient {
      * Pop an element from the tail of the first list that is non-empty,
      * with the given `keys` being checked in the order that they are given.
      * Blocks the connection when there are no elements to pop from any of the given lists.
-     * See https://redis.io/commands/brpop/ for more details.
+     * See https://valkey.io/commands/brpop/ for more details.
      *
      * @remarks
      * 1. When in cluster mode, all `keys` must map to the same hash slot.
@@ -2494,7 +2494,7 @@ export class BaseClient {
      * Pop an element from the head of the first list that is non-empty,
      * with the given `keys` being checked in the order that they are given.
      * Blocks the connection when there are no elements to pop from any of the given lists.
-     * See https://redis.io/commands/blpop/ for more details.
+     * See https://valkey.io/commands/blpop/ for more details.
      *
      * @remarks
      * 1. When in cluster mode, all `keys` must map to the same hash slot.
@@ -2521,7 +2521,7 @@ export class BaseClient {
      * Creates a new structure if the `key` does not exist.
      * When no elements are provided, and `key` exists and is a HyperLogLog, then no operation is performed.
      *
-     * See https://redis.io/commands/pfadd/ for more details.
+     * See https://valkey.io/commands/pfadd/ for more details.
      *
      * @param key - The key of the HyperLogLog data structure to add elements into.
      * @param elements - An array of members to add to the HyperLogLog stored at `key`.

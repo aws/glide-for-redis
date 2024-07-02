@@ -8073,6 +8073,96 @@ class TestCommands:
         # DB 0 should still have no keys, so random_key should still return None
         assert await redis_client.random_key() is None
 
+    @pytest.mark.parametrize("cluster_mode", [True, False])
+    @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
+    async def test_dump_restore(self, redis_client: TGlideClient):
+        key1 = f"{{key}}-1{get_random_string(10)}"
+        key2 = f"{{key}}-2{get_random_string(10)}"
+        key3 = f"{{key}}-3{get_random_string(10)}"
+        nonExistingKey = f"{{key}}-4{get_random_string(10)}"
+        value = get_random_string(5)
+
+        await redis_client.set(key1, value)
+
+        # Dump an existing key
+        bytesData = await redis_client.dump(key1)
+        assert bytesData is not None
+
+        # Dump non-existing key
+        assert await redis_client.dump(nonExistingKey) is None
+
+        # Restore to a new key and verify its value
+        assert await redis_client.restore(key2, 0, bytesData) == OK
+        newValue = await redis_client.get(key2)
+        assert newValue == value.encode()
+
+        # Restore to an existing key
+        with pytest.raises(RequestError) as e:
+            await redis_client.restore(key2, 0, bytesData)
+        assert "Target key name already exists" in str(e)
+
+        # Restore using a value with checksum error
+        with pytest.raises(RequestError) as e:
+            await redis_client.restore(key3, 0, value.encode())
+        assert "payload version or checksum are wrong" in str(e)
+
+    @pytest.mark.parametrize("cluster_mode", [True, False])
+    @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
+    async def test_dump_restore_options(self, redis_client: TGlideClient):
+        key1 = f"{{key}}-1{get_random_string(10)}"
+        key2 = f"{{key}}-2{get_random_string(10)}"
+        key3 = f"{{key}}-3{get_random_string(10)}"
+        value = get_random_string(5)
+
+        await redis_client.set(key1, value)
+
+        # Dump an existing key
+        bytesData = await redis_client.dump(key1)
+        assert bytesData is not None
+
+        # Restore without option
+        assert await redis_client.restore(key2, 0, bytesData) == OK
+
+        # Restore with REPLACE option
+        assert await redis_client.restore(key2, 0, bytesData, replace=True) == OK
+
+        # Restore to an existing key holding different value with REPLACE option
+        assert await redis_client.sadd(key3, ["a"]) == 1
+        assert await redis_client.restore(key3, 0, bytesData, replace=True) == OK
+
+        # Restore with REPLACE, ABSTTL, and positive TTL
+        assert (
+            await redis_client.restore(key2, 1000, bytesData, replace=True, absttl=True)
+            == OK
+        )
+
+        # Restore with REPLACE, ABSTTL, and negative TTL
+        with pytest.raises(RequestError) as e:
+            await redis_client.restore(key2, -10, bytesData, replace=True, absttl=True)
+        assert "Invalid TTL value" in str(e)
+
+        # Restore with REPLACE and positive idletime
+        assert (
+            await redis_client.restore(key2, 0, bytesData, replace=True, idletime=10)
+            == OK
+        )
+
+        # Restore with REPLACE and negative idletime
+        with pytest.raises(RequestError) as e:
+            await redis_client.restore(key2, 0, bytesData, replace=True, idletime=-10)
+        assert "Invalid IDLETIME value" in str(e)
+
+        # Restore with REPLACE and positive frequency
+        assert (
+            await redis_client.restore(key2, 0, bytesData, replace=True, frequency=10)
+            == OK
+        )
+
+        # Restore with REPLACE and negative frequency
+        with pytest.raises(RequestError) as e:
+            await redis_client.restore(key2, 0, bytesData, replace=True, frequency=-10)
+        assert "Invalid FREQ value" in str(e)
+
     @pytest.mark.parametrize("cluster_mode", [False])
     @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
     async def test_lcs(self, redis_client: GlideClient):

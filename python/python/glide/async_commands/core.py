@@ -5617,6 +5617,88 @@ class CoreCommands(Protocol):
             await self._execute_command(RequestType.GetEx, args),
         )
 
+    async def dump(
+        self,
+        key: TEncodable,
+    ) -> Optional[bytes]:
+        """
+        Serialize the value stored at `key` in a Valkey-specific format and return it to the user.
+
+        See https://valkey.io/commands/dump for more details.
+
+        Args:
+            key (TEncodable): The `key` to serialize.
+
+        Returns:
+            Optional[bytes]: The serialized value of the data stored at `key`.
+                If `key` does not exist, `None` will be returned.
+
+        Examples:
+            >>> await client.dump("key")
+                b"value" # The serialized value stored at `key`.
+            >>> await client.dump("nonExistingKey")
+                None # Non-existing key will return `None`.
+        """
+        return cast(
+            Optional[bytes],
+            await self._execute_command(RequestType.Dump, [key]),
+        )
+
+    async def restore(
+        self,
+        key: TEncodable,
+        ttl: int,
+        value: TEncodable,
+        replace: bool = False,
+        absttl: bool = False,
+        idletime: Optional[int] = None,
+        frequency: Optional[int] = None,
+    ) -> TOK:
+        """
+        Create a `key` associated with a `value` that is obtained by deserializing the provided
+        serialized `value` obtained via `dump`.
+
+        See https://valkey.io/commands/restore for more details.
+
+        Args:
+            key (TEncodable): The `key` to create.
+            ttl (int): The expiry time (in milliseconds). If `0`, the `key` will persist.
+            value (TEncodable) The serialized value to deserialize and assign to `key`.
+            replace (bool): Set to `True` to replace the key if it exists.
+            absttl (bool): Set to `True` to specify that `ttl` represents an absolute Unix
+                timestamp (in milliseconds).
+            idletime (Optional[int]): Set the `IDLETIME` option with object idletime to the given key.
+            frequency (Optional[int]): Set the `FREQ` option with object frequency to the given key.
+
+        Returns:
+            OK: If the `key` was successfully restored with a `value`.
+
+        Examples:
+            >>> await client.restore("newKey", 0, value)
+                OK # Indicates restore `newKey` without any ttl expiry nor any option
+            >>> await client.restore("newKey", 0, value, replace=True)
+                OK # Indicates restore `newKey` with `REPLACE` option
+            >>> await client.restore("newKey", 0, value, absttl=True)
+                OK # Indicates restore `newKey` with `ABSTTL` option
+            >>> await client.restore("newKey", 0, value, idletime=10)
+                OK # Indicates restore `newKey` with `IDLETIME` option
+            >>> await client.restore("newKey", 0, value, frequency=5)
+                OK # Indicates restore `newKey` with `FREQ` option
+        """
+        args = [key, str(ttl), value]
+        if replace is True:
+            args.append("REPLACE")
+        if absttl is True:
+            args.append("ABSTTL")
+        if idletime is not None:
+            args.extend(["IDLETIME", str(idletime)])
+        if frequency is not None:
+            args.extend(["FREQ", str(frequency)])
+        return cast(
+            TOK,
+            await self._execute_command(RequestType.Restore, args),
+        )
+
     async def sscan(
         self,
         key: TEncodable,

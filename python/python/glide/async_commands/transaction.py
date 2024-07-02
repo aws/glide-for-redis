@@ -2506,7 +2506,7 @@ class BaseTransaction:
 
     def xinfo_groups(
         self: TTransaction,
-        key: str,
+        key: TEncodable,
     ) -> TTransaction:
         """
         Returns the list of all consumer groups and their attributes for the stream stored at `key`.
@@ -2514,11 +2514,11 @@ class BaseTransaction:
         See https://valkey.io/commands/xinfo-groups for more details.
 
         Args:
-            key (str): The key of the stream.
+            key (TEncodable): The key of the stream.
 
         Command response:
-            List[Mapping[str, Union[str, int, None]]]: A list of mappings, where each mapping represents the attributes
-                of a consumer group for the stream at `key`. Each mapping contains the following info:
+            List[Mapping[bytes, Union[bytes, int, None]]]: A list of mappings, where each mapping represents the
+                attributes of a consumer group for the stream at `key`. Each mapping contains the following info:
                 - name: the consumer group's name.
                 - consumers: the number of consumers in the group.
                 - pending: the length of the group's pending entries list (PEL), which are messages that were delivered
@@ -2533,8 +2533,8 @@ class BaseTransaction:
 
     def xinfo_consumers(
         self: TTransaction,
-        key: str,
-        group_name: str,
+        key: TEncodable,
+        group_name: TEncodable,
     ) -> TTransaction:
         """
         Returns the list of all consumers and their attributes for the given consumer group of the stream stored at
@@ -2543,11 +2543,11 @@ class BaseTransaction:
         See https://valkey.io/commands/xinfo-consumers for more details.
 
         Args:
-            key (str): The key of the stream.
-            group_name (str): The consumer group name.
+            key (TEncodable): The key of the stream.
+            group_name (TEncodable): The consumer group name.
 
         Command response:
-            List[Mapping[str, Union[str, int]]]: A list of mappings, where each mapping represents the attributes of a
+            List[Mapping[bytes, Union[bytes, int]]]: A list of mappings, where each mapping contains the attributes of a
                 consumer for the given consumer group of the stream at `key`. Each mapping contains the following info:
                 - name: the consumer's name.
                 - pending: the number of entries in the pending entries list (PEL): pending messages for the consumer,

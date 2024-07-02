@@ -3333,19 +3333,19 @@ class CoreCommands(Protocol):
 
     async def xinfo_groups(
         self,
-        key: str,
-    ) -> List[Mapping[str, Union[str, int, None]]]:
+        key: TEncodable,
+    ) -> List[Mapping[bytes, Union[bytes, int, None]]]:
         """
         Returns the list of all consumer groups and their attributes for the stream stored at `key`.
 
         See https://valkey.io/commands/xinfo-groups for more details.
 
         Args:
-            key (str): The key of the stream.
+            key (TEncodable): The key of the stream.
 
         Returns:
-            List[Mapping[str, Union[str, int, None]]]: A list of mappings, where each mapping represents the attributes
-                of a consumer group for the stream at `key`. Each mapping contains the following info:
+            List[Mapping[bytes, Union[bytes, int, None]]]: A list of mappings, where each mapping represents the
+                attributes of a consumer group for the stream at `key`. Each mapping contains the following info:
                 - name: the consumer group's name.
                 - consumers: the number of consumers in the group.
                 - pending: the length of the group's pending entries list (PEL), which are messages that were delivered
@@ -3360,34 +3360,34 @@ class CoreCommands(Protocol):
             >>> await client.xinfo_groups("my_stream")
                 [
                     {
-                        "name": "mygroup",
-                        "consumers": 2,
-                        "pending": 2,
-                        "last-delivered-id": "1638126030001-0",
-                        "entries-read": 2,
-                        "lag": 0,
+                        b"name": b"mygroup",
+                        b"consumers": 2,
+                        b"pending": 2,
+                        b"last-delivered-id": b"1638126030001-0",
+                        b"entries-read": 2,
+                        b"lag": 0,
                     },
                     {
-                        "name": "some-other-group",
-                        "consumers": 1,
-                        "pending": 0,
-                        "last-delivered-id": "1638126028070-0",
-                        "entries-read": 1,
-                        "lag": 1,
+                        b"name": b"some-other-group",
+                        b"consumers": 1,
+                        b"pending": 0,
+                        b"last-delivered-id": b"1638126028070-0",
+                        b"entries-read": 1,
+                        b"lag": 1,
                     }
                 ]
                 # The list of consumer groups and their attributes for stream "my_stream".
         """
         return cast(
-            List[Mapping[str, Union[str, int, None]]],
+            List[Mapping[bytes, Union[bytes, int, None]]],
             await self._execute_command(RequestType.XInfoGroups, [key]),
         )
 
     async def xinfo_consumers(
         self,
-        key: str,
-        group_name: str,
-    ) -> List[Mapping[str, Union[str, int]]]:
+        key: TEncodable,
+        group_name: TEncodable,
+    ) -> List[Mapping[bytes, Union[bytes, int]]]:
         """
         Returns the list of all consumers and their attributes for the given consumer group of the stream stored at
         `key`.
@@ -3395,11 +3395,11 @@ class CoreCommands(Protocol):
         See https://valkey.io/commands/xinfo-consumers for more details.
 
         Args:
-            key (str): The key of the stream.
-            group_name (str): The consumer group name.
+            key (TEncodable): The key of the stream.
+            group_name (TEncodable): The consumer group name.
 
         Returns:
-            List[Mapping[str, Union[str, int]]]: A list of mappings, where each mapping represents the attributes of a
+            List[Mapping[bytes, Union[bytes, int]]]: A list of mappings, where each mapping contains the attributes of a
                 consumer for the given consumer group of the stream at `key`. Each mapping contains the following info:
                 - name: the consumer's name.
                 - pending: the number of entries in the pending entries list (PEL): pending messages for the consumer,
@@ -3417,22 +3417,22 @@ class CoreCommands(Protocol):
             >>> await client.xinfo_consumers("my_stream", "my_group")
                 [
                     {
-                        "name": "Alice",
-                        "pending": 1,
-                        "idle": 9104628,
-                        "inactive": 18104698,
+                        b"name": b"Alice",
+                        b"pending": 1,
+                        b"idle": 9104628,
+                        b"inactive": 18104698,
                     },
                     {
-                        "name": "Bob",
-                        "pending": 1,
-                        "idle": 83841983,
-                        "inactive": 993841998,
+                        b"name": b"Bob",
+                        b"pending": 1,
+                        b"idle": 83841983,
+                        b"inactive": 993841998,
                     }
                 ]
                 # The list of consumers and their attributes for consumer group "my_group" of stream "my_stream".
         """
         return cast(
-            List[Mapping[str, Union[str, int]]],
+            List[Mapping[bytes, Union[bytes, int]]],
             await self._execute_command(RequestType.XInfoConsumers, [key, group_name]),
         )
 

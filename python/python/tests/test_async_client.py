@@ -6391,8 +6391,7 @@ class TestCommands:
         time.sleep(2)
         consumers_result = await redis_client.xinfo_consumers(key, group_name1)
         assert len(consumers_result) == 1
-        # cast key type to bytes so that mypy won't complain about passing byte strings to get() when str was expected
-        consumer1_info = cast(Mapping[bytes, Union[str, int]], consumers_result[0])
+        consumer1_info = consumers_result[0]
         assert consumer1_info.get(b"name") == consumer1.encode()
         assert consumer1_info.get(b"pending") == 1
         assert cast(int, consumer1_info.get(b"idle")) > 0
@@ -6426,7 +6425,7 @@ class TestCommands:
 
         groups = await redis_client.xinfo_groups(key)
         assert len(groups) == 1
-        group1_info = cast(Mapping[bytes, Union[str, int]], groups[0])
+        group1_info = groups[0]
         assert group1_info.get(b"name") == group_name1.encode()
         assert group1_info.get(b"consumers") == 2
         assert group1_info.get(b"pending") == 3
@@ -6445,7 +6444,7 @@ class TestCommands:
         assert await redis_client.xgroup_set_id(key, group_name1, stream_id1_1) == OK
         groups = await redis_client.xinfo_groups(key)
         assert len(groups) == 1
-        group1_info = cast(Mapping[bytes, Union[str, int]], groups[0])
+        group1_info = groups[0]
         assert group1_info.get(b"name") == group_name1.encode()
         assert group1_info.get(b"consumers") == 2
         assert group1_info.get(b"pending") == 3
@@ -6471,7 +6470,7 @@ class TestCommands:
             )
             groups = await redis_client.xinfo_groups(key)
             assert len(groups) == 1
-            group1_info = cast(Mapping[bytes, Union[str, int]], groups[0])
+            group1_info = groups[0]
             assert group1_info.get(b"name") == group_name1.encode()
             assert group1_info.get(b"consumers") == 2
             assert group1_info.get(b"pending") == 3

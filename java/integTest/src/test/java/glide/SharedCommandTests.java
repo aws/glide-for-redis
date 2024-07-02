@@ -88,6 +88,7 @@ import glide.api.models.commands.scan.ZScanOptionsBinary;
 import glide.api.models.commands.stream.StreamAddOptions;
 import glide.api.models.commands.stream.StreamClaimOptions;
 import glide.api.models.commands.stream.StreamGroupOptions;
+import glide.api.models.commands.stream.StreamGroupOptionsBinary;
 import glide.api.models.commands.stream.StreamPendingOptions;
 import glide.api.models.commands.stream.StreamRange.IdBound;
 import glide.api.models.commands.stream.StreamRange.InfRangeBound;
@@ -4656,6 +4657,77 @@ public class SharedCommandTests {
     @SneakyThrows
     @ParameterizedTest(autoCloseArguments = false)
     @MethodSource("getClients")
+    public void xgroupCreate_xgroupDestroyBinary(BaseClient client) {
+        GlideString key = gs(UUID.randomUUID().toString());
+        GlideString stringKey = gs(UUID.randomUUID().toString());
+        GlideString groupName = gs(("group" + UUID.randomUUID()));
+        GlideString streamId = gs("0-1");
+
+        // Stream not created results in error
+        Exception executionException =
+                assertThrows(
+                        ExecutionException.class, () -> client.xgroupCreate(key, groupName, streamId).get());
+        assertInstanceOf(RequestException.class, executionException.getCause());
+
+        // Stream with option to create creates stream & Group
+        assertEquals(
+                OK,
+                client
+                        .xgroupCreate(
+                                key, groupName, streamId, StreamGroupOptionsBinary.builder().makeStream().build())
+                        .get());
+
+        // ...and again results in BUSYGROUP error, because group names must be unique
+        executionException =
+                assertThrows(
+                        ExecutionException.class, () -> client.xgroupCreate(key, groupName, streamId).get());
+        assertInstanceOf(RequestException.class, executionException.getCause());
+        assertTrue(executionException.getMessage().contains("BUSYGROUP"));
+
+        // Stream Group can be destroyed returns: true
+        assertEquals(true, client.xgroupDestroy(key, groupName).get());
+
+        // ...and again results in: false
+        assertEquals(false, client.xgroupDestroy(key, groupName).get());
+
+        // ENTRIESREAD option was added in redis 7.0.0
+        StreamGroupOptionsBinary entriesReadOption =
+                StreamGroupOptionsBinary.builder().entriesRead(gs("10")).build();
+        if (REDIS_VERSION.isGreaterThanOrEqualTo("7.0.0")) {
+            assertEquals(OK, client.xgroupCreate(key, groupName, streamId, entriesReadOption).get());
+        } else {
+            executionException =
+                    assertThrows(
+                            ExecutionException.class,
+                            () -> client.xgroupCreate(key, groupName, streamId, entriesReadOption).get());
+            assertInstanceOf(RequestException.class, executionException.getCause());
+        }
+
+        // key is a string and cannot be created as a stream
+        assertEquals(OK, client.set(stringKey, gs("not_a_stream")).get());
+        executionException =
+                assertThrows(
+                        ExecutionException.class,
+                        () ->
+                                client
+                                        .xgroupCreate(
+                                                stringKey,
+                                                groupName,
+                                                streamId,
+                                                StreamGroupOptionsBinary.builder().makeStream().build())
+                                        .get());
+        assertInstanceOf(RequestException.class, executionException.getCause());
+
+        executionException =
+                assertThrows(
+                        ExecutionException.class, () -> client.xgroupDestroy(stringKey, groupName).get());
+        assertInstanceOf(RequestException.class, executionException.getCause());
+    }
+
+    // TODO: Add binary versions of xgroup operations once xadd xreadgroup xdel have binary versions
+    @SneakyThrows
+    @ParameterizedTest(autoCloseArguments = false)
+    @MethodSource("getClients")
     public void xgroupCreateConsumer_xgroupDelConsumer_xreadgroup_xack(BaseClient client) {
         String key = UUID.randomUUID().toString();
         String stringKey = UUID.randomUUID().toString();
@@ -4753,6 +4825,7 @@ public class SharedCommandTests {
         assertInstanceOf(RequestException.class, executionException.getCause());
     }
 
+    // TODO: Add binary versions of xgroup operations once xadd xreadgroup xdel have binary versions
     @SneakyThrows
     @ParameterizedTest(autoCloseArguments = false)
     @MethodSource("getClients")

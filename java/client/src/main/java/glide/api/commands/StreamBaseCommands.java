@@ -6,6 +6,7 @@ import glide.api.models.commands.stream.StreamAddOptions;
 import glide.api.models.commands.stream.StreamAddOptions.StreamAddOptionsBuilder;
 import glide.api.models.commands.stream.StreamClaimOptions;
 import glide.api.models.commands.stream.StreamGroupOptions;
+import glide.api.models.commands.stream.StreamGroupOptionsBinary;
 import glide.api.models.commands.stream.StreamPendingOptions;
 import glide.api.models.commands.stream.StreamRange;
 import glide.api.models.commands.stream.StreamRange.IdBound;
@@ -399,6 +400,25 @@ public interface StreamBaseCommands {
      *
      * @see <a href="https://valkey.io/commands/xgroup-create/">valkey.io</a> for details.
      * @param key The key of the stream.
+     * @param groupname The newly created consumer group name.
+     * @param id Stream entry ID that specifies the last delivered entry in the stream from the new
+     *     group’s perspective. The special ID <code>"$"</code> can be used to specify the last entry
+     *     in the stream.
+     * @return <code>OK</code>.
+     * @example
+     *     <pre>{@code
+     * // Create the consumer group "mygroup", using zero as the starting ID:
+     * assert client.xgroupCreate(gs("mystream"), gs("mygroup"), gs("0-0")).get().equals("OK");
+     * }</pre>
+     */
+    CompletableFuture<String> xgroupCreate(GlideString key, GlideString groupname, GlideString id);
+
+    /**
+     * Creates a new consumer group uniquely identified by <code>groupname</code> for the stream
+     * stored at <code>key</code>.
+     *
+     * @see <a href="https://valkey.io/commands/xgroup-create/">valkey.io</a> for details.
+     * @param key The key of the stream.
      * @param groupName The newly created consumer group name.
      * @param id Stream entry ID that specifies the last delivered entry in the stream from the new
      *     group’s perspective. The special ID <code>"$"</code> can be used to specify the last entry
@@ -413,6 +433,27 @@ public interface StreamBaseCommands {
      */
     CompletableFuture<String> xgroupCreate(
             String key, String groupName, String id, StreamGroupOptions options);
+
+    /**
+     * Creates a new consumer group uniquely identified by <code>groupname</code> for the stream
+     * stored at <code>key</code>.
+     *
+     * @see <a href="https://valkey.io/commands/xgroup-create/">valkey.io</a> for details.
+     * @param key The key of the stream.
+     * @param groupName The newly created consumer group name.
+     * @param id Stream entry ID that specifies the last delivered entry in the stream from the new
+     *     group’s perspective. The special ID <code>"$"</code> can be used to specify the last entry
+     *     in the stream.
+     * @param options The group options {@link StreamGroupOptionsBinary}.
+     * @return <code>OK</code>.
+     * @example
+     *     <pre>{@code
+     * // Create the consumer group "mygroup", and the stream if it does not exist, after the last ID
+     * assert client.xgroupCreate("gs(mystream"), gs("mygroup"), gs("$"), new StreamGroupOptionsBinary(true)).get().equals("OK");
+     * }</pre>
+     */
+    CompletableFuture<String> xgroupCreate(
+            GlideString key, GlideString groupName, GlideString id, StreamGroupOptionsBinary options);
 
     /**
      * Destroys the consumer group <code>groupname</code> for the stream stored at <code>key</code>.
@@ -430,6 +471,21 @@ public interface StreamBaseCommands {
     CompletableFuture<Boolean> xgroupDestroy(String key, String groupname);
 
     /**
+     * Destroys the consumer group <code>groupname</code> for the stream stored at <code>key</code>.
+     *
+     * @see <a href="https://valkey.io/commands/xgroup-destroy/">valkey.io</a> for details.
+     * @param key The key of the stream.
+     * @param groupname The consumer group name to delete.
+     * @return <code>true</code> if the consumer group is destroyed. Otherwise, <code>false</code>.
+     * @example
+     *     <pre>{@code
+     * // Destroys the consumer group "mygroup"
+     * assert client.xgroupDestroy(gs("mystream"), gs("mygroup")).get().equals("OK");
+     * }</pre>
+     */
+    CompletableFuture<Boolean> xgroupDestroy(GlideString key, GlideString groupname);
+
+    /**
      * Creates a consumer named <code>consumer</code> in the consumer group <code>group</code> for the
      * stream stored at <code>key</code>.
      *
@@ -445,6 +501,24 @@ public interface StreamBaseCommands {
      * }</pre>
      */
     CompletableFuture<Boolean> xgroupCreateConsumer(String key, String group, String consumer);
+
+    /**
+     * Creates a consumer named <code>consumer</code> in the consumer group <code>group</code> for the
+     * stream stored at <code>key</code>.
+     *
+     * @see <a href="https://valkey.io/commands/xgroup-createconsumer/">valkey.io</a> for details.
+     * @param key The key of the stream.
+     * @param group The consumer group name.
+     * @param consumer The newly created consumer.
+     * @return <code>true</code> if the consumer is created. Otherwise, <code>false</code>.
+     * @example
+     *     <pre>{@code
+     * // Creates the consumer "myconsumer" in consumer group "mygroup"
+     * assert client.xgroupCreateConsumer(gs("mystream"), gs("mygroup"), gs("myconsumer")).get();
+     * }</pre>
+     */
+    CompletableFuture<Boolean> xgroupCreateConsumer(
+            GlideString key, GlideString group, GlideString consumer);
 
     /**
      * Deletes a consumer named <code>consumer</code> in the consumer group <code>group</code>.
@@ -465,6 +539,25 @@ public interface StreamBaseCommands {
     CompletableFuture<Long> xgroupDelConsumer(String key, String group, String consumer);
 
     /**
+     * Deletes a consumer named <code>consumer</code> in the consumer group <code>group</code>.
+     *
+     * @see <a href="https://valkey.io/commands/xgroup-delconsumer/">valkey.io</a> for details.
+     * @param key The key of the stream.
+     * @param group The consumer group name.
+     * @param consumer The consumer to delete.
+     * @return The number of pending messages the <code>consumer</code> had before it was deleted.
+     * @example
+     *     <pre>{@code
+     * // Deletes the consumer "myconsumer" in consumer group "mygroup"
+     * Long pendingMsgCount = client.xgroupDelConsumer(gs("mystream"), gs("mygroup"), gs("myconsumer")).get();
+     * System.out.println("Consumer 'myconsumer' had " +
+     *     + pendingMsgCount + " pending messages unclaimed.");
+     * }</pre>
+     */
+    CompletableFuture<Long> xgroupDelConsumer(
+            GlideString key, GlideString group, GlideString consumer);
+
+    /**
      * Sets the last delivered ID for a consumer group.
      *
      * @see <a href="https://valkey.io/commands/xgroup-setid/">valkey.io</a> for details.
@@ -480,6 +573,23 @@ public interface StreamBaseCommands {
      * }</pre>
      */
     CompletableFuture<String> xgroupSetId(String key, String groupName, String id);
+
+    /**
+     * Sets the last delivered ID for a consumer group.
+     *
+     * @see <a href="https://valkey.io/commands/xgroup-setid/">valkey.io</a> for details.
+     * @param key The key of the stream.
+     * @param groupName The consumer group name.
+     * @param id The stream entry ID that should be set as the last delivered ID for the consumer
+     *     group.
+     * @return <code>OK</code>.
+     * @example
+     *     <pre>{@code
+     * // Update consumer group "mygroup", to set the last delivered entry ID.
+     * assert client.xgroupSetId(gs("mystream"), gs("mygroup"), gs("0")).get().equals("OK");
+     * }</pre>
+     */
+    CompletableFuture<String> xgroupSetId(GlideString key, GlideString groupName, GlideString id);
 
     /**
      * Sets the last delivered ID for a consumer group.
@@ -502,6 +612,28 @@ public interface StreamBaseCommands {
      */
     CompletableFuture<String> xgroupSetId(
             String key, String groupName, String id, String entriesReadId);
+
+    /**
+     * Sets the last delivered ID for a consumer group.
+     *
+     * @since Redis 7.0 and above
+     * @see <a href="https://valkey.io/commands/xgroup-setid/">valkey.io</a> for details.
+     * @param key The key of the stream.
+     * @param groupName The consumer group name.
+     * @param id The stream entry ID that should be set as the last delivered ID for the consumer
+     *     group.
+     * @param entriesReadId An arbitrary ID (that isn't the first ID, last ID, or the zero ID (<code>
+     *     "0-0"</code>)) used to find out how many entries are between the arbitrary ID (excluding
+     *     it) and the stream's last entry.
+     * @return <code>OK</code>.
+     * @example
+     *     <pre>{@code
+     * // Update consumer group "mygroup", to set the last delivered entry ID.
+     * assert client.xgroupSetId(gs("mystream"), gs("mygroup"), gs("0"), gs("1-1")).get().equals("OK");
+     * }</pre>
+     */
+    CompletableFuture<String> xgroupSetId(
+            GlideString key, GlideString groupName, GlideString id, GlideString entriesReadId);
 
     /**
      * Reads entries from the given streams owned by a consumer group.

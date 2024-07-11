@@ -409,6 +409,13 @@ export function createHSet(
 /**
  * @internal
  */
+export function createHKeys(key: string): command_request.Command {
+    return createCommand(RequestType.HKeys, [key]);
+}
+
+/**
+ * @internal
+ */
 export function createHSetNX(
     key: string,
     field: string,

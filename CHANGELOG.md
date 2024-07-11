@@ -1,4 +1,6 @@
 #### Changes
+* Node: Added HKEYS command ([#1499](https://github.com/aws/glide-for-redis/pull/1499))
+* Node: Added SMOVE command ([#1476](https://github.com/aws/glide-for-redis/pull/1476))
 * Node: Added ZINTERSTORE command ([#1513](https://github.com/valkey-io/valkey-glide/pull/1513))
 * Python: Added OBJECT ENCODING command ([#1471](https://github.com/valkey-io/valkey-glide/pull/1471))
 * Python: Added OBJECT FREQ command ([#1472](https://github.com/valkey-io/valkey-glide/pull/1472))

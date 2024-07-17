@@ -228,6 +228,8 @@ export type ReturnType =
     | ReturnTypeAttribute
     | ReturnType[];
 
+export type GlideString = string | Uint8Array;
+
 /** Represents the credentials for connecting to a server. */
 export type RedisCredentials = {
     /**

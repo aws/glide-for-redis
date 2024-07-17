@@ -1,13 +1,14 @@
+import { GlideString } from "./BaseClient";
 export interface Decoder<T> {
-    decode(input: string | Buffer): T;
+    decode(input: GlideString): T;
 }
 
 class BytesDecoder implements Decoder<any> {
-    decode(input: string | Buffer): any {}
+    decode(input: GlideString): any {}
 }
 
 class StringDecoder implements Decoder<any> {
-    decode(input: any): any {
+    decode(input: GlideString): any {
         if (Buffer.isBuffer(input)) {
             return input.toString("utf-8");
         } else if (Array.isArray(input)) {
@@ -23,7 +24,7 @@ class StringDecoder implements Decoder<any> {
         } else if (typeof input === "object" && input !== null) {
             const decodedObject: Record<string, any> = {};
             for (const [key, value] of Object.entries(input)) {
-            decodedObject[this.decode(key) as string] = this.decode(value);
+                decodedObject[this.decode(key) as string] = this.decode(value);
             }
             return decodedObject;
         } else {

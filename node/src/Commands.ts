@@ -11,11 +11,12 @@ import { BaseClient } from "src/BaseClient";
 import { GlideClient } from "src/GlideClient";
 /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
 import { GlideClusterClient } from "src/GlideClusterClient";
+import { GlideString } from "./BaseClient";
 import { command_request } from "./ProtobufMessage";
 
 import RequestType = command_request.RequestType;
 
-function isLargeCommand(args: BulkString[]) {
+function isLargeCommand(args: GlideString[]) {
     let lenSum = 0;
 
     for (const arg of args) {
@@ -29,12 +30,10 @@ function isLargeCommand(args: BulkString[]) {
     return false;
 }
 
-type BulkString = string | Uint8Array;
-
 /**
  * Convert a string array into Uint8Array[]
  */
-function toBuffersArray(args: BulkString[]) {
+function toBuffersArray(args: GlideString[]) {
     const argsBytes: Uint8Array[] = [];
 
     for (const arg of args) {
@@ -68,7 +67,7 @@ export function parseInfoResponse(response: string): Record<string, string> {
 
 function createCommand(
     requestType: command_request.RequestType,
-    args: BulkString[],
+    args: GlideString[],
 ): command_request.Command {
     const singleCommand = command_request.Command.create({
         requestType,
@@ -156,8 +155,8 @@ export type SetOptions = {
  * @internal
  */
 export function createSet(
-    key: BulkString,
-    value: BulkString,
+    key: GlideString,
+    value: GlideString,
     options?: SetOptions,
 ): command_request.Command {
     const args = [key, value];

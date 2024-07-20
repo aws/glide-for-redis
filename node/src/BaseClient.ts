@@ -310,6 +310,10 @@ export type BaseClientConfiguration = {
      * Client name to be used for the client. Will be used with CLIENT SETNAME command during connection establishment.
      */
     clientName?: string;
+    /**
+     * 
+     */
+    defaultDecoder?: Decoder;
 };
 
 export type ScriptOptions = {
@@ -362,6 +366,7 @@ export class BaseClient {
     private remainingReadData: Uint8Array | undefined;
     private readonly requestTimeout: number; // Timeout in milliseconds
     private isClosed = false;
+    private defaultDecoder = new StringDecoder();
     private readonly pubsubFutures: [PromiseFunction, ErrorFunction][] = [];
     private pendingPushNotification: response.Response[] = [];
     private config: BaseClientConfiguration | undefined;
@@ -410,6 +415,7 @@ export class BaseClient {
             }
         }
     }
+
     private handleReadData(data: Buffer) {
         const buf = this.remainingReadData
             ? Buffer.concat([this.remainingReadData, data])
@@ -457,25 +463,26 @@ export class BaseClient {
             this.promiseCallbackFunctions[message.callbackIdx];
         this.availableCallbackSlots.push(message.callbackIdx);
 
-        if (message.requestError != null) {
-            const errorType = getRequestErrorClass(message.requestError.type);
-            reject(new errorType(message.requestError.message ?? undefined));
-        } else if (message.respPointer != null) {
-            const pointer = message.respPointer;
+            if (message.requestError != null) {
+                const errorType = getRequestErrorClass(
+                    message.requestError.type,
+                );
+                reject(
+                    new errorType(message.requestError.message ?? undefined),
+                );
+            } else if (message.respPointer != null) {
+                const pointer = message.respPointer;
+                resolve(pointer);
 
-            if (typeof pointer === "number") {
-                // TODO: change according to https://github.com/valkey-io/valkey-glide/pull/2052
-                resolve(valueFromSplitPointer(0, pointer, true));
+                
+            } else if (
+                message.constantResponse === response.ConstantResponse.OK
+            ) {
+                resolve("OK");
             } else {
-                // TODO: change according to https://github.com/valkey-io/valkey-glide/pull/2052
-                resolve(valueFromSplitPointer(pointer.high, pointer.low, true));
+                resolve(null);
             }
-        } else if (message.constantResponse === response.ConstantResponse.OK) {
-            resolve("OK");
-        } else {
-            resolve(null);
         }
-    }
 
     processPush(response: response.Response) {
         if (response.closingError != null || !response.respPointer) {
@@ -523,6 +530,7 @@ export class BaseClient {
                 console.error(`Server closed: ${err}`);
                 this.close();
             });
+        this.defaultDecoder = options?.defaultDecoder ?? new StringDecoder();
     }
 
     private getCallbackIndex(): number {
@@ -554,6 +562,7 @@ export class BaseClient {
             | command_request.Command
             | command_request.Command[]
             | command_request.ScriptInvocation,
+        stringDecoder: boolean = true, 
         route?: command_request.Routes,
     ): Promise<T> {
         if (this.isClosed) {
@@ -564,8 +573,14 @@ export class BaseClient {
 
         return new Promise((resolve, reject) => {
             const callbackIndex = this.getCallbackIndex();
-            this.promiseCallbackFunctions[callbackIndex] = [resolve, reject];
-            this.writeOrBufferCommandRequest(callbackIndex, command, route);
+            this.promiseCallbackFunctions[callbackIndex] = [(pointer)=> {
+                if (typeof pointer === "number") {
+                    resolve(valueFromSplitPointer(0, pointer, stringDecoder));
+                } else {
+                    resolve(valueFromSplitPointer(pointer.high, pointer.low, stringDecoder));
+                }
+            }, reject];
+            this.writeOrBufferCommandRequest(callbackIndex, command, decoder, route);
         });
     }
 
@@ -575,6 +590,7 @@ export class BaseClient {
             | command_request.Command
             | command_request.Command[]
             | command_request.ScriptInvocation,
+        decoder: Decoder, 
         route?: command_request.Routes,
     ) {
         const message = Array.isArray(command)
@@ -821,8 +837,28 @@ export class BaseClient {
      * console.log(result); // Output: 'value'
      * ```
      */
-    public get(key: string): Promise<string | null> {
-        return this.createWritePromise(createGet(key));
+    public get(key: string, decoder?: Decoder): Promise<string | null> {
+        return this.createWritePromise(createGet(key), decoder);
+    }
+
+    /**
+     * Gets a string value associated with the given `key`and deletes the key.
+     *
+     * See https://valkey.io/commands/getdel/ for details.
+     *
+     * @param key - The key to retrieve from the database.
+     * @returns If `key` exists, returns the `value` of `key`. Otherwise, return `null`.
+     *
+     * @example
+     * ```typescript
+     * const result = client.getdel("key");
+     * console.log(result); // Output: 'value'
+     *
+     * const value = client.getdel("key");  // value is null
+     * ```
+     */
+    public getdel(key: string): Promise<string | null> {
+        return this.createWritePromise(createGetDel(key));
     }
 
     /**

@@ -309,7 +309,8 @@ describe("SocketConnectionInternals", () => {
                     );
                 });
                 const result = await connection.get("foo");
-                expect(intoString(result)).toEqual(intoString(expected));
+                console.log(result);
+                expect(result).toEqual(expected);
             });
         };
 

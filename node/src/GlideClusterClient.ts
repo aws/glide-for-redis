@@ -351,7 +351,11 @@ export class GlideClusterClient extends BaseClient {
      */
     public customCommand(args: string[], route?: Routes): Promise<ReturnType> {
         const command = createCustomCommand(args);
-        return super.createWritePromise(command, toProtobufRoute(route));
+        return super.createWritePromise(
+            command,
+            undefined, // This will trigger the default value for decode
+            toProtobufRoute(route),
+        );
     }
 
     /** Execute a transaction by processing the queued commands.
@@ -372,6 +376,7 @@ export class GlideClusterClient extends BaseClient {
     ): Promise<ReturnType[] | null> {
         return this.createWritePromise<ReturnType[] | null>(
             transaction.commands,
+            undefined, // This will trigger the default value for decode
             toProtobufRoute(route),
         ).then((result: ReturnType[] | null) => {
             return this.processResultWithSetCommands(
@@ -408,6 +413,7 @@ export class GlideClusterClient extends BaseClient {
     public ping(message?: string, route?: Routes): Promise<string> {
         return this.createWritePromise(
             createPing(message),
+            undefined, // This will trigger the default value for decode
             toProtobufRoute(route),
         );
     }
@@ -428,6 +434,7 @@ export class GlideClusterClient extends BaseClient {
     ): Promise<ClusterResponse<string>> {
         return this.createWritePromise<ClusterResponse<string>>(
             createInfo(options),
+            undefined, // This will trigger the default value for decode
             toProtobufRoute(route),
         );
     }
@@ -461,6 +468,7 @@ export class GlideClusterClient extends BaseClient {
     ): Promise<ClusterResponse<string | null>> {
         return this.createWritePromise<ClusterResponse<string | null>>(
             createClientGetName(),
+            undefined, // This will trigger the default value for decode
             toProtobufRoute(route),
         );
     }
@@ -483,6 +491,7 @@ export class GlideClusterClient extends BaseClient {
     public configRewrite(route?: Routes): Promise<"OK"> {
         return this.createWritePromise(
             createConfigRewrite(),
+            undefined, // This will trigger the default value for decode
             toProtobufRoute(route),
         );
     }
@@ -505,6 +514,7 @@ export class GlideClusterClient extends BaseClient {
     public configResetStat(route?: Routes): Promise<"OK"> {
         return this.createWritePromise(
             createConfigResetStat(),
+            undefined, // This will trigger the default value for decode
             toProtobufRoute(route),
         );
     }
@@ -520,6 +530,7 @@ export class GlideClusterClient extends BaseClient {
     public clientId(route?: Routes): Promise<ClusterResponse<number>> {
         return this.createWritePromise<ClusterResponse<number>>(
             createClientId(),
+            undefined, // This will trigger the default value for decode
             toProtobufRoute(route),
         );
     }
@@ -555,6 +566,7 @@ export class GlideClusterClient extends BaseClient {
     ): Promise<ClusterResponse<Record<string, string>>> {
         return this.createWritePromise<ClusterResponse<Record<string, string>>>(
             createConfigGet(parameters),
+            undefined, // This will trigger the default value for decode
             toProtobufRoute(route),
         );
     }
@@ -582,6 +594,7 @@ export class GlideClusterClient extends BaseClient {
     ): Promise<"OK"> {
         return this.createWritePromise(
             createConfigSet(parameters),
+            undefined, // This will trigger the default value for decode
             toProtobufRoute(route),
         );
     }
@@ -614,6 +627,7 @@ export class GlideClusterClient extends BaseClient {
     ): Promise<ClusterResponse<string>> {
         return this.createWritePromise(
             createEcho(message),
+            undefined, // This will trigger the default value for decode
             toProtobufRoute(route),
         );
     }
@@ -645,7 +659,11 @@ export class GlideClusterClient extends BaseClient {
      * ```
      */
     public time(route?: Routes): Promise<ClusterResponse<[string, string]>> {
-        return this.createWritePromise(createTime(), toProtobufRoute(route));
+        return this.createWritePromise(
+            createTime(),
+            undefined, // This will trigger the default value for decode
+            toProtobufRoute(route),
+        );
     }
 
     /**

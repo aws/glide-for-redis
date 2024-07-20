@@ -187,10 +187,7 @@ fn redis_value_to_js(val: Value, js_env: Env, string_decoder: bool) -> Result<Js
         Value::Array(array) => {
             let mut js_array_view = js_env.create_array_with_length(array.len())?;
             for (index, item) in array.into_iter().enumerate() {
-                js_array_view.set_element(
-                    index as u32,
-                    redis_value_to_js(item, js_env, string_decoder)?,
-                )?;
+                js_array_view.set_element(index as u32, redis_value_to_js(item, js_env, string_decoder)?)?;
             }
             Ok(js_array_view.into_unknown())
         }
@@ -232,10 +229,7 @@ fn redis_value_to_js(val: Value, js_env: Env, string_decoder: bool) -> Result<Js
             // TODO - return a set object instead of an array object
             let mut js_array_view = js_env.create_array_with_length(array.len())?;
             for (index, item) in array.into_iter().enumerate() {
-                js_array_view.set_element(
-                    index as u32,
-                    redis_value_to_js(item, js_env, string_decoder)?,
-                )?;
+                js_array_view.set_element(index as u32, redis_value_to_js(item, js_env, string_decoder)?)?;
             }
             Ok(js_array_view.into_unknown())
         }
@@ -265,12 +259,7 @@ fn redis_value_to_js(val: Value, js_env: Env, string_decoder: bool) -> Result<Js
 #[napi(
     ts_return_type = "null | string | Uint8Array | number | {} | Boolean | BigInt | Set<any> | any[]"
 )]
-pub fn value_from_split_pointer(
-    js_env: Env,
-    high_bits: u32,
-    low_bits: u32,
-    string_decoder: bool,
-) -> Result<JsUnknown> {
+pub fn value_from_split_pointer(js_env: Env, high_bits: u32, low_bits: u32, string_decoder: bool) -> Result<JsUnknown> {
     let mut bytes = [0_u8; 8];
     (&mut bytes[..4])
         .write_u32::<LittleEndian>(low_bits)

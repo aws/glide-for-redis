@@ -30,6 +30,23 @@ on:
             - .github/json_matrices/build-matrix.json
     workflow_dispatch:
 
+    pull_request_target:
+      types: [labeled]
+      paths:
+          - glide-core/src/**
+          - submodules/**
+          - node/**
+          - utils/cluster_manager.py
+          - .github/workflows/node.yml
+          - .github/workflows/build-node-wrapper/action.yml
+          - .github/workflows/install-shared-dependencies/action.yml
+          - .github/workflows/test-benchmark/action.yml
+          - .github/workflows/lint-rust/action.yml
+          - .github/workflows/install-valkey/action.yml
+          - .github/json_matrices/build-matrix.json
+    schedule:
+        - cron: "0 1 * * *"
+
 concurrency:
     group: node-${{ github.head_ref || github.ref }}
     cancel-in-progress: true
@@ -38,37 +55,81 @@ env:
     CARGO_TERM_COLOR: always
 
 jobs:
-    load-engine-matrix:
+    check-label:
       runs-on: ubuntu-latest
-      outputs:
-        matrix: ${{ steps.load-engine-matrix.outputs.matrix }}
+      # If the trigger is a label we want to check if it is a CoreChanges label, 
+      # if it is we want to run the job in the AWS_ACTIONS environment so its need to be approved
+      environment: ${{ github.event_name == 'pull_request_target'  && 'AWS_ACTIONS' || '' }}  
       steps:
-          - name: Checkout
-            uses: actions/checkout@v4
+        - name: Check for CoreChanges label
+          if: github.event_name == 'pull_request_target' && github.event.label.name != 'CoreChanges'
+          run: |
+            echo "This workflow only runs for the CoreChanges label on pull requests"
+            exit 1
 
-          - name: Load the engine matrix
-            id: load-engine-matrix
-            shell: bash
-            run: echo "matrix=$(jq -c . < .github/json_matrices/engine-matrix.json)" >> $GITHUB_OUTPUT
+    load-engine-matrix:
+        runs-on: ubuntu-latest
+        # We want to run this job only if the previous job outputs should_run=true,
+        # Which means that if the trigger was a label we run this job just if the label was CoreChanges
+        needs: check-label
+        outputs:
+          matrix: ${{ steps.load-engine-matrix.outputs.matrix }}
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Load the engine matrix
+              id: load-engine-matrix
+              shell: bash
+              # We want to run the full matrix only for scheduled runs and CoreChanges
+              # For other events we want to run only the always matrix which is first and last version supported
+              run: |
+                if [[ "${{ github.event_name }}" == "pull_request" || "${{ github.event_name }}" == "push" ]]; then
+                  echo "matrix=$(jq -c '[.[] | select(.run == "always")]' < .github/json_matrices/engine-matrix.json)" >> $GITHUB_OUTPUT
+                else
+                  echo "matrix=$(jq -c . < .github/json_matrices/engine-matrix.json)" >> $GITHUB_OUTPUT
+                fi
+    create-version-matrix:
+        runs-on: ubuntu-latest
+        needs: check-label
+        outputs:
+            matrix: ${{ steps.create-version-matrix.outputs.matrix }}
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Create version matrix
+              id: create-version-matrix
+              shell: bash
+              # We want to run the full matrix only for scheduled runs and CoreChanges
+              # For other events we want to run only the always matrix which is first and last version supported
+              run: |
+                if [[ "${{ github.event_name }}" == "pull_request" || "${{ github.event_name }}" == "push" ]]; then
+                  echo 'matrix={"node":["16.x","20.x"]}' >> $GITHUB_OUTPUT
+                else
+                  echo 'matrix={"node":["16.x","17.x","18.x","19.x","20.x"]}' >> $GITHUB_OUTPUT
+                fi
+
 
     test-ubuntu-latest:
         runs-on: ubuntu-latest
-        needs: load-engine-matrix
-        timeout-minutes: 25
+        needs: [load-engine-matrix, create-version-matrix]
+        timeout-minutes: 15
         strategy:
             fail-fast: false
             matrix:
                 engine: ${{ fromJson(needs.load-engine-matrix.outputs.matrix) }}
-
+                node: ${{ fromJson(needs.create-version-matrix.outputs.matrix).node }}
+                
         steps:
             - uses: actions/checkout@v4
               with:
                   submodules: recursive
 
-            - name: Use Node.js 16.x
+            - name: Setup Node
               uses: actions/setup-node@v3
               with:
-                  node-version: 16.x
+                  node-version: ${{ matrix.node }}
 
             - name: Build Node wrapper
               uses: ./.github/workflows/build-node-wrapper
@@ -118,6 +179,7 @@ jobs:
     lint-rust:
         timeout-minutes: 15
         runs-on: ubuntu-latest
+        needs: check-label
         steps:
             - uses: actions/checkout@v4
               with:
@@ -128,39 +190,41 @@ jobs:
                   cargo-toml-folder: ./node/rust-client
               name: lint node rust
 
-    # build-macos-latest:
-    #     runs-on: macos-latest
-    #     timeout-minutes: 25
-    #     steps:
-    #         - uses: actions/checkout@v4
-    #           with:
-    #               submodules: recursive
-    #         - name: Set up Homebrew
-    #           uses: Homebrew/actions/setup-homebrew@master
+    build-macos-latest:
+        if: github.event_name == 'schedule' || github.event.label.name == 'CoreChanges'
+        runs-on: macos-latest
+        needs: check-label
+        timeout-minutes: 25
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  submodules: recursive
+            - name: Set up Homebrew
+              uses: Homebrew/actions/setup-homebrew@master
 
-    #         - name: Install NodeJS
-    #           run: |
-    #               brew update
-    #               brew upgrade || true
-    #               brew install node
+            - name: Install NodeJS
+              run: |
+                  brew update
+                  brew upgrade || true
+                  brew install node
 
-    #         - name: Downgrade npm major version to 8
-    #           run: |
-    #               npm i -g npm@8
+            - name: Downgrade npm major version to 8
+              run: |
+                  npm i -g npm@8
 
-    #         - name: Build Node wrapper
-    #           uses: ./.github/workflows/build-node-wrapper
-    #           with:
-    #               os: "macos"
-    #               named_os: "darwin"
-    #               arch: "arm64"
-    #               target: "aarch64-apple-darwin"
-    #               github-token: ${{ secrets.GITHUB_TOKEN }}
-    #               engine-version: "7.2.5"
+            - name: Build Node wrapper
+              uses: ./.github/workflows/build-node-wrapper
+              with:
+                  os: "macos"
+                  named_os: "darwin"
+                  arch: "arm64"
+                  target: "aarch64-apple-darwin"
+                  github-token: ${{ secrets.GITHUB_TOKEN }}
+                  engine-version: "7.2.5"
 
-    #         - name: Test compatibility
-    #           run: npm test -- -t "set and get flow works"
-    #           working-directory: ./node
+            - name: Test compatibility
+              run: npm test -- -t "set and get flow works"
+              working-directory: ./node
 
     #         - name: Upload test reports
     #           if: always()
@@ -174,8 +238,10 @@ jobs:
     #                   benchmarks/results/**
 
     build-amazonlinux-latest:
+        if: github.event_name == 'schedule' || github.event.label.name == 'CoreChanges'
         runs-on: ubuntu-latest
         container: amazonlinux:latest
+        needs: check-label
         timeout-minutes: 15
         steps:
             - name: Install git
@@ -221,7 +287,9 @@ jobs:
                       benchmarks/results/**
 
     build-and-test-linux-musl-on-x86:
+        if: github.event_name == 'schedule' || github.event.label.name == 'CoreChanges'
         name: Build and test Node wrapper on Linux musl
+        needs: check-label
         runs-on: ubuntu-latest
         container:
             image: node:alpine

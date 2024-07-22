@@ -230,6 +230,11 @@ export type ReturnType =
 
 export type GlideString = string | Uint8Array;
 
+export const enum Decoder {
+    Bytes,
+    String
+}
+
 /** Represents the credentials for connecting to a server. */
 export type RedisCredentials = {
     /**
@@ -415,7 +420,6 @@ export class BaseClient {
             }
         }
     }
-
     private handleReadData(data: Buffer) {
         const buf = this.remainingReadData
             ? Buffer.concat([this.remainingReadData, data])
@@ -562,9 +566,10 @@ export class BaseClient {
             | command_request.Command
             | command_request.Command[]
             | command_request.ScriptInvocation,
-        stringDecoder: boolean = true, 
+        decoder: Decoder = this.defaultDecoder,
         route?: command_request.Routes,
     ): Promise<T> {
+        var stringDecoder = decoder instanceof StringDecoder? true : false;
         if (this.isClosed) {
             throw new ClosingError(
                 "Unable to execute requests; the client is closed. Please create a new client.",
@@ -574,11 +579,14 @@ export class BaseClient {
         return new Promise((resolve, reject) => {
             const callbackIndex = this.getCallbackIndex();
             this.promiseCallbackFunctions[callbackIndex] = [(pointer)=> {
+                var resolveAns;
                 if (typeof pointer === "number") {
-                    resolve(valueFromSplitPointer(0, pointer, stringDecoder));
+                    resolveAns = valueFromSplitPointer(0, pointer, stringDecoder);
                 } else {
-                    resolve(valueFromSplitPointer(pointer.high, pointer.low, stringDecoder));
+                    resolveAns = valueFromSplitPointer(pointer.high, pointer.low, stringDecoder);
                 }
+                // Decode the response according the givan decoder
+                resolve(decoder.decode(resolveAns))
             }, reject];
             this.writeOrBufferCommandRequest(callbackIndex, command, decoder, route);
         });

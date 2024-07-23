@@ -165,15 +165,14 @@ fn redis_value_to_js(val: Value, js_env: Env, string_decoder: bool) -> Result<Js
         Value::Nil => js_env.get_null().map(|val| val.into_unknown()),
         Value::SimpleString(str) => {
             if string_decoder {
-                Ok(js_env
-                    .create_string_from_std(str)
-                    .map(|val| val.into_unknown())?)
+                Ok(js_env.create_string_from_std(str)
+                .map(|val| val.into_unknown())?)
             } else {
                 Ok(js_env
-                    .create_buffer_with_data(str.as_bytes().to_vec())?
-                    .into_unknown())
+                .create_buffer_with_data(str.as_bytes().to_vec())?
+                .into_unknown())
             }
-        }
+        },
         Value::Okay => js_env.create_string("OK").map(|val| val.into_unknown()),
         Value::Int(num) => js_env.create_int64(num).map(|val| val.into_unknown()),
         Value::BulkString(data) => {

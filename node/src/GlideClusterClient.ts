@@ -6,6 +6,7 @@ import * as net from "net";
 import {
     BaseClient,
     BaseClientConfiguration,
+    Decoder,
     PubSubMsg,
     ReadFrom, // eslint-disable-line @typescript-eslint/no-unused-vars
     ReturnType,
@@ -716,9 +717,11 @@ export class GlideClusterClient extends BaseClient {
     public lolwut(
         options?: LolwutOptions,
         route?: Routes,
+        decoder?: Decoder,
     ): Promise<ClusterResponse<string>> {
         return this.createWritePromise(
             createLolwut(options),
+            decoder,
             toProtobufRoute(route),
         );
     }
@@ -837,9 +840,11 @@ export class GlideClusterClient extends BaseClient {
         libraryCode: string,
         replace?: boolean,
         route?: Routes,
+        decoder?: Decoder,
     ): Promise<string> {
         return this.createWritePromise(
             createFunctionLoad(libraryCode, replace),
+            decoder,
             toProtobufRoute(route),
         );
     }
@@ -862,9 +867,10 @@ export class GlideClusterClient extends BaseClient {
      * console.log(result); // Output: 'OK'
      * ```
      */
-    public functionFlush(mode?: FlushMode, route?: Routes): Promise<string> {
+    public functionFlush(mode?: FlushMode, route?: Routes, decoder?: Decoder): Promise<string> {
         return this.createWritePromise(
             createFunctionFlush(mode),
+            decoder,
             toProtobufRoute(route),
         );
     }
@@ -926,9 +932,10 @@ export class GlideClusterClient extends BaseClient {
      * console.log(result); // Output: 'OK'
      * ```
      */
-    public flushall(mode?: FlushMode, route?: Routes): Promise<string> {
+    public flushall(mode?: FlushMode, route?: Routes, decoder?: Decoder): Promise<string> {
         return this.createWritePromise(
             createFlushAll(mode),
+            decoder,
             toProtobufRoute(route),
         );
     }
@@ -949,9 +956,10 @@ export class GlideClusterClient extends BaseClient {
      * console.log(result); // Output: 'OK'
      * ```
      */
-    public flushdb(mode?: FlushMode, route?: Routes): Promise<string> {
+    public flushdb(mode?: FlushMode, route?: Routes, decoder?: Decoder): Promise<string> {
         return this.createWritePromise(
             createFlushDB(mode),
+            decoder,
             toProtobufRoute(route),
         );
     }
@@ -972,8 +980,8 @@ export class GlideClusterClient extends BaseClient {
      * console.log("Number of keys across all primary nodes: ", numKeys);
      * ```
      */
-    public dbsize(route?: Routes): Promise<number> {
-        return this.createWritePromise(createDBSize(), toProtobufRoute(route));
+    public dbsize(route?: Routes, decoder?: Decoder): Promise<ClusterResponse<number>> {
+        return this.createWritePromise(createDBSize(), decoder, toProtobufRoute(route));
     }
 
     /** Publish a message on pubsub channel.

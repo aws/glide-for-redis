@@ -2,6 +2,7 @@
  * Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0
  */
 
+import { Decoder } from "./BaseClient";
 import {
     ReadFrom, // eslint-disable-line @typescript-eslint/no-unused-vars
 } from "./BaseClient";
@@ -212,7 +213,6 @@ import {
     createZScan,
     createZScore,
 } from "./Commands";
-import { Decoder } from "./Decoder";
 import { command_request } from "./ProtobufMessage";
 
 /**

@@ -371,7 +371,7 @@ export class BaseClient {
     private remainingReadData: Uint8Array | undefined;
     private readonly requestTimeout: number; // Timeout in milliseconds
     private isClosed = false;
-    private defaultDecoder = new StringDecoder();
+    private defaultDecoder = Decoder.String;
     private readonly pubsubFutures: [PromiseFunction, ErrorFunction][] = [];
     private pendingPushNotification: response.Response[] = [];
     private config: BaseClientConfiguration | undefined;
@@ -534,7 +534,7 @@ export class BaseClient {
                 console.error(`Server closed: ${err}`);
                 this.close();
             });
-        this.defaultDecoder = options?.defaultDecoder ?? new StringDecoder();
+        this.defaultDecoder = options?.defaultDecoder ?? Decoder.String;
     }
 
     private getCallbackIndex(): number {
@@ -569,7 +569,7 @@ export class BaseClient {
         decoder: Decoder = this.defaultDecoder,
         route?: command_request.Routes,
     ): Promise<T> {
-        var stringDecoder = decoder instanceof StringDecoder? true : false;
+        var stringDecoder = decoder === Decoder.String? true : false;
         if (this.isClosed) {
             throw new ClosingError(
                 "Unable to execute requests; the client is closed. Please create a new client.",
@@ -579,16 +579,16 @@ export class BaseClient {
         return new Promise((resolve, reject) => {
             const callbackIndex = this.getCallbackIndex();
             this.promiseCallbackFunctions[callbackIndex] = [(pointer)=> {
-                var resolveAns;
+                let resolveAns;
                 if (typeof pointer === "number") {
                     resolveAns = valueFromSplitPointer(0, pointer, stringDecoder);
                 } else {
                     resolveAns = valueFromSplitPointer(pointer.high, pointer.low, stringDecoder);
                 }
-                // Decode the response according the givan decoder
-                resolve(decoder.decode(resolveAns))
+                
+                resolve(resolveAns);
             }, reject];
-            this.writeOrBufferCommandRequest(callbackIndex, command, decoder, route);
+            this.writeOrBufferCommandRequest(callbackIndex, command, route);
         });
     }
 
@@ -598,7 +598,6 @@ export class BaseClient {
             | command_request.Command
             | command_request.Command[]
             | command_request.ScriptInvocation,
-        decoder: Decoder, 
         route?: command_request.Routes,
     ) {
         const message = Array.isArray(command)
@@ -847,26 +846,6 @@ export class BaseClient {
      */
     public get(key: string, decoder?: Decoder): Promise<string | null> {
         return this.createWritePromise(createGet(key), decoder);
-    }
-
-    /**
-     * Gets a string value associated with the given `key`and deletes the key.
-     *
-     * See https://valkey.io/commands/getdel/ for details.
-     *
-     * @param key - The key to retrieve from the database.
-     * @returns If `key` exists, returns the `value` of `key`. Otherwise, return `null`.
-     *
-     * @example
-     * ```typescript
-     * const result = client.getdel("key");
-     * console.log(result); // Output: 'value'
-     *
-     * const value = client.getdel("key");  // value is null
-     * ```
-     */
-    public getdel(key: string): Promise<string | null> {
-        return this.createWritePromise(createGetDel(key));
     }
 
     /**

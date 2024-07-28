@@ -24,8 +24,6 @@ runs:
               github-token: ${{ inputs.github-token }}
 
         - uses: Swatinem/rust-cache@v2
-          with:
-              github-token: ${{ inputs.github-token }}
 
         - run: cargo fmt --all -- --check
           working-directory: ${{ inputs.cargo-toml-folder }}

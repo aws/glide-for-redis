@@ -27,7 +27,7 @@
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
     "[github-actions-workflow]": {
-        "editor.defaultFormatter": "redhat.vscode-yaml"
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
     },
     "yaml.schemas": {
         "https://json.schemastore.org/github-workflow.json": [

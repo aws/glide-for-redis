@@ -31,19 +31,19 @@ on:
     workflow_dispatch:
 
     pull_request_target:
-      types: [labeled]
-      paths:
-          - glide-core/src/**
-          - submodules/**
-          - node/**
-          - utils/cluster_manager.py
-          - .github/workflows/node.yml
-          - .github/workflows/build-node-wrapper/action.yml
-          - .github/workflows/install-shared-dependencies/action.yml
-          - .github/workflows/test-benchmark/action.yml
-          - .github/workflows/lint-rust/action.yml
-          - .github/workflows/install-valkey/action.yml
-          - .github/json_matrices/build-matrix.json
+        types: [labeled]
+        paths:
+            - glide-core/src/**
+            - submodules/**
+            - node/**
+            - utils/cluster_manager.py
+            - .github/workflows/node.yml
+            - .github/workflows/build-node-wrapper/action.yml
+            - .github/workflows/install-shared-dependencies/action.yml
+            - .github/workflows/test-benchmark/action.yml
+            - .github/workflows/lint-rust/action.yml
+            - .github/workflows/install-valkey/action.yml
+            - .github/json_matrices/build-matrix.json
     schedule:
         - cron: "0 1 * * *"
 
@@ -55,45 +55,29 @@ env:
     CARGO_TERM_COLOR: always
 
 jobs:
-    check-label:
-      runs-on: ubuntu-latest
-      # If the trigger is a label we want to check if it is a CoreChanges label, 
-      # if it is we want to run the job in the AWS_ACTIONS environment so its need to be approved
-      environment: ${{ github.event_name == 'pull_request_target'  && 'AWS_ACTIONS' || '' }}  
-      steps:
-        - name: Check for CoreChanges label
-          if: github.event_name == 'pull_request_target' && github.event.label.name != 'CoreChanges'
-          run: |
-            echo "This workflow only runs for the CoreChanges label on pull requests"
-            exit 1
-
-    load-engine-matrix:
+    get-matrices:
         runs-on: ubuntu-latest
-        # We want to run this job only if the previous job outputs should_run=true,
-        # Which means that if the trigger was a label we run this job just if the label was CoreChanges
-        needs: check-label
         outputs:
-          matrix: ${{ steps.load-engine-matrix.outputs.matrix }}
+            should-run: ${{ steps.get-matrices.outputs.should-run }}
+            engine-matrix-output: ${{ steps.get-matrices.outputs.engine-matrix-output }}
+            host-matrix-output: ${{ steps.get-matrices.outputs.host-matrix-output }}
         steps:
-            - name: Checkout
-              uses: actions/checkout@v4
-
-            - name: Load the engine matrix
-              id: load-engine-matrix
-              shell: bash
-              # We want to run the full matrix only for scheduled runs and CoreChanges
-              # For other events we want to run only the always matrix which is first and last version supported
+            - uses: actions/checkout@v4
+            - id: get-matrices
+              uses: ./.github/workflows/create-tests-matrices
+              with:
+                  language-name: node
+            - name: Echo outputs
               run: |
-                if [[ "${{ github.event_name }}" == "pull_request" || "${{ github.event_name }}" == "push" ]]; then
-                  echo "matrix=$(jq -c '[.[] | select(.run == "always")]' < .github/json_matrices/engine-matrix.json)" >> $GITHUB_OUTPUT
-                else
-                  echo "matrix=$(jq -c . < .github/json_matrices/engine-matrix.json)" >> $GITHUB_OUTPUT
-                fi
+                  echo "should_run: ${{ steps.get-matrices.outputs.should_run }}"
+                  echo "engine-matrix-output: ${{ steps.get-matrices.outputs.engine-matrix-output }}"
+                  echo "host-matrix-output: ${{ steps.get-matrices.outputs.host-matrix-output }}"
     create-version-matrix:
         runs-on: ubuntu-latest
-        needs: check-label
+        needs: get-matrices
+        if: ${{ needs.get-matrices.outputs.should-run == 'true' }}
         outputs:
-            matrix: ${{ steps.create-version-matrix.outputs.matrix }}
+            node-matrix-output: ${{ steps.create-version-matrix.outputs.node-matrix-output }}
         steps:
             - name: Checkout
               uses: actions/checkout@v4
@@ -101,33 +85,33 @@ jobs:
             - name: Create version matrix
               id: create-version-matrix
               shell: bash
-              # We want to run the full matrix only for scheduled runs and CoreChanges
+              # We want to run the full matrix only for scheduled runs and Core changes
               # For other events we want to run only the always matrix which is first and last version supported
               run: |
-                if [[ "${{ github.event_name }}" == "pull_request" || "${{ github.event_name }}" == "push" ]]; then
-                  echo 'matrix={"node":["16.x","20.x"]}' >> $GITHUB_OUTPUT
-                else
-                  echo 'matrix={"node":["16.x","17.x","18.x","19.x","20.x"]}' >> $GITHUB_OUTPUT
-                fi
+                  if [[ "${{ github.event_name }}" == "pull_request" || "${{ github.event_name }}" == "push" ]]; then
+                    echo 'node-matrix-output=["16.x","20.x"]' >> $GITHUB_OUTPUT
+                  else
+                    echo 'node-matrix-output=["16.x","17.x","18.x","19.x","20.x"]' >> $GITHUB_OUTPUT
+                  fi
 
-
-    test-ubuntu-latest:
+    test-node-ubuntu:
         runs-on: ubuntu-latest
-        needs: [load-engine-matrix, create-version-matrix]
-        timeout-minutes: 15
+        needs: [create-version-matrix, get-matrices]
+        timeout-minutes: 25
         strategy:
             fail-fast: false
             matrix:
-                engine: ${{ fromJson(needs.load-engine-matrix.outputs.matrix) }}
-                node: ${{ fromJson(needs.create-version-matrix.outputs.matrix).node }}
-                
+                engine: ${{ fromJson(needs.get-matrices.outputs.engine-matrix-output) }}
+                node: ${{ fromJson(needs.create-version-matrix.outputs.node-matrix-output)}}
         steps:
             - uses: actions/checkout@v4
               with:
                   submodules: recursive
 
             - name: Setup Node
-              uses: actions/setup-node@v3
+              uses: actions/setup-node@v4
+              env:
+                  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
               with:
                   node-version: ${{ matrix.node }}
 
@@ -145,18 +129,18 @@ jobs:
 
             - name: test hybrid node modules - commonjs
               run: |
-                npm install --package-lock-only
-                npm ci
-                npm run build-and-test
+                  npm install --package-lock-only
+                  npm ci
+                  npm run build-and-test
               working-directory: ./node/hybrid-node-tests/commonjs-test
               env:
                   JEST_HTML_REPORTER_OUTPUT_PATH: test-report-commonjs.html
 
             - name: test hybrid node modules - ecma
               run: |
-                npm install --package-lock-only
-                npm ci
-                npm run build-and-test
+                  npm install --package-lock-only
+                  npm ci
+                  npm run build-and-test
               working-directory: ./node/hybrid-node-tests/ecmascript-test
               env:
                   JEST_HTML_REPORTER_OUTPUT_PATH: test-report-ecma.html
@@ -170,7 +154,7 @@ jobs:
               continue-on-error: true
               uses: actions/upload-artifact@v4
               with:
-                  name: test-report-node-${{ matrix.engine.type }}-${{ matrix.engine.version }}-ubuntu
+                  name: test-report-node-${{ matrix.engine.type }}-${{ matrix.engine.version }}-${{ matrix.node }}-ubuntu
                   path: |
                       node/test-report*.html
                       utils/clusters/**
@@ -179,7 +163,8 @@ jobs:
     lint-rust:
         timeout-minutes: 15
         runs-on: ubuntu-latest
-        needs: check-label
+        needs: get-matrices
+        if: ${{ needs.get-matrices.outputs.should-run == 'true' }}
         steps:
             - uses: actions/checkout@v4
               with:
@@ -190,10 +175,29 @@ jobs:
                   cargo-toml-folder: ./node/rust-client
               name: lint node rust
 
-    build-macos-latest:
-        if: github.event_name == 'schedule' || github.event.label.name == 'CoreChanges'
-        runs-on: macos-latest
-        needs: check-label
+    build-node-macos:
+        needs: get-matrices
+        strategy:
+            fail-fast: false
+            matrix:
+                host:
+                    [
+                        {
+                            "RUNNER": "macos-latest",
+                            "OS": "macos",
+                            "ARCH": "arm64",
+                            "TARGET": "aarch64-apple-darwin",
+                        },
+                        {
+                            "RUNNER": "macos-12",
+                            "OS": "macos",
+                            "ARCH": "x64",
+                            "TARGET": "x86_64-apple-darwin",
+                        },
+                    ]
+                engine: ${{ fromJson(needs.get-matrices.outputs.engine-matrix-output) }}
+        if: (github.repository_owner == 'valkey-io' && github.event_name == 'schedule') || github.event.label.name == 'Core changes'
+        runs-on: ${{ matrix.host.RUNNER }}
         timeout-minutes: 25
         steps:
             - uses: actions/checkout@v4
@@ -217,31 +221,30 @@ jobs:
               with:
                   os: "macos"
                   named_os: "darwin"
-                  arch: "arm64"
-                  target: "aarch64-apple-darwin"
+                  arch: ${{ matrix.host.ARCH }}
+                  target: ${{ matrix.host.TARGET }}
                   github-token: ${{ secrets.GITHUB_TOKEN }}
-                  engine-version: "7.2.5"
+                  engine-version: ${{ matrix.engine.version }}
 
-            - name: Test compatibility
-              run: npm test -- -t "set and get flow works"
+            - name: test
+              run: npm test
               working-directory: ./node
 
-    #         - name: Upload test reports
-    #           if: always()
-    #           continue-on-error: true
-    #           uses: actions/upload-artifact@v4
-    #           with:
-    #               name: test-report-node-${{ matrix.engine.type }}-${{ matrix.engine.version }}-macos
-    #               path: |
-    #                   node/test-report*.html
-    #                   utils/clusters/**
-    #                   benchmarks/results/**
+            - name: Upload test reports
+              if: always()
+              continue-on-error: true
+              uses: actions/upload-artifact@v4
+              with:
+                  name: test-report-node-${{ matrix.engine.type }}-${{ matrix.engine.version }}-${{ matrix.host.OS }}-${{ matrix.host.ARCH }}
+                  path: |
+                      node/test-report*.html
+                      utils/clusters/**
+                      benchmarks/results/**
 
     build-amazonlinux-latest:
-        if: github.event_name == 'schedule' || github.event.label.name == 'CoreChanges'
+        if: (github.repository_owner == 'valkey-io' && github.event_name == 'schedule') || github.event.label.name == 'Core changes'
         runs-on: ubuntu-latest
         container: amazonlinux:latest
-        needs: check-label
         timeout-minutes: 15
         steps:
             - name: Install git
@@ -271,8 +274,8 @@ jobs:
                   github-token: ${{ secrets.GITHUB_TOKEN }}
                   engine-version: "7.2.5"
 
-            - name: Test compatibility
-              run: npm test -- -t "set and get flow works"
+            - name: test
+              run: npm test
               working-directory: ./node
 
             - name: Upload test reports
@@ -287,9 +290,8 @@ jobs:
                       benchmarks/results/**
 
     build-and-test-linux-musl-on-x86:
-        if: github.event_name == 'schedule' || github.event.label.name == 'CoreChanges'
+        if: (github.repository_owner == 'valkey-io' && github.event_name == 'schedule') || github.event.label.name == 'Core changes'
         name: Build and test Node wrapper on Linux musl
-        needs: check-label
         runs-on: ubuntu-latest
         container:
             image: node:alpine
@@ -322,9 +324,8 @@ jobs:
                   github-token: ${{ secrets.GITHUB_TOKEN }}
                   engine-version: "7.2.5"
 
-            - name: Test compatibility
-              shell: bash
-              run: npm test -- -t "set and get flow works"
+            - name: test
+              run: npm test
               working-directory: ./node
 
             - name: Upload test reports

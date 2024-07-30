@@ -22,6 +22,7 @@ import {
     BaseClientConfiguration,
     ClosingError,
     ClusterTransaction,
+    Decoder,
     GlideClient,
     GlideClientConfiguration,
     GlideClusterClient,
@@ -37,7 +38,7 @@ import {
     connection_request,
     response,
 } from "../src/ProtobufMessage";
-import { convertStringArrayToBuffer, intoString } from "./TestUtilities";
+import { convertStringArrayToBuffer } from "./TestUtilities";
 const { RequestType, CommandRequest } = command_request;
 
 beforeAll(() => {
@@ -308,7 +309,7 @@ describe("SocketConnectionInternals", () => {
                         },
                     );
                 });
-                const result = await connection.get("foo");
+                const result = await connection.get("foo", Decoder.String);
                 console.log(result);
                 expect(result).toEqual(expected);
             });
@@ -414,7 +415,7 @@ describe("SocketConnectionInternals", () => {
             const transaction = new ClusterTransaction();
             transaction.info([InfoOptions.Server]);
             const result = await connection.exec(transaction, "randomNode");
-            expect(intoString(result)).toEqual(
+            expect(result).toEqual(
                 expect.stringContaining("# Server"),
             );
         });

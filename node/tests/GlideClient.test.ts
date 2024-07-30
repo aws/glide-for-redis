@@ -29,11 +29,10 @@ import {
     flushAndCloseClient,
     generateLuaLibCode,
     getClientConfigurationOption,
-    intoString,
     parseCommandLineArgs,
     parseEndpoints,
     transactionTest,
-    validateTransactionResponse,
+    validateTransactionResponse
 } from "./TestUtilities";
 
 /* eslint-disable @typescript-eslint/no-var-requires */
@@ -119,13 +118,13 @@ describe("GlideClient", () => {
                 getClientConfigurationOption(cluster.getAddresses(), protocol),
             );
             const result = await client.info();
-            expect(intoString(result)).toEqual(
+            expect(result).toEqual(
                 expect.stringContaining("# Server"),
             );
-            expect(intoString(result)).toEqual(
+            expect(result).toEqual(
                 expect.stringContaining("# Replication"),
             );
-            expect(intoString(result)).toEqual(
+            expect(result).toEqual(
                 expect.not.stringContaining("# Latencystats"),
             );
         },
@@ -366,22 +365,22 @@ describe("GlideClient", () => {
             );
 
             const result = await client.lolwut();
-            expect(intoString(result)).toEqual(
+            expect(result).toEqual(
                 expect.stringContaining("Redis ver. "),
             );
 
             const result2 = await client.lolwut({ parameters: [] });
-            expect(intoString(result2)).toEqual(
+            expect(result2).toEqual(
                 expect.stringContaining("Redis ver. "),
             );
 
             const result3 = await client.lolwut({ parameters: [50, 20] });
-            expect(intoString(result3)).toEqual(
+            expect(result3).toEqual(
                 expect.stringContaining("Redis ver. "),
             );
 
             const result4 = await client.lolwut({ version: 6 });
-            expect(intoString(result4)).toEqual(
+            expect(result4).toEqual(
                 expect.stringContaining("Redis ver. "),
             );
 
@@ -389,7 +388,7 @@ describe("GlideClient", () => {
                 version: 5,
                 parameters: [30, 4, 4],
             });
-            expect(intoString(result5)).toEqual(
+            expect(result5).toEqual(
                 expect.stringContaining("Redis ver. "),
             );
 
@@ -403,7 +402,7 @@ describe("GlideClient", () => {
 
             if (results) {
                 for (const element of results) {
-                    expect(intoString(element)).toEqual(
+                    expect(element).toEqual(
                         expect.stringContaining("Redis ver. "),
                     );
                 }

@@ -235,6 +235,18 @@ export const enum Decoder {
     String
 }
 
+class PointerResponse {
+    pointer: any;
+    high: any;
+    low: any;
+
+    constructor(pointer: any, high?: any, low?: any) {
+        this.pointer = pointer;
+        this.high = high? high: undefined;
+        this.low = low? low: undefined;
+    }
+}
+
 /** Represents the credentials for connecting to a server. */
 export type RedisCredentials = {
     /**
@@ -359,6 +371,11 @@ export type PubSubMsg = {
     channel: string;
     pattern?: string | null;
 };
+
+export type CreateWritePromiseOptions = {
+  decoder?: Decoder;
+  route?: command_request.Routes;
+}
 export class BaseClient {
     private socket: net.Socket;
     private readonly promiseCallbackFunctions: [
@@ -467,26 +484,30 @@ export class BaseClient {
             this.promiseCallbackFunctions[message.callbackIdx];
         this.availableCallbackSlots.push(message.callbackIdx);
 
-            if (message.requestError != null) {
-                const errorType = getRequestErrorClass(
-                    message.requestError.type,
-                );
-                reject(
-                    new errorType(message.requestError.message ?? undefined),
-                );
-            } else if (message.respPointer != null) {
-                const pointer = message.respPointer;
-                resolve(pointer);
-
-                
-            } else if (
-                message.constantResponse === response.ConstantResponse.OK
-            ) {
-                resolve("OK");
+        if (message.requestError != null) {
+            const errorType = getRequestErrorClass(
+                message.requestError.type,
+            );
+            reject(
+                new errorType(message.requestError.message ?? undefined),
+            );
+        } else if (message.respPointer != null) {
+            let pointer;
+            if (typeof message.respPointer === "number") {
+                pointer = new PointerResponse(message.respPointer);
             } else {
-                resolve(null);
+                pointer = new PointerResponse(message.respPointer, message.respPointer.high, message.respPointer.low);
             }
+            resolve(pointer);
+            
+        } else if (
+            message.constantResponse === response.ConstantResponse.OK
+        ) {
+            resolve("OK");
+        } else {
+            resolve(null);
         }
+    }
 
     processPush(response: response.Response) {
         if (response.closingError != null || !response.respPointer) {
@@ -566,10 +587,10 @@ export class BaseClient {
             | command_request.Command
             | command_request.Command[]
             | command_request.ScriptInvocation,
-        decoder: Decoder = this.defaultDecoder,
-        route?: command_request.Routes,
+        options: CreateWritePromiseOptions = {},
     ): Promise<T> {
-        var stringDecoder = decoder === Decoder.String? true : false;
+        const { decoder = this.defaultDecoder, route } = options;
+        let stringDecoder = decoder === Decoder.String? true : false;
         if (this.isClosed) {
             throw new ClosingError(
                 "Unable to execute requests; the client is closed. Please create a new client.",
@@ -578,14 +599,16 @@ export class BaseClient {
 
         return new Promise((resolve, reject) => {
             const callbackIndex = this.getCallbackIndex();
-            this.promiseCallbackFunctions[callbackIndex] = [(pointer)=> {
-                let resolveAns;
-                if (typeof pointer === "number") {
-                    resolveAns = valueFromSplitPointer(0, pointer, stringDecoder);
-                } else {
-                    resolveAns = valueFromSplitPointer(pointer.high, pointer.low, stringDecoder);
+            this.promiseCallbackFunctions[callbackIndex] = [(resolveAns: T)=> {
+                if (resolveAns instanceof PointerResponse) {
+
+                    if (typeof resolveAns === "number") {
+                        resolveAns = valueFromSplitPointer(0, resolveAns, stringDecoder) as T;
+                    } else {
+                        resolveAns = valueFromSplitPointer(resolveAns.high, resolveAns.low, stringDecoder) as T;
+                    }
+                    
                 }
-                
                 resolve(resolveAns);
             }, reject];
             this.writeOrBufferCommandRequest(callbackIndex, command, route);
@@ -714,7 +737,7 @@ export class BaseClient {
         });
     }
 
-    public tryGetPubSubMessage(): PubSubMsg | null {
+    public tryGetPubSubMessage(decoder?: Decoder): PubSubMsg | null {
         if (this.isClosed) {
             throw new ClosingError(
                 "Unable to execute requests; the client is closed. Please create a new client.",
@@ -738,13 +761,14 @@ export class BaseClient {
 
         while (this.pendingPushNotification.length > 0 && !msg) {
             const pushNotification = this.pendingPushNotification.shift()!;
-            msg = this.notificationToPubSubMessageSafe(pushNotification);
+            msg = this.notificationToPubSubMessageSafe(pushNotification, decoder);
         }
 
         return msg;
     }
     notificationToPubSubMessageSafe(
         pushNotification: response.Response,
+        decoder?: Decoder,
     ): PubSubMsg | null {
         let msg: PubSubMsg | null = null;
         const responsePointer = pushNotification.respPointer;
@@ -755,15 +779,13 @@ export class BaseClient {
                 nextPushNotificationValue = valueFromSplitPointer(
                     responsePointer.high,
                     responsePointer.low,
-                    // TODO: change according to https://github.com/valkey-io/valkey-glide/pull/2052
-                    true,
+                    decoder === Decoder.String
                 ) as Record<string, unknown>;
             } else {
                 nextPushNotificationValue = valueFromSplitPointer(
                     0,
                     responsePointer,
-                    // TODO: change according to https://github.com/valkey-io/valkey-glide/pull/2052
-                    true,
+                    decoder === Decoder.String
                 ) as Record<string, unknown>;
             }
 
@@ -845,7 +867,7 @@ export class BaseClient {
      * ```
      */
     public get(key: string, decoder?: Decoder): Promise<string | null> {
-        return this.createWritePromise(createGet(key), decoder);
+        return this.createWritePromise(createGet(key), { decoder });
     }
 
     /**

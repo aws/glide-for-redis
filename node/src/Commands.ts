@@ -6,7 +6,7 @@ import { createLeakedStringVec, MAX_REQUEST_ARGS_LEN } from "glide-rs";
 import Long from "long";
 
 /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
-import { BaseClient } from "src/BaseClient";
+import { BaseClient, Decoder } from "src/BaseClient";
 /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
 import { GlideClient } from "src/GlideClient";
 /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
@@ -2383,6 +2383,12 @@ export type LolwutOptions = {
      *  For version `6`, those are number of columns and number of lines.
      */
     parameters?: number[];
+    /**
+     * An optional argument specifies the type of decoding.
+     *  Use Decoder.String to get the response as a String.
+     *  Use Decoder.Bytes to get the response in a buffer.
+     */
+    decoder?: Decoder;
 };
 
 /**

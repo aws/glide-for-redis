@@ -439,7 +439,7 @@ export class GlideClient extends BaseClient {
      * ```
      */
     public lolwut(options?: LolwutOptions): Promise<string> {
-        return this.createWritePromise(createLolwut(options));
+        return this.createWritePromise(createLolwut(options), {decoder: options? options.decoder: undefined});
     }
 
     /**

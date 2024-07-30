@@ -107,7 +107,7 @@ describe("GlideClusterClient", () => {
             const info_server = getFirstResult(
                 await client.info([InfoOptions.Server]),
             );
-            expect(intoString(info_server)).toEqual(
+            expect(info_server).toEqual(
                 expect.stringContaining("# Server"),
             );
 

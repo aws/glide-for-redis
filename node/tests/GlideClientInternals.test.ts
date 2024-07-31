@@ -415,9 +415,7 @@ describe("SocketConnectionInternals", () => {
             const transaction = new ClusterTransaction();
             transaction.info([InfoOptions.Server]);
             const result = await connection.exec(transaction, "randomNode");
-            expect(result).toEqual(
-                expect.stringContaining("# Server"),
-            );
+            expect(result).toEqual(expect.stringContaining("# Server"));
         });
     });
 

@@ -2,7 +2,6 @@
  * Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0
  */
 
-import { Decoder } from "./BaseClient";
 import {
     ReadFrom, // eslint-disable-line @typescript-eslint/no-unused-vars
 } from "./BaseClient";
@@ -254,7 +253,6 @@ export class BaseTransaction<T extends BaseTransaction<T>> {
     protected addAndReturn(
         command: command_request.Command,
         shouldConvertToSet: boolean = false,
-        decoder?: Decoder
     ): T {
         if (shouldConvertToSet) {
             // The command's index within the transaction is saved for later conversion of its response to a Set type.
@@ -272,7 +270,7 @@ export class BaseTransaction<T extends BaseTransaction<T>> {
      *
      * Command Response - If `key` exists, returns the value of `key` as a string. Otherwise, return null.
      */
-    public get(key: string, decoder?: Decoder): T {
+    public get(key: string): T {
         return this.addAndReturn(createGet(key));
     }
 

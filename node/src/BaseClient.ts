@@ -8,7 +8,7 @@ import {
     valueFromSplitPointer,
 } from "glide-rs";
 import * as net from "net";
-import { Buffer, BufferWriter, Reader, Writer } from "protobufjs";
+import { Buffer, BufferWriter, Long, Reader, Writer } from "protobufjs";
 import {
     AggregationType,
     BaseScanOptions,
@@ -232,18 +232,22 @@ export type GlideString = string | Uint8Array;
 
 export const enum Decoder {
     Bytes,
-    String
+    String,
 }
 
 class PointerResponse {
-    pointer: any;
-    high: any;
-    low: any;
+    pointer: number | Long | null;
+    high: number | undefined;
+    low: number | undefined;
 
-    constructor(pointer: any, high?: any, low?: any) {
+    constructor(
+        pointer: number | Long | null,
+        high?: number | undefined,
+        low?: number | undefined,
+    ) {
         this.pointer = pointer;
-        this.high = high? high: undefined;
-        this.low = low? low: undefined;
+        this.high = high ? high : undefined;
+        this.low = low ? low : undefined;
     }
 }
 
@@ -328,7 +332,8 @@ export type BaseClientConfiguration = {
      */
     clientName?: string;
     /**
-     * 
+     * Default decoder when decoder is not set per command.
+     * If not set, 'Decoder.String' will be used.
      */
     defaultDecoder?: Decoder;
 };
@@ -373,9 +378,9 @@ export type PubSubMsg = {
 };
 
 export type CreateWritePromiseOptions = {
-  decoder?: Decoder;
-  route?: command_request.Routes;
-}
+    decoder?: Decoder;
+    route?: command_request.Routes;
+};
 export class BaseClient {
     private socket: net.Socket;
     private readonly promiseCallbackFunctions: [
@@ -485,24 +490,23 @@ export class BaseClient {
         this.availableCallbackSlots.push(message.callbackIdx);
 
         if (message.requestError != null) {
-            const errorType = getRequestErrorClass(
-                message.requestError.type,
-            );
-            reject(
-                new errorType(message.requestError.message ?? undefined),
-            );
+            const errorType = getRequestErrorClass(message.requestError.type);
+            reject(new errorType(message.requestError.message ?? undefined));
         } else if (message.respPointer != null) {
             let pointer;
+
             if (typeof message.respPointer === "number") {
                 pointer = new PointerResponse(message.respPointer);
             } else {
-                pointer = new PointerResponse(message.respPointer, message.respPointer.high, message.respPointer.low);
+                pointer = new PointerResponse(
+                    message.respPointer,
+                    message.respPointer.high,
+                    message.respPointer.low,
+                );
             }
+
             resolve(pointer);
-            
-        } else if (
-            message.constantResponse === response.ConstantResponse.OK
-        ) {
+        } else if (message.constantResponse === response.ConstantResponse.OK) {
             resolve("OK");
         } else {
             resolve(null);
@@ -590,7 +594,8 @@ export class BaseClient {
         options: CreateWritePromiseOptions = {},
     ): Promise<T> {
         const { decoder = this.defaultDecoder, route } = options;
-        let stringDecoder = decoder === Decoder.String? true : false;
+        const stringDecoder = decoder === Decoder.String ? true : false;
+
         if (this.isClosed) {
             throw new ClosingError(
                 "Unable to execute requests; the client is closed. Please create a new client.",
@@ -599,18 +604,28 @@ export class BaseClient {
 
         return new Promise((resolve, reject) => {
             const callbackIndex = this.getCallbackIndex();
-            this.promiseCallbackFunctions[callbackIndex] = [(resolveAns: T)=> {
-                if (resolveAns instanceof PointerResponse) {
-
-                    if (typeof resolveAns === "number") {
-                        resolveAns = valueFromSplitPointer(0, resolveAns, stringDecoder) as T;
-                    } else {
-                        resolveAns = valueFromSplitPointer(resolveAns.high, resolveAns.low, stringDecoder) as T;
+            this.promiseCallbackFunctions[callbackIndex] = [
+                (resolveAns: T) => {
+                    if (resolveAns instanceof PointerResponse) {
+                        if (typeof resolveAns === "number") {
+                            resolveAns = valueFromSplitPointer(
+                                0,
+                                resolveAns,
+                                stringDecoder,
+                            ) as T;
+                        } else {
+                            resolveAns = valueFromSplitPointer(
+                                resolveAns.high!,
+                                resolveAns.low!,
+                                stringDecoder,
+                            ) as T;
+                        }
                     }
-                    
-                }
-                resolve(resolveAns);
-            }, reject];
+
+                    resolve(resolveAns);
+                },
+                reject,
+            ];
             this.writeOrBufferCommandRequest(callbackIndex, command, route);
         });
     }
@@ -761,7 +776,10 @@ export class BaseClient {
 
         while (this.pendingPushNotification.length > 0 && !msg) {
             const pushNotification = this.pendingPushNotification.shift()!;
-            msg = this.notificationToPubSubMessageSafe(pushNotification, decoder);
+            msg = this.notificationToPubSubMessageSafe(
+                pushNotification,
+                decoder,
+            );
         }
 
         return msg;
@@ -779,13 +797,13 @@ export class BaseClient {
                 nextPushNotificationValue = valueFromSplitPointer(
                     responsePointer.high,
                     responsePointer.low,
-                    decoder === Decoder.String
+                    decoder === Decoder.String,
                 ) as Record<string, unknown>;
             } else {
                 nextPushNotificationValue = valueFromSplitPointer(
                     0,
                     responsePointer,
-                    decoder === Decoder.String
+                    decoder === Decoder.String,
                 ) as Record<string, unknown>;
             }
 

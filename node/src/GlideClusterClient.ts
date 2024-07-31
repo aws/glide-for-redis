@@ -352,10 +352,9 @@ export class GlideClusterClient extends BaseClient {
      */
     public customCommand(args: string[], route?: Routes): Promise<ReturnType> {
         const command = createCustomCommand(args);
-        return super.createWritePromise(
-            command,
-            {route: toProtobufRoute(route)},
-        );
+        return super.createWritePromise(command, {
+            route: toProtobufRoute(route),
+        });
     }
 
     /** Execute a transaction by processing the queued commands.
@@ -376,7 +375,7 @@ export class GlideClusterClient extends BaseClient {
     ): Promise<ReturnType[] | null> {
         return this.createWritePromise<ReturnType[] | null>(
             transaction.commands,
-            {route: toProtobufRoute(route)},
+            { route: toProtobufRoute(route) },
         ).then((result: ReturnType[] | null) => {
             return this.processResultWithSetCommands(
                 result,
@@ -410,10 +409,9 @@ export class GlideClusterClient extends BaseClient {
      * ```
      */
     public ping(message?: string, route?: Routes): Promise<string> {
-        return this.createWritePromise(
-            createPing(message),
-            {route: toProtobufRoute(route)},
-        );
+        return this.createWritePromise(createPing(message), {
+            route: toProtobufRoute(route),
+        });
     }
 
     /** Get information and statistics about the Redis server.
@@ -432,7 +430,7 @@ export class GlideClusterClient extends BaseClient {
     ): Promise<ClusterResponse<string>> {
         return this.createWritePromise<ClusterResponse<string>>(
             createInfo(options),
-            {route: toProtobufRoute(route)},
+            { route: toProtobufRoute(route) },
         );
     }
 
@@ -465,7 +463,7 @@ export class GlideClusterClient extends BaseClient {
     ): Promise<ClusterResponse<string | null>> {
         return this.createWritePromise<ClusterResponse<string | null>>(
             createClientGetName(),
-            {route: toProtobufRoute(route)},
+            { route: toProtobufRoute(route) },
         );
     }
 
@@ -485,10 +483,9 @@ export class GlideClusterClient extends BaseClient {
      * ```
      */
     public configRewrite(route?: Routes): Promise<"OK"> {
-        return this.createWritePromise(
-            createConfigRewrite(),
-            {route: toProtobufRoute(route)},
-        );
+        return this.createWritePromise(createConfigRewrite(), {
+            route: toProtobufRoute(route),
+        });
     }
 
     /** Resets the statistics reported by Redis using the INFO and LATENCY HISTOGRAM commands.
@@ -507,10 +504,9 @@ export class GlideClusterClient extends BaseClient {
      * ```
      */
     public configResetStat(route?: Routes): Promise<"OK"> {
-        return this.createWritePromise(
-            createConfigResetStat(),
-            {route: toProtobufRoute(route)},
-        );
+        return this.createWritePromise(createConfigResetStat(), {
+            route: toProtobufRoute(route),
+        });
     }
 
     /** Returns the current connection id.
@@ -524,7 +520,7 @@ export class GlideClusterClient extends BaseClient {
     public clientId(route?: Routes): Promise<ClusterResponse<number>> {
         return this.createWritePromise<ClusterResponse<number>>(
             createClientId(),
-            {route: toProtobufRoute(route)},
+            { route: toProtobufRoute(route) },
         );
     }
 
@@ -559,7 +555,7 @@ export class GlideClusterClient extends BaseClient {
     ): Promise<ClusterResponse<Record<string, string>>> {
         return this.createWritePromise<ClusterResponse<Record<string, string>>>(
             createConfigGet(parameters),
-            {route: toProtobufRoute(route)},
+            { route: toProtobufRoute(route) },
         );
     }
 
@@ -584,10 +580,9 @@ export class GlideClusterClient extends BaseClient {
         parameters: Record<string, string>,
         route?: Routes,
     ): Promise<"OK"> {
-        return this.createWritePromise(
-            createConfigSet(parameters),
-            {route: toProtobufRoute(route)},
-        );
+        return this.createWritePromise(createConfigSet(parameters), {
+            route: toProtobufRoute(route),
+        });
     }
 
     /** Echoes the provided `message` back.
@@ -616,10 +611,9 @@ export class GlideClusterClient extends BaseClient {
         message: string,
         route?: Routes,
     ): Promise<ClusterResponse<string>> {
-        return this.createWritePromise(
-            createEcho(message),
-            {route: toProtobufRoute(route)},
-        );
+        return this.createWritePromise(createEcho(message), {
+            route: toProtobufRoute(route),
+        });
     }
 
     /** Returns the server time.
@@ -649,10 +643,9 @@ export class GlideClusterClient extends BaseClient {
      * ```
      */
     public time(route?: Routes): Promise<ClusterResponse<[string, string]>> {
-        return this.createWritePromise(
-            createTime(),
-            {route: toProtobufRoute(route)},
-        );
+        return this.createWritePromise(createTime(), {
+            route: toProtobufRoute(route),
+        });
     }
 
     /**
@@ -706,11 +699,10 @@ export class GlideClusterClient extends BaseClient {
         options?: LolwutOptions,
         route?: Routes,
     ): Promise<ClusterResponse<string>> {
-        return this.createWritePromise(
-            createLolwut(options),
-            { decoder: options?.decoder,
-            route: toProtobufRoute(route)},
-        );
+        return this.createWritePromise(createLolwut(options), {
+            decoder: options?.decoder,
+            route: toProtobufRoute(route),
+        });
     }
 
     /**
@@ -737,10 +729,9 @@ export class GlideClusterClient extends BaseClient {
         args: string[],
         route?: Routes,
     ): Promise<ReturnType> {
-        return this.createWritePromise(
-            createFCall(func, [], args),
-            { route: toProtobufRoute(route) }
-        );
+        return this.createWritePromise(createFCall(func, [], args), {
+            route: toProtobufRoute(route),
+        });
     }
 
     /**
@@ -768,10 +759,9 @@ export class GlideClusterClient extends BaseClient {
         args: string[],
         route?: Routes,
     ): Promise<ReturnType> {
-        return this.createWritePromise(
-            createFCallReadOnly(func, [], args),
-            {route : toProtobufRoute(route)},
-        );
+        return this.createWritePromise(createFCallReadOnly(func, [], args), {
+            route: toProtobufRoute(route),
+        });
     }
 
     /**
@@ -796,10 +786,9 @@ export class GlideClusterClient extends BaseClient {
         libraryCode: string,
         route?: Routes,
     ): Promise<string> {
-        return this.createWritePromise(
-            createFunctionDelete(libraryCode),
-            {route: toProtobufRoute(route)},
-        );
+        return this.createWritePromise(createFunctionDelete(libraryCode), {
+            route: toProtobufRoute(route),
+        });
     }
 
     /**
@@ -830,7 +819,7 @@ export class GlideClusterClient extends BaseClient {
     ): Promise<string> {
         return this.createWritePromise(
             createFunctionLoad(libraryCode, replace),
-            {route: toProtobufRoute(route)},
+            { route: toProtobufRoute(route) },
         );
     }
 
@@ -853,11 +842,9 @@ export class GlideClusterClient extends BaseClient {
      * ```
      */
     public functionFlush(mode?: FlushMode, route?: Routes): Promise<string> {
-        return this.createWritePromise(
-            createFunctionFlush(mode),
-            {
-            route: toProtobufRoute(route)},
-        );
+        return this.createWritePromise(createFunctionFlush(mode), {
+            route: toProtobufRoute(route),
+        });
     }
 
     /**
@@ -895,10 +882,9 @@ export class GlideClusterClient extends BaseClient {
         options?: FunctionListOptions,
         route?: Routes,
     ): Promise<ClusterResponse<FunctionListResponse>> {
-        return this.createWritePromise(
-            createFunctionList(options),
-            {route: toProtobufRoute(route)},
-        );
+        return this.createWritePromise(createFunctionList(options), {
+            route: toProtobufRoute(route),
+        });
     }
 
     /**
@@ -917,12 +903,15 @@ export class GlideClusterClient extends BaseClient {
      * console.log(result); // Output: 'OK'
      * ```
      */
-    public flushall(mode?: FlushMode, route?: Routes, decoder?: Decoder): Promise<string> {
-        return this.createWritePromise(
-            createFlushAll(mode),
-            {decoder: decoder,
-            route: toProtobufRoute(route)},
-        );
+    public flushall(
+        mode?: FlushMode,
+        route?: Routes,
+        decoder?: Decoder,
+    ): Promise<string> {
+        return this.createWritePromise(createFlushAll(mode), {
+            decoder: decoder,
+            route: toProtobufRoute(route),
+        });
     }
 
     /**
@@ -941,12 +930,15 @@ export class GlideClusterClient extends BaseClient {
      * console.log(result); // Output: 'OK'
      * ```
      */
-    public flushdb(mode?: FlushMode, route?: Routes, decoder?: Decoder): Promise<string> {
-        return this.createWritePromise(
-            createFlushDB(mode),
-            {decoder: decoder,
-            route: toProtobufRoute(route)},
-        );
+    public flushdb(
+        mode?: FlushMode,
+        route?: Routes,
+        decoder?: Decoder,
+    ): Promise<string> {
+        return this.createWritePromise(createFlushDB(mode), {
+            decoder: decoder,
+            route: toProtobufRoute(route),
+        });
     }
 
     /**
@@ -965,8 +957,14 @@ export class GlideClusterClient extends BaseClient {
      * console.log("Number of keys across all primary nodes: ", numKeys);
      * ```
      */
-    public dbsize(route?: Routes, decoder?: Decoder): Promise<ClusterResponse<number>> {
-        return this.createWritePromise(createDBSize(), {decoder: decoder, route: toProtobufRoute(route)});
+    public dbsize(
+        route?: Routes,
+        decoder?: Decoder,
+    ): Promise<ClusterResponse<number>> {
+        return this.createWritePromise(createDBSize(), {
+            decoder: decoder,
+            route: toProtobufRoute(route),
+        });
     }
 
     /** Publish a message on pubsub channel.

@@ -6,6 +6,7 @@ import * as net from "net";
 import {
     BaseClient,
     BaseClientConfiguration,
+    Decoder,
     PubSubMsg,
     ReadFrom, // eslint-disable-line @typescript-eslint/no-unused-vars
     ReturnType,
@@ -167,14 +168,19 @@ export class GlideClient extends BaseClient {
      *   See https://redis.io/topics/Transactions/ for details on Redis Transactions.
      *
      * @param transaction - A Transaction object containing a list of commands to be executed.
+     * @param decoder - An optional parameter to decode all commands in the transaction. If not set, 'Decoder.String' will be used.
      * @returns A list of results corresponding to the execution of each command in the transaction.
      *      If a command returns a value, it will be included in the list. If a command doesn't return a value,
      *      the list entry will be null.
      *      If the transaction failed due to a WATCH command, `exec` will return `null`.
      */
-    public exec(transaction: Transaction): Promise<ReturnType[] | null> {
+    public exec(
+        transaction: Transaction,
+        decoder: Decoder = Decoder.String,
+    ): Promise<ReturnType[] | null> {
         return this.createWritePromise<ReturnType[] | null>(
             transaction.commands,
+            { decoder: decoder },
         ).then((result: ReturnType[] | null) => {
             return this.processResultWithSetCommands(
                 result,
@@ -439,7 +445,7 @@ export class GlideClient extends BaseClient {
      * ```
      */
     public lolwut(options?: LolwutOptions): Promise<string> {
-        return this.createWritePromise(createLolwut(options), {decoder: options? options.decoder: undefined});
+        return this.createWritePromise(createLolwut(options));
     }
 
     /**

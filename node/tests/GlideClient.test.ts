@@ -32,7 +32,7 @@ import {
     parseCommandLineArgs,
     parseEndpoints,
     transactionTest,
-    validateTransactionResponse
+    validateTransactionResponse,
 } from "./TestUtilities";
 
 /* eslint-disable @typescript-eslint/no-var-requires */
@@ -118,12 +118,8 @@ describe("GlideClient", () => {
                 getClientConfigurationOption(cluster.getAddresses(), protocol),
             );
             const result = await client.info();
-            expect(result).toEqual(
-                expect.stringContaining("# Server"),
-            );
-            expect(result).toEqual(
-                expect.stringContaining("# Replication"),
-            );
+            expect(result).toEqual(expect.stringContaining("# Server"));
+            expect(result).toEqual(expect.stringContaining("# Replication"));
             expect(result).toEqual(
                 expect.not.stringContaining("# Latencystats"),
             );
@@ -365,32 +361,22 @@ describe("GlideClient", () => {
             );
 
             const result = await client.lolwut();
-            expect(result).toEqual(
-                expect.stringContaining("Redis ver. "),
-            );
+            expect(result).toEqual(expect.stringContaining("Redis ver. "));
 
             const result2 = await client.lolwut({ parameters: [] });
-            expect(result2).toEqual(
-                expect.stringContaining("Redis ver. "),
-            );
+            expect(result2).toEqual(expect.stringContaining("Redis ver. "));
 
             const result3 = await client.lolwut({ parameters: [50, 20] });
-            expect(result3).toEqual(
-                expect.stringContaining("Redis ver. "),
-            );
+            expect(result3).toEqual(expect.stringContaining("Redis ver. "));
 
             const result4 = await client.lolwut({ version: 6 });
-            expect(result4).toEqual(
-                expect.stringContaining("Redis ver. "),
-            );
+            expect(result4).toEqual(expect.stringContaining("Redis ver. "));
 
             const result5 = await client.lolwut({
                 version: 5,
                 parameters: [30, 4, 4],
             });
-            expect(result5).toEqual(
-                expect.stringContaining("Redis ver. "),
-            );
+            expect(result5).toEqual(expect.stringContaining("Redis ver. "));
 
             // transaction tests
             const transaction = new Transaction();

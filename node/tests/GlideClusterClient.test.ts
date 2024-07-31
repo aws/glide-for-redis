@@ -107,9 +107,7 @@ describe("GlideClusterClient", () => {
             const info_server = getFirstResult(
                 await client.info([InfoOptions.Server]),
             );
-            expect(info_server).toEqual(
-                expect.stringContaining("# Server"),
-            );
+            expect(info_server).toEqual(expect.stringContaining("# Server"));
 
             const infoReplicationValues = Object.values(
                 await client.info([InfoOptions.Replication]),
@@ -135,12 +133,8 @@ describe("GlideClusterClient", () => {
                 [InfoOptions.Server],
                 "randomNode",
             );
-            expect(intoString(result)).toEqual(
-                expect.stringContaining("# Server"),
-            );
-            expect(intoString(result)).toEqual(
-                expect.not.stringContaining("# Errorstats"),
-            );
+            expect(result).toEqual(expect.stringContaining("# Server"));
+            expect(result).toEqual(expect.not.stringContaining("# Errorstats"));
         },
         TIMEOUT,
     );

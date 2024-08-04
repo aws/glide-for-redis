@@ -230,8 +230,17 @@ export type ReturnType =
 
 export type GlideString = string | Uint8Array;
 
+/**
+ * Enum representing the different types of decoders.
+ */
 export const enum Decoder {
+    /**
+     * Decodes the response into a buffer array.
+     */
     Bytes,
+    /**
+     * Decodes the response into a string.
+     */
     String,
 }
 
@@ -377,7 +386,7 @@ export type PubSubMsg = {
     pattern?: string | null;
 };
 
-export type CreateWritePromiseOptions = {
+export type WritePromiseOptions = {
     decoder?: Decoder;
     route?: command_request.Routes;
 };
@@ -591,7 +600,7 @@ export class BaseClient {
             | command_request.Command
             | command_request.Command[]
             | command_request.ScriptInvocation,
-        options: CreateWritePromiseOptions = {},
+        options: WritePromiseOptions = {},
     ): Promise<T> {
         const { decoder = this.defaultDecoder, route } = options;
         const stringDecoder = decoder === Decoder.String ? true : false;
@@ -875,6 +884,7 @@ export class BaseClient {
      * See https://valkey.io/commands/get/ for details.
      *
      * @param key - The key to retrieve from the database.
+     * @param decoder - Optional enum parameter for decoding the response.
      * @returns If `key` exists, returns the value of `key` as a string. Otherwise, return null.
      *
      * @example

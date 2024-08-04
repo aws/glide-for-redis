@@ -7,8 +7,7 @@ import {
     BaseClient,
     BaseClientConfiguration,
     Decoder,
-    PubSubMsg,
-    ReadFrom, // eslint-disable-line @typescript-eslint/no-unused-vars
+    PubSubMsg, // eslint-disable-line @typescript-eslint/no-unused-vars
     ReturnType,
 } from "./BaseClient";
 import {
@@ -895,6 +894,7 @@ export class GlideClusterClient extends BaseClient {
      * @param mode - The flushing mode, could be either {@link FlushMode.SYNC} or {@link FlushMode.ASYNC}.
      * @param route - The command will be routed to all primary nodes, unless `route` is provided, in which
      *     case the client will route the command to the nodes defined by `route`.
+     * @param decoder - An optional enum parameter for decoding the response.
      * @returns `OK`.
      *
      * @example
@@ -903,14 +903,14 @@ export class GlideClusterClient extends BaseClient {
      * console.log(result); // Output: 'OK'
      * ```
      */
-    public flushall(
-        mode?: FlushMode,
-        route?: Routes,
-        decoder?: Decoder,
-    ): Promise<string> {
-        return this.createWritePromise(createFlushAll(mode), {
-            decoder: decoder,
-            route: toProtobufRoute(route),
+    public flushall(options?: {
+        mode?: FlushMode;
+        route?: Routes;
+        decoder?: Decoder;
+    }): Promise<string> {
+        return this.createWritePromise(createFlushAll(options?.mode), {
+            decoder: options?.decoder,
+            route: toProtobufRoute(options?.route),
         });
     }
 
@@ -922,6 +922,7 @@ export class GlideClusterClient extends BaseClient {
      * @param mode - The flushing mode, could be either {@link FlushMode.SYNC} or {@link FlushMode.ASYNC}.
      * @param route - The command will be routed to all primary nodes, unless `route` is provided, in which
      *     case the client will route the command to the nodes defined by `route`.
+     * @param decoder - An optional enum parameter for decoding the response.
      * @returns `OK`.
      *
      * @example
@@ -930,14 +931,14 @@ export class GlideClusterClient extends BaseClient {
      * console.log(result); // Output: 'OK'
      * ```
      */
-    public flushdb(
-        mode?: FlushMode,
-        route?: Routes,
-        decoder?: Decoder,
-    ): Promise<string> {
-        return this.createWritePromise(createFlushDB(mode), {
-            decoder: decoder,
-            route: toProtobufRoute(route),
+    public flushdb(options?: {
+        mode?: FlushMode;
+        route?: Routes;
+        decoder?: Decoder;
+    }): Promise<string> {
+        return this.createWritePromise(createFlushDB(options?.mode), {
+            decoder: options?.decoder,
+            route: toProtobufRoute(options?.route),
         });
     }
 
@@ -948,6 +949,7 @@ export class GlideClusterClient extends BaseClient {
 
      * @param route - The command will be routed to all primary nodes, unless `route` is provided, in which
      *     case the client will route the command to the nodes defined by `route`.
+     * @param decoder - An optional enum parameter for decoding the response.
      * @returns The number of keys in the database.
      *     In the case of routing the query to multiple nodes, returns the aggregated number of keys across the different nodes.
      *
@@ -957,13 +959,13 @@ export class GlideClusterClient extends BaseClient {
      * console.log("Number of keys across all primary nodes: ", numKeys);
      * ```
      */
-    public dbsize(
-        route?: Routes,
-        decoder?: Decoder,
-    ): Promise<ClusterResponse<number>> {
+    public dbsize(options?: {
+        route?: Routes;
+        decoder?: Decoder;
+    }): Promise<ClusterResponse<number>> {
         return this.createWritePromise(createDBSize(), {
-            decoder: decoder,
-            route: toProtobufRoute(route),
+            decoder: options?.decoder,
+            route: toProtobufRoute(options?.route),
         });
     }
 
@@ -1159,10 +1161,9 @@ export class GlideClusterClient extends BaseClient {
      * ```
      */
     public async lastsave(route?: Routes): Promise<ClusterResponse<number>> {
-        return this.createWritePromise(
-            createLastSave(),
-            toProtobufRoute(route),
-        );
+        return this.createWritePromise(createLastSave(), {
+            route: toProtobufRoute(route),
+        });
     }
 
     /**
@@ -1181,10 +1182,9 @@ export class GlideClusterClient extends BaseClient {
      * ```
      */
     public async randomKey(route?: Routes): Promise<string | null> {
-        return this.createWritePromise(
-            createRandomKey(),
-            toProtobufRoute(route),
-        );
+        return this.createWritePromise(createRandomKey(), {
+            route: toProtobufRoute(route),
+        });
     }
 
     /**
@@ -1206,6 +1206,8 @@ export class GlideClusterClient extends BaseClient {
      * ```
      */
     public async unwatch(route?: Routes): Promise<"OK"> {
-        return this.createWritePromise(createUnWatch(), toProtobufRoute(route));
+        return this.createWritePromise(createUnWatch(), {
+            route: toProtobufRoute(route),
+        });
     }
 }

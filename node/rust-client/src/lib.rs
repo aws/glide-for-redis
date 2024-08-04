@@ -188,7 +188,7 @@ fn redis_value_to_js(val: Value, js_env: Env, string_decoder: bool) -> Result<Js
             let mut js_array_view = js_env.create_array_with_length(array.len())?;
             for (index, item) in array.into_iter().enumerate() {
                 js_array_view.set_element(
-                    index as u32, 
+                    index as u32,
                     redis_value_to_js(item, js_env, string_decoder)?,
                 )?;
             }
@@ -233,7 +233,7 @@ fn redis_value_to_js(val: Value, js_env: Env, string_decoder: bool) -> Result<Js
             let mut js_array_view = js_env.create_array_with_length(array.len())?;
             for (index, item) in array.into_iter().enumerate() {
                 js_array_view.set_element(
-                    index as u32, 
+                    index as u32,
                     redis_value_to_js(item, js_env, string_decoder)?,
                 )?;
             }
@@ -266,9 +266,9 @@ fn redis_value_to_js(val: Value, js_env: Env, string_decoder: bool) -> Result<Js
     ts_return_type = "null | string | Uint8Array | number | {} | Boolean | BigInt | Set<any> | any[]"
 )]
 pub fn value_from_split_pointer(
-    js_env: Env, 
-    high_bits: u32, 
-    low_bits: u32, 
+    js_env: Env,
+    high_bits: u32,
+    low_bits: u32,
     string_decoder: bool,
 ) -> Result<JsUnknown> {
     let mut bytes = [0_u8; 8];

@@ -246,8 +246,8 @@ class PointerResponse {
         low?: number | undefined,
     ) {
         this.pointer = pointer;
-        this.high = high ? high : undefined;
-        this.low = low ? low : undefined;
+        this.high = high;
+        this.low = low;
     }
 }
 

@@ -892,10 +892,13 @@ export class BaseClient {
      * // Example usage of get method to retrieve the value of a key
      * const result = await client.get("key");
      * console.log(result); // Output: 'value'
+     * // Example usage of get method to retrieve the value of a key with Bytes decoder
+     * const result = await client.get("key", Decoder.Bytes);
+     * console.log(result); // Output: {"data": [118, 97, 108, 117, 101], "type": "Buffer"}
      * ```
      */
     public get(key: string, decoder?: Decoder): Promise<string | null> {
-        return this.createWritePromise(createGet(key), { decoder });
+        return this.createWritePromise(createGet(key), { decoder: decoder });
     }
 
     /**

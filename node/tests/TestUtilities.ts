@@ -440,6 +440,33 @@ export function validateTransactionResponse(
 }
 
 /**
+ * Populates a transaction with commands to test the decoded response.
+ * @param baseTransaction - A transaction.
+ * @returns Array of tuples, where first element is a test name/description, second - expected return value.
+ */
+export async function encodedTransactionTest(
+    baseTransaction: Transaction | ClusterTransaction,
+): Promise<[string, ReturnType][]> {
+    const key1 = "{key}" + uuidv4(); // string
+    const key2 = "{key}" + uuidv4(); // string
+    const value = "bar";
+    const valueEncoded = Buffer.from(value);
+    // array of tuples - first element is test name/description, second - expected return value
+    const responseData: [string, ReturnType][] = [];
+
+    baseTransaction.set(key1, value);
+    responseData.push(["set(key1, value)", "OK"]);
+    baseTransaction.set(key2, value);
+    responseData.push(["set(key2, value)", "OK"]);
+    baseTransaction.get(key1);
+    responseData.push(["get(key1)", valueEncoded]);
+    baseTransaction.get(key2);
+    responseData.push(["get(key2)", valueEncoded]);
+
+    return responseData;
+}
+
+/**
  * Populates a transaction with commands to test.
  * @param baseTransaction - A transaction.
  * @returns Array of tuples, where first element is a test name/description, second - expected return value.

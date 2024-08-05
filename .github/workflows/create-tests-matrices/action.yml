@@ -1,0 +1,47 @@
+inputs:
+    language-name:
+        description: "Language name"
+        required: true
+outputs:
+    should-run:
+        description: "Should run the job"
+        value: ${{ steps.check_should_run.outputs.should-run }}
+    engine-matrix-output:
+        description: "Engine matrix"
+        value: ${{ steps.load-engine-matrix.outputs.engine-matrix }}
+    host-matrix-output:
+        description: "Host matrix"
+        value: ${{ steps.load-host-matrix.outputs.host-matrix }}
+
+runs:
+    using: "composite"
+    steps:
+        - name: Check for Core changes label
+          id: check_should_run
+          shell: bash
+          run: |
+              if [[ ("${{ github.event_name }}" == "pull_request_target" && "${{ github.event.label.name }}" == "Core changes" ) || "${{ github.event_name }}" != "pull_request_target" ]]; then
+                echo "should-run=true" >> $GITHUB_OUTPUT
+              else
+                echo "should-run=false" >> $GITHUB_OUTPUT
+              fi
+
+        - name: Load engine matrix
+          id: load-engine-matrix
+          shell: bash
+          run: |
+              if [[ "${{ github.event_name }}" == "pull_request" || "${{ github.event_name }}" == "push" ]]; then
+                echo "engine-matrix=$(jq -c '[.[] | select(.run == "always")]' < .github/json_matrices/engine-matrix.json)" >> $GITHUB_OUTPUT
+              else
+                echo "engine-matrix=$(jq -c . < .github/json_matrices/engine-matrix.json)" >> $GITHUB_OUTPUT
+              fi
+
+        - name: Load host matrix
+          id: load-host-matrix
+          shell: bash
+          run: |
+              if [[ "${{ github.event_name }}" == "pull_request" || "${{ github.event_name }}" == "push" ]]; then
+                echo 'host-matrix={"include":'"$(jq -c '[.[] | select(.run | type == "array" and contains(["always"]))]' .github/json_matrices/build-matrix.json)"'}' >> $GITHUB_OUTPUT
+              else
+                echo 'host-matrix={"include":'"$(jq -c '[.[] | select(.run | type == "array" and contains(["${{ inputs.language-name }}"]))]' .github/json_matrices/build-matrix.json)"'}' >> $GITHUB_OUTPUT
+              fi

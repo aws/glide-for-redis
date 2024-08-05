@@ -5,7 +5,8 @@
         "RUNNER": "ubuntu-latest",
         "ARCH": "x64",
         "TARGET": "x86_64-unknown-linux-gnu",
-        "PACKAGE_MANAGERS": ["pypi", "npm"]
+        "PACKAGE_MANAGERS": ["pypi", "npm"],
+        "run": ["always", "python", "node", "java"]
     },
     {
         "OS": "ubuntu",
@@ -14,7 +15,8 @@
         "ARCH": "arm64",
         "TARGET": "aarch64-unknown-linux-gnu",
         "PACKAGE_MANAGERS": ["pypi", "npm"],
-        "CONTAINER": "2_28"
+        "CONTAINER": "2_28",
+        "run": ["python", "node", "java"]
     },
     {
         "OS": "macos",
@@ -22,7 +24,8 @@
         "RUNNER": "macos-12",
         "ARCH": "x64",
         "TARGET": "x86_64-apple-darwin",
-        "PACKAGE_MANAGERS": ["pypi", "npm"]
+        "PACKAGE_MANAGERS": ["pypi", "npm"],
+        "run": ["python", "node", "java"]
     },
     {
         "OS": "macos",
@@ -30,7 +33,8 @@
         "RUNNER": "macos-latest",
         "ARCH": "arm64",
         "TARGET": "aarch64-apple-darwin",
-        "PACKAGE_MANAGERS": ["pypi", "npm"]
+        "PACKAGE_MANAGERS": ["pypi", "npm"],
+        "run": ["python", "node", "java"]
     },
     {
         "OS": "ubuntu",
@@ -40,7 +44,8 @@
         "RUNNER": ["self-hosted", "Linux", "ARM64"],
         "IMAGE": "node:alpine",
         "CONTAINER_OPTIONS": "--user root --privileged --rm",
-        "PACKAGE_MANAGERS": ["npm"]
+        "PACKAGE_MANAGERS": ["npm"],
+        "run": ["node"]
     },
     {
         "OS": "ubuntu",
@@ -50,6 +55,7 @@
         "RUNNER": "ubuntu-latest",
         "IMAGE": "node:alpine",
         "CONTAINER_OPTIONS": "--user root --privileged",
-        "PACKAGE_MANAGERS": ["npm"]
+        "PACKAGE_MANAGERS": ["npm"],
+        "run": ["node"]
     }
 ]

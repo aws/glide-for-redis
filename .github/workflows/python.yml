@@ -31,6 +31,23 @@ on:
             - .github/json_matrices/build-matrix.json
     workflow_dispatch:
 
+    pull_request_target:
+        types: [labeled]
+        paths:
+            - python/**
+            - glide-core/src/**
+            - submodules/**
+            - utils/cluster_manager.py
+            - .github/workflows/python.yml
+            - .github/workflows/build-python-wrapper/action.yml
+            - .github/workflows/install-shared-dependencies/action.yml
+            - .github/workflows/test-benchmark/action.yml
+            - .github/workflows/lint-rust/action.yml
+            - .github/workflows/install-valkey/action.yml
+            - .github/json_matrices/build-matrix.json
+    schedule:
+        - cron: "0 2 * * *"
+
 concurrency:
     group: python-${{ github.head_ref || github.ref }}
     cancel-in-progress: true
@@ -39,52 +56,63 @@ permissions:
     contents: read
 
 jobs:
-    load-engine-matrix:
+    get-matrices:
         runs-on: ubuntu-latest
         outputs:
-          matrix: ${{ steps.load-engine-matrix.outputs.matrix }}
+            should-run: ${{ steps.get-matrices.outputs.should-run }}
+            engine-matrix-output: ${{ steps.get-matrices.outputs.engine-matrix-output }}
+            host-matrix-output: ${{ steps.get-matrices.outputs.host-matrix-output }}
+        steps:
+            - uses: actions/checkout@v4
+            - id: get-matrices
+              uses: ./.github/workflows/create-tests-matrices
+              with:
+                  language-name: python
+            - name: Echo outputs
+              run: |
+                  echo "should-run: ${{ steps.get-matrices.outputs.should-run }}"
+                  echo "engine-matrix-output: ${{ steps.get-matrices.outputs.engine-matrix-output }}"
+                  echo "host-matrix-output: ${{ steps.get-matrices.outputs.host-matrix-output }}"
+    create-version-matrix:
+        runs-on: ubuntu-latest
+        needs: get-matrices
+        if: ${{ needs.get-matrices.outputs.should-run == 'true' }}
+        outputs:
+            python-matrix-output: ${{ steps.create-version-matrix.outputs.python-matrix-output }}
         steps:
             - name: Checkout
               uses: actions/checkout@v4
-        
-            - name: Load the engine matrix
-              id: load-engine-matrix
+
+            - name: Create version matrix
+              id: create-version-matrix
+
               shell: bash
-              run: echo "matrix=$(jq -c . < .github/json_matrices/engine-matrix.json)" >> $GITHUB_OUTPUT
-        
-    test:
+              # We want to run the full matrix only for scheduled runs and Core changes
+              # For other events we want to run only the always matrix which is first and last version supported
+              run: |
+                  if [[ "${{ github.event_name }}" == "pull_request" || "${{github.event_name }}" == "push" ]]; then
+                    echo 'python-matrix-output=["3.8","3.12"]' >> $GITHUB_OUTPUT
+                  else
+                    echo 'python-matrix-output=["3.8","3.9","3.10","3.11","3.12"]' >> $GITHUB_OUTPUT
+                  fi
+
+    test-python:
         runs-on: ${{ matrix.host.RUNNER }}
-        needs: load-engine-matrix
+        needs: [create-version-matrix, get-matrices]
         timeout-minutes: 35
         strategy:
             fail-fast: false
             matrix:
-                engine: ${{ fromJson(needs.load-engine-matrix.outputs.matrix) }}
-                python:
-                  # - "3.8"
-                  # - "3.9"
-                  # - "3.10"
-                  # - "3.11"
-                    - "3.12"
-                host:
-                    - {
-                        OS: ubuntu,
-                        RUNNER: ubuntu-latest,
-                        TARGET: x86_64-unknown-linux-gnu
-                    }
-                    # - {
-                    #     OS: macos,
-                    #     RUNNER: macos-latest,
-                    #     TARGET: aarch64-apple-darwin
-                    # }
-
+                engine: ${{ fromJson(needs.get-matrices.outputs.engine-matrix-output) }}
+                python: ${{ fromJson(needs.create-version-matrix.outputs.python-matrix-output) }}
+                host: ${{ fromJson(needs.get-matrices.outputs.host-matrix-output).include }}
         steps:
             - uses: actions/checkout@v4
               with:
                   submodules: recursive
 
             - name: Set up Python
-              uses: actions/setup-python@v4
+              uses: actions/setup-python@v5
               with:
                   python-version: ${{ matrix.python }}
 
@@ -134,43 +162,26 @@ jobs:
                       python/python/tests/pytest_report.html
                       utils/clusters/**
                       benchmarks/results/**
-
-    test-pubsub:
+    test-pubsub-python:
         runs-on: ${{ matrix.host.RUNNER }}
-        needs: load-engine-matrix
+        needs: [create-version-matrix, get-matrices]
         timeout-minutes: 35
         strategy:
             fail-fast: false
             matrix:
-                engine: ${{ fromJson(needs.load-engine-matrix.outputs.matrix) }}
-                python:
-                  # - "3.8"
-                  # - "3.9"
-                  # - "3.10"
-                  # - "3.11"
-                    - "3.12"
-                host:
-                    - {
-                        OS: ubuntu,
-                        RUNNER: ubuntu-latest,
-                        TARGET: x86_64-unknown-linux-gnu
-                    }
-                    # - {
-                    #     OS: macos,
-                    #     RUNNER: macos-latest,
-                    #     TARGET: aarch64-apple-darwin
-                    # }
-
+                engine: ${{ fromJson(needs.get-matrices.outputs.engine-matrix-output) }}
+                python: ${{ fromJson(needs.create-version-matrix.outputs.python-matrix-output) }}
+                host: ${{ fromJson(needs.get-matrices.outputs.host-matrix-output).include }}
         steps:
             - uses: actions/checkout@v4
               with:
                   submodules: recursive
-        
+
             - name: Set up Python
-              uses: actions/setup-python@v4
+              uses: actions/setup-python@v5
               with:
                   python-version: ${{ matrix.python }}
-        
+
             - name: Build Python wrapper
               uses: ./.github/workflows/build-python-wrapper
               with:
@@ -178,14 +189,14 @@ jobs:
                   target: ${{ matrix.host.TARGET }}
                   github-token: ${{ secrets.GITHUB_TOKEN }}
                   engine-version: ${{ matrix.engine.version }}
-        
+
             - name: Test pubsub with pytest
               working-directory: ./python
               run: |
                   source .env/bin/activate
                   cd python/tests/
                   pytest --asyncio-mode=auto -k test_pubsub --html=pytest_report.html --self-contained-html
-        
+
             - name: Upload test reports
               if: always()
               continue-on-error: true
@@ -197,6 +208,8 @@ jobs:
 
     lint:
         runs-on: ubuntu-latest
+        needs: get-matrices
+        if: ${{ needs.get-matrices.outputs.should-run == 'true' }}
         timeout-minutes: 15
         steps:
             - uses: actions/checkout@v4
@@ -235,8 +248,8 @@ jobs:
               working-directory: ./python
               run: |
                   black --check --diff .
-
     build-amazonlinux-latest:
+        if: (github.repository_owner == 'valkey-io' && github.event_name == 'schedule') || github.event.label.name == 'Core changes'
         runs-on: ubuntu-latest
         container: amazonlinux:latest
         timeout-minutes: 15

@@ -37,16 +37,16 @@ jobs:
     load-engine-matrix:
         runs-on: ubuntu-latest
         outputs:
-          matrix: ${{ steps.load-engine-matrix.outputs.matrix }}
+            matrix: ${{ steps.load-engine-matrix.outputs.matrix }}
         steps:
             - name: Checkout
               uses: actions/checkout@v4
-  
+
             - name: Load the engine matrix
               id: load-engine-matrix
               shell: bash
               run: echo "matrix=$(jq -c . < .github/json_matrices/engine-matrix.json)" >> $GITHUB_OUTPUT
-  
+
     run-tests:
         needs: load-engine-matrix
         timeout-minutes: 25
@@ -56,19 +56,19 @@ jobs:
                 engine: ${{ fromJson(needs.load-engine-matrix.outputs.matrix) }}
                 dotnet:
                     # - '6.0'
-                    - '8.0'
+                    - "8.0"
                 host:
                     - {
-                        OS: ubuntu,
-                        RUNNER: ubuntu-latest,
-                        TARGET: x86_64-unknown-linux-gnu
-                    }
+                          OS: ubuntu,
+                          RUNNER: ubuntu-latest,
+                          TARGET: x86_64-unknown-linux-gnu,
+                      }
                     # - {
                     #     OS: macos,
                     #     RUNNER: macos-latest,
                     #     TARGET: aarch64-apple-darwin
                     # }
-    
+
         runs-on: ${{ matrix.host.RUNNER }}
 
         steps:
@@ -80,7 +80,7 @@ jobs:
               uses: actions/setup-dotnet@v4
               with:
                   dotnet-version: ${{ matrix.dotnet }}
-    
+
             - name: Install shared software dependencies
               uses: ./.github/workflows/install-shared-dependencies
               with:
@@ -112,7 +112,7 @@ jobs:
                       benchmarks/results/*
                       utils/clusters/**
 
-# TODO Add amazonlinux
+    # TODO Add amazonlinux
 
     lint-rust:
         timeout-minutes: 10
@@ -125,3 +125,4 @@ jobs:
             - uses: ./.github/workflows/lint-rust
               with:
                   cargo-toml-folder: ./csharp/lib
+                  github-token: ${{ secrets.GITHUB_TOKEN }}

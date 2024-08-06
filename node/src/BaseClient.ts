@@ -44,6 +44,7 @@ import {
     SearchOrigin,
     SetOptions,
     StreamAddOptions,
+    StreamRangeBound,
     StreamReadOptions,
     StreamTrimOptions,
     ZAddOptions,
@@ -152,6 +153,7 @@ import {
     createXAdd,
     createXDel,
     createXLen,
+    createXRange,
     createXRead,
     createXTrim,
     createZAdd,
@@ -2627,6 +2629,46 @@ export class BaseClient {
             }),
         });
         return this.createWritePromise(scriptInvocation);
+    }
+
+    /**
+     * Returns stream entries matching a given range of IDs.
+     *
+     * See https://valkey.io/commands/xrange for more details.
+     *
+     * @param key - The key of the stream.
+     * @param start - The starting stream ID bound for the range.
+     *     - Use `id` to specify a stream ID.
+     *     - Use `isInclusive: false` to specify an exclusive bounded stream ID.
+     *     - Use `-` to start with the minimum available ID.
+     * @param end - The ending stream ID bound for the range.
+     *     - Use `id` to specify a stream ID.
+     *     - Use `isInclusive: false` to specify an exclusive bounded stream ID.
+     *     - Use `+` to end with the maximum available ID.
+     * @param count - An optional argument specifying the maximum count of stream entries to return.
+     *     If `count` is not provided, all stream entries in the range will be returned.
+     * @returns A mapping of stream IDs to stream entry data, where entry data is a
+     *     list of pairings with format `[[field, entry], [field, entry], ...]`.
+     *
+     * @example
+     * ```typescript
+     * await client.xadd("mystream", [["field1", "value1"]], {id: "0-1"});
+     * await client.xadd("mystream", [["field2", "value2"], ["field2", "value3"]], {id: "0-2"});
+     * console.log(await client.xrange("mystream", "-", "+"));
+     * // Output:
+     * // {
+     * //     "0-1": [["field1", "value1"]],
+     * //     "0-2": [["field2", "value2"], ["field2", "value3"]],
+     * // } // Indicates the stream IDs and their associated field-value pairs for all stream entries in "mystream".
+     * ```
+     */
+    public async xrange(
+        key: string,
+        start: StreamRangeBound,
+        end: StreamRangeBound,
+        count?: number,
+    ): Promise<Record<string, [string, string][]> | null> {
+        return this.createWritePromise(createXRange(key, start, end, count));
     }
 
     /** Adds members with their scores to the sorted set stored at `key`.

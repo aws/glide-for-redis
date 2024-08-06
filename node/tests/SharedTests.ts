@@ -38,6 +38,7 @@ import {
     Script,
     SignedEncoding,
     SortOrder,
+    StreamIdBoundary,
     Transaction,
     UnsignedEncoding,
     UpdateByScore,
@@ -4276,6 +4277,80 @@ export function runBaseTests<Context>(config: {
                     }),
                 ).rejects.toThrow();
                 await expect(client.xlen(stringKey)).rejects.toThrow();
+            }, protocol);
+        },
+        config.timeout,
+    );
+
+    it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
+        `xrange test_%p`,
+        async (protocol) => {
+            await runTest(async (client: BaseClient) => {
+                const key = uuidv4();
+                const nonExistingKey = uuidv4();
+                const stringKey = uuidv4();
+                const streamId1 = "0-1";
+                const streamId2 = "0-2";
+                const streamId3 = "0-3";
+
+                expect(
+                    await client.xadd(key, [["f1", "v1"]], { id: streamId1 }),
+                ).toEqual(streamId1);
+                expect(
+                    await client.xadd(key, [["f2", "v2"]], { id: streamId2 }),
+                ).toEqual(streamId2);
+                expect(await client.xlen(key)).toEqual(2);
+
+                // get everything from the stream
+                expect(await client.xrange(key, StreamIdBoundary.MinId, StreamIdBoundary.MaxId)).toEqual({
+                    [streamId1]: [["f1", "v1"]],
+                    [streamId2]: [["f2", "v2"]],
+                });
+
+                // returns empty mapping if + before -
+                expect(await client.xrange(key, StreamIdBoundary.MaxId, StreamIdBoundary.MinId)).toEqual({});
+
+                expect(
+                    await client.xadd(key, [["f3", "v3"]], { id: streamId3 }),
+                ).toEqual(streamId3);
+
+                // get the newest entry
+                expect(
+                    await client.xrange(
+                        key,
+                        { exclusive: "(", id: streamId2 },
+                        { id: 5 },
+                        1,
+                    ),
+                ).toEqual({ [streamId3]: [["f3", "v3"]] });
+
+                // xrange against an emptied stream
+                expect(await client.xdel(key, [streamId1, streamId2, streamId3])).toEqual(3);
+                expect(await client.xrange(key, StreamIdBoundary.MinId, StreamIdBoundary.MaxId, 10)).toEqual({});
+
+                expect(await client.xrange(nonExistingKey, "-", "+")).toEqual(
+                    {},
+                );
+
+                // count value < 1 returns null
+                expect(await client.xrange(key, StreamIdBoundary.MinId, StreamIdBoundary.MaxId, 0)).toEqual(null);
+                expect(await client.xrange(key, StreamIdBoundary.MinId, StreamIdBoundary.MaxId, -1)).toEqual(null);
+
+                // key exists, but it is not a stream
+                expect(await client.set(stringKey, "foo"));
+                await expect(
+                    client.xrange(stringKey, StreamIdBoundary.MinId, StreamIdBoundary.MaxId),
+                ).rejects.toThrow(RequestError);
+
+                // invalid start bound
+                await expect(
+                    client.xrange(key, { id: "not_a_stream_id" }, StreamIdBoundary.MaxId),
+                ).rejects.toThrow(RequestError);
+
+                // invalid end bound
+                await expect(
+                    client.xrange(key, StreamIdBoundary.MinId, { id: "not_a_stream_id" }),
+                ).rejects.toThrow(RequestError);
             }, protocol);
         },
         config.timeout,

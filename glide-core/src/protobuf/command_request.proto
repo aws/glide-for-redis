@@ -253,6 +253,9 @@ enum RequestType {
     PubSubNumSub = 212;
     PubSubSChannels = 213;
     PubSubSNumSub = 214;
+    ScriptExists = 215;
+    ScriptFlush = 216;
+    ScriptKill = 217;
 }
 
 message Command {

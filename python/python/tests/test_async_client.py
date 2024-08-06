@@ -10234,3 +10234,152 @@ class TestScripts:
             == key.encode()
         )
         await glide_client.close()
+
+    @pytest.mark.parametrize("cluster_mode", [True, False])
+    @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
+    async def test_script_exists(self, glide_client: TGlideClient):
+        script1 = Script("return 'Hello'")
+        script2 = Script("return 'World'")
+
+        # Load the scripts
+        await glide_client.invoke_script(script1)
+        await glide_client.invoke_script(script2)
+
+        # Get the SHA1 digests of the scripts
+        sha1_1 = script1.get_hash()
+        sha1_2 = script2.get_hash()
+        non_existent_sha1 = "0" * 40  # A SHA1 that doesn't exist
+
+        # Check existence of scripts
+        result = await glide_client.script_exists([sha1_1, sha1_2, non_existent_sha1])
+
+        assert result == [True, True, False]
+
+    @pytest.mark.parametrize("cluster_mode", [True, False])
+    @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
+    async def test_script_flush(self, glide_client: TGlideClient):
+        # Load a script
+        script = Script("return 'Hello'")
+        await glide_client.invoke_script(script)
+
+        # Check that the script exists
+        assert await glide_client.script_exists([script.get_hash()]) == [True]
+
+        # Flush the script cache
+        assert await glide_client.script_flush() == OK
+
+        # Check that the script no longer exists
+        assert await glide_client.script_exists([script.get_hash()]) == [False]
+
+        # Test with ASYNC mode
+        await glide_client.invoke_script(script)
+        assert await glide_client.script_flush(FlushMode.ASYNC) == OK
+        assert await glide_client.script_exists([script.get_hash()]) == [False]
+
+    @pytest.mark.parametrize("cluster_mode", [True, False])
+    @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
+    async def test_script_kill(
+        self, request, cluster_mode, protocol, glide_client: TGlideClient
+    ):
+        # Verify that script_kill raises an error when no script is running
+        with pytest.raises(RequestError) as e:
+            await glide_client.script_kill()
+        assert "No scripts in execution right now" in str(e)
+
+        # Create a long-running script
+        long_script = Script("while true do end")
+
+        # Create a second client to run the script
+        test_client = await create_client(
+            request, cluster_mode=cluster_mode, protocol=protocol, timeout=30000
+        )
+
+        # Create a second client to kill the script
+        test_client2 = await create_client(
+            request, cluster_mode=cluster_mode, protocol=protocol, timeout=15000
+        )
+
+        async def run_long_script():
+            with pytest.raises(RequestError) as e:
+                # Since executing the script with no keys cause for a random node selection that could be a replica
+                # Until we decide on a proper routing option
+                await test_client.invoke_script(
+                    long_script, keys=[get_random_string(5)]
+                )
+            assert "Script killed by user" in str(e)
+
+        async def wait_and_kill_script():
+            await asyncio.sleep(3)  # Give some time for the script to start
+            while True:
+                try:
+                    result = await test_client2.script_kill()
+                    assert result == OK
+                    break
+                except RequestError:
+                    await asyncio.sleep(0.5)
+
+        # Run the long script and kill it
+        await asyncio.gather(
+            run_long_script(),
+            wait_and_kill_script(),
+        )
+
+        # Verify that script_kill raises an error when no script is running
+        with pytest.raises(RequestError) as e:
+            await glide_client.script_kill()
+        assert "No scripts in execution right now" in str(e)
+
+        await test_client.close()
+        await test_client2.close()
+
+    @pytest.mark.parametrize("cluster_mode", [True, False])
+    @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
+    async def test_script_kill_unkillable(
+        self, request, cluster_mode, protocol, glide_client: TGlideClient
+    ):
+        # Create a second client to run the script
+        test_client = await create_client(
+            request, cluster_mode=cluster_mode, protocol=protocol, timeout=30000
+        )
+
+        # Create a second client to kill the script
+        test_client2 = await create_client(
+            request, cluster_mode=cluster_mode, protocol=protocol, timeout=15000
+        )
+
+        # Add test for script_kill with writing script
+        writing_script = Script(
+            """
+            redis.call('SET', KEYS[1], 'value')
+            local start = redis.call('TIME')[1]
+            while redis.call('TIME')[1] - start < 15 do
+                redis.call('SET', KEYS[1], 'value')
+            end
+        """
+        )
+
+        async def run_writing_script():
+            await test_client.invoke_script(writing_script, keys=[get_random_string(5)])
+
+        async def attempt_kill_writing_script():
+            await asyncio.sleep(3)  # Give some time for the script to start
+            foundUnkillable = False
+            while True:
+                try:
+                    await test_client2.script_kill()
+                except RequestError as e:
+                    if "UNKILLABLE" in str(e):
+                        foundUnkillable = True
+                        break
+                    await asyncio.sleep(0.5)
+
+            assert foundUnkillable
+
+        # Run the writing script and attempt to kill it
+        await asyncio.gather(
+            run_writing_script(),
+            attempt_kill_writing_script(),
+        )
+
+        await test_client.close()
+        await test_client2.close()

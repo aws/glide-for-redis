@@ -2688,6 +2688,12 @@ export function runBaseTests<Context>(config: {
                             ExpireOptions.HasExistingExpiry,
                         ),
                     ).toEqual(true);
+                    expect(await client.expiretime(key)).toBeGreaterThan(
+                        Math.floor(Date.now() / 1000),
+                    );
+                    expect(await client.pexpiretime(key)).toBeGreaterThan(
+                        Date.now(),
+                    );
                 }
 
                 expect(await client.ttl(key)).toBeLessThanOrEqual(15);
@@ -2751,7 +2757,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `expire, pexpire, expireAt and pexpireAt with timestamp in the past or negative timeout_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: BaseClient, cluster) => {
                 const key = uuidv4();
                 expect(await client.set(key, "foo")).toEqual("OK");
                 expect(await client.ttl(key)).toEqual(-1);
@@ -2769,6 +2775,13 @@ export function runBaseTests<Context>(config: {
                 ).toEqual(true);
                 expect(await client.ttl(key)).toEqual(-2);
                 expect(await client.set(key, "foo")).toEqual("OK");
+
+                // no timeout set yet
+                if (!cluster.checkIfServerVersionLessThan("7.0.0")) {
+                    expect(await client.expiretime(key)).toEqual(-1);
+                    expect(await client.pexpiretime(key)).toEqual(-1);
+                }
+
                 expect(
                     await client.pexpireAt(
                         key,
@@ -2784,7 +2797,7 @@ export function runBaseTests<Context>(config: {
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `expire, pexpire, expireAt, pexpireAt and ttl with non-existing key_%p`,
         async (protocol) => {
-            await runTest(async (client: BaseClient) => {
+            await runTest(async (client: BaseClient, cluster) => {
                 const key = uuidv4();
                 expect(await client.expire(key, 10)).toEqual(false);
                 expect(await client.pexpire(key, 10000)).toEqual(false);
@@ -2801,6 +2814,11 @@ export function runBaseTests<Context>(config: {
                     ),
                 ).toEqual(false);
                 expect(await client.ttl(key)).toEqual(-2);
+
+                if (!cluster.checkIfServerVersionLessThan("7.0.0")) {
+                    expect(await client.expiretime(key)).toEqual(-2);
+                    expect(await client.pexpiretime(key)).toEqual(-2);
+                }
             }, protocol);
         },
         config.timeout,

@@ -43,6 +43,7 @@ import {
     createSort,
     createSortReadOnly,
     createTime,
+    createUnWatch,
 } from "./Commands";
 import { connection_request } from "./ProtobufMessage";
 import { Transaction } from "./Transaction";
@@ -742,7 +743,27 @@ export class GlideClient extends BaseClient {
      * console.log(result); // Output: "key12" - "key12" is a random existing key name from the currently selected database.
      * ```
      */
-    public randomKey(): Promise<string | null> {
+    public async randomKey(): Promise<string | null> {
         return this.createWritePromise(createRandomKey());
+    }
+
+    /**
+     * Flushes all the previously watched keys for a transaction. Executing a transaction will
+     * automatically flush all previously watched keys.
+     *
+     * See https://valkey.io/commands/unwatch/ and https://valkey.io/topics/transactions/#cas for more details.
+     *
+     * @returns A simple "OK" response.
+     *
+     * @example
+     * ```typescript
+     * let response = await client.watch(["sampleKey"]);
+     * console.log(response); // Output: "OK"
+     * response = await client.unwatch();
+     * console.log(response); // Output: "OK"
+     * ```
+     */
+    public async unwatch(): Promise<"OK"> {
+        return this.createWritePromise(createUnWatch());
     }
 }

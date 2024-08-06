@@ -20,6 +20,7 @@ from glide.async_commands.bitmap import (
 from glide.async_commands.command_args import Limit, ListDirection, OrderBy
 from glide.async_commands.core import (
     ConditionalChange,
+    CoreCommands,
     ExpireOptions,
     ExpiryGetEx,
     ExpirySet,
@@ -101,6 +102,8 @@ from glide.routes import (
 
 from .glide import ClusterScanCursor, Script
 
+PubSubMsg = CoreCommands.PubSubMsg
+
 __all__ = [
     # Client
     "GlideClient",
@@ -180,6 +183,8 @@ __all__ = [
     "TrimByMinId",
     "UpdateOptions",
     "ClusterScanCursor"
+    # PubSub
+    "PubSubMsg",
     # Logger
     "Logger",
     "LogLevel",

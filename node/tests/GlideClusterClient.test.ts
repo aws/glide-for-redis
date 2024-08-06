@@ -253,8 +253,13 @@ describe("GlideClusterClient", () => {
             );
 
             if (!cluster.checkIfServerVersionLessThan("7.0.0")) {
-                transaction.publish("message", "key");
-                expectedRes.push(['publish("message", "key")', 0]);
+                transaction.publish("message", "key", true);
+                expectedRes.push(['publish("message", "key", true)', 0]);
+
+                transaction.pubsubShardChannels();
+                expectedRes.push(["pubsubShardChannels()", []]);
+                transaction.pubsubShardNumSub();
+                expectedRes.push(["pubsubShardNumSub()", {}]);
             }
 
             const result = await client.exec(transaction);
@@ -274,7 +279,7 @@ describe("GlideClusterClient", () => {
             );
             const transaction = new ClusterTransaction();
             transaction.get("key");
-            const result1 = await client1.customCommand(["WATCH", "key"]);
+            const result1 = await client1.watch(["key"]);
             expect(result1).toEqual("OK");
 
             const result2 = await client2.set("key", "foo");
@@ -385,6 +390,7 @@ describe("GlideClusterClient", () => {
             await client.mget(["abc", "zxy", "lkn"]);
             await client.mset({ abc: "1", zxy: "2", lkn: "3" });
             await client.touch(["abc", "zxy", "lkn"]);
+            await client.watch(["ghi", "zxy", "lkn"]);
             client.close();
         },
     );
@@ -1105,6 +1111,108 @@ describe("GlideClusterClient", () => {
             // `key` should be the only existing key, so randomKey should return `key`
             expect(await client.randomKey()).toEqual(key);
             expect(await client.randomKey("allPrimaries")).toEqual(key);
+
+            client.close();
+        },
+        TIMEOUT,
+    );
+
+    it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
+        "watch test_%p",
+        async (protocol) => {
+            const client = await GlideClusterClient.createClient(
+                getClientConfigurationOption(cluster.getAddresses(), protocol),
+            );
+
+            const key1 = "{key}-1" + uuidv4();
+            const key2 = "{key}-2" + uuidv4();
+            const key3 = "{key}-3" + uuidv4();
+            const key4 = "{key}-4" + uuidv4();
+            const setFoobarTransaction = new ClusterTransaction();
+            const setHelloTransaction = new ClusterTransaction();
+
+            // Returns null when a watched key is modified before it is executed in a transaction command.
+            // Transaction commands are not performed.
+            expect(await client.watch([key1, key2, key3])).toEqual("OK");
+            expect(await client.set(key2, "hello")).toEqual("OK");
+            setFoobarTransaction
+                .set(key1, "foobar")
+                .set(key2, "foobar")
+                .set(key3, "foobar");
+            let results = await client.exec(setFoobarTransaction);
+            expect(results).toEqual(null);
+            // sanity check
+            expect(await client.get(key1)).toEqual(null);
+            expect(await client.get(key2)).toEqual("hello");
+            expect(await client.get(key3)).toEqual(null);
+
+            // Transaction executes command successfully with a read command on the watch key before
+            // transaction is executed.
+            expect(await client.watch([key1, key2, key3])).toEqual("OK");
+            expect(await client.get(key2)).toEqual("hello");
+            results = await client.exec(setFoobarTransaction);
+            expect(results).toEqual(["OK", "OK", "OK"]);
+            // sanity check
+            expect(await client.get(key1)).toEqual("foobar");
+            expect(await client.get(key2)).toEqual("foobar");
+            expect(await client.get(key3)).toEqual("foobar");
+
+            // Transaction executes command successfully with unmodified watched keys
+            expect(await client.watch([key1, key2, key3])).toEqual("OK");
+            results = await client.exec(setFoobarTransaction);
+            expect(results).toEqual(["OK", "OK", "OK"]);
+            // sanity check
+            expect(await client.get(key1)).toEqual("foobar");
+            expect(await client.get(key2)).toEqual("foobar");
+            expect(await client.get(key3)).toEqual("foobar");
+
+            // Transaction executes command successfully with a modified watched key but is not in the
+            // transaction.
+            expect(await client.watch([key4])).toEqual("OK");
+            setHelloTransaction
+                .set(key1, "hello")
+                .set(key2, "hello")
+                .set(key3, "hello");
+            results = await client.exec(setHelloTransaction);
+            expect(results).toEqual(["OK", "OK", "OK"]);
+            // sanity check
+            expect(await client.get(key1)).toEqual("hello");
+            expect(await client.get(key2)).toEqual("hello");
+            expect(await client.get(key3)).toEqual("hello");
+
+            // WATCH can not have an empty String array parameter
+            await expect(client.watch([])).rejects.toThrow(RequestError);
+
+            client.close();
+        },
+        TIMEOUT,
+    );
+
+    it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
+        "unwatch test_%p",
+        async (protocol) => {
+            const client = await GlideClusterClient.createClient(
+                getClientConfigurationOption(cluster.getAddresses(), protocol),
+            );
+
+            const key1 = "{key}-1" + uuidv4();
+            const key2 = "{key}-2" + uuidv4();
+            const setFoobarTransaction = new ClusterTransaction();
+
+            // UNWATCH returns OK when there no watched keys
+            expect(await client.unwatch()).toEqual("OK");
+
+            // Transaction executes successfully after modifying a watched key then calling UNWATCH
+            expect(await client.watch([key1, key2])).toEqual("OK");
+            expect(await client.set(key2, "hello")).toEqual("OK");
+            expect(await client.unwatch()).toEqual("OK");
+            expect(await client.unwatch("allPrimaries")).toEqual("OK");
+            setFoobarTransaction.set(key1, "foobar").set(key2, "foobar");
+            const results = await client.exec(setFoobarTransaction);
+            expect(results).toEqual(["OK", "OK"]);
+            // sanity check
+            expect(await client.get(key1)).toEqual("foobar");
+            expect(await client.get(key2)).toEqual("foobar");
 
             client.close();
         },

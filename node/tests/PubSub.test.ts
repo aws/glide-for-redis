@@ -3280,4 +3280,747 @@ describe("PubSub", () => {
         },
         TIMEOUT,
     );
+
+    /**
+     * Tests the pubsubChannels command functionality.
+     *
+     * This test verifies that the pubsubChannels command correctly returns
+     * the active channels matching a specified pattern.
+     *
+     * It covers the following scenarios:
+     * - Checking that no channels exist initially
+     * - Subscribing to multiple channels
+     * - Retrieving all active channels without a pattern
+     * - Retrieving channels matching a specific pattern
+     * - Verifying that a non-matching pattern returns no channels
+     *
+     * @param clusterMode - Indicates if the test should be run in cluster mode.
+     */
+    it.each([true, false])(
+        "test pubsub channels_%p",
+        async (clusterMode) => {
+            let pubSub:
+                | GlideClusterClientConfiguration.PubSubSubscriptions
+                | GlideClientConfiguration.PubSubSubscriptions
+                | null = null;
+            let client1: TGlideClient | null = null;
+            let client2: TGlideClient | null = null;
+            let client: TGlideClient | null = null;
+
+            try {
+                const channel1 = "test_channel1";
+                const channel2 = "test_channel2";
+                const channel3 = "some_channel3";
+                const pattern = "test_*";
+
+                if (clusterMode) {
+                    client = await GlideClusterClient.createClient(
+                        getOptions(clusterMode),
+                    );
+                } else {
+                    client = await GlideClient.createClient(
+                        getOptions(clusterMode),
+                    );
+                }
+
+                // Assert no channels exists yet
+                expect(await client.pubsubChannels()).toEqual([]);
+
+                pubSub = createPubSubSubscription(
+                    clusterMode,
+                    {
+                        [GlideClusterClientConfiguration.PubSubChannelModes
+                            .Exact]: new Set([channel1, channel2, channel3]),
+                    },
+                    {
+                        [GlideClientConfiguration.PubSubChannelModes.Exact]:
+                            new Set([channel1, channel2, channel3]),
+                    },
+                );
+
+                [client1, client2] = await createClients(
+                    clusterMode,
+                    getOptions(clusterMode),
+                    getOptions(clusterMode),
+                    pubSub,
+                );
+
+                // Test pubsubChannels without pattern
+                const channels = await client2.pubsubChannels();
+                expect(new Set(channels)).toEqual(
+                    new Set([channel1, channel2, channel3]),
+                );
+
+                // Test pubsubChannels with pattern
+                const channelsWithPattern =
+                    await client2.pubsubChannels(pattern);
+                expect(new Set(channelsWithPattern)).toEqual(
+                    new Set([channel1, channel2]),
+                );
+
+                // Test with non-matching pattern
+                const nonMatchingChannels =
+                    await client2.pubsubChannels("non_matching_*");
+                expect(nonMatchingChannels.length).toBe(0);
+            } finally {
+                if (client1) {
+                    await clientCleanup(
+                        client1,
+                        clusterMode ? pubSub! : undefined,
+                    );
+                }
+
+                if (client2) {
+                    await clientCleanup(client2);
+                }
+
+                if (client) {
+                    await clientCleanup(client);
+                }
+            }
+        },
+        TIMEOUT,
+    );
+
+    /**
+     * Tests the pubsubNumPat command functionality.
+     *
+     * This test verifies that the pubsubNumPat command correctly returns
+     * the number of unique patterns that are subscribed to by clients.
+     *
+     * It covers the following scenarios:
+     * - Checking that no patterns exist initially
+     * - Subscribing to multiple patterns
+     * - Verifying the correct number of unique patterns
+     *
+     * @param clusterMode - Indicates if the test should be run in cluster mode.
+     */
+    it.each([true, false])(
+        "test pubsub numpat_%p",
+        async (clusterMode) => {
+            let pubSub:
+                | GlideClusterClientConfiguration.PubSubSubscriptions
+                | GlideClientConfiguration.PubSubSubscriptions
+                | null = null;
+            let client1: TGlideClient | null = null;
+            let client2: TGlideClient | null = null;
+            let client: TGlideClient | null = null;
+
+            try {
+                const pattern1 = "test_*";
+                const pattern2 = "another_*";
+
+                // Create a client and check initial number of patterns
+                if (clusterMode) {
+                    client = await GlideClusterClient.createClient(
+                        getOptions(clusterMode),
+                    );
+                } else {
+                    client = await GlideClient.createClient(
+                        getOptions(clusterMode),
+                    );
+                }
+
+                expect(await client.pubsubNumPat()).toBe(0);
+
+                // Set up subscriptions with patterns
+                pubSub = createPubSubSubscription(
+                    clusterMode,
+                    {
+                        [GlideClusterClientConfiguration.PubSubChannelModes
+                            .Pattern]: new Set([pattern1, pattern2]),
+                    },
+                    {
+                        [GlideClientConfiguration.PubSubChannelModes.Pattern]:
+                            new Set([pattern1, pattern2]),
+                    },
+                );
+
+                [client1, client2] = await createClients(
+                    clusterMode,
+                    getOptions(clusterMode),
+                    getOptions(clusterMode),
+                    pubSub,
+                );
+
+                const numPatterns = await client2.pubsubNumPat();
+                expect(numPatterns).toBe(2);
+            } finally {
+                if (client1) {
+                    await clientCleanup(
+                        client1,
+                        clusterMode ? pubSub! : undefined,
+                    );
+                }
+
+                if (client2) {
+                    await clientCleanup(client2);
+                }
+
+                if (client) {
+                    await clientCleanup(client);
+                }
+            }
+        },
+        TIMEOUT,
+    );
+
+    /**
+     * Tests the pubsubNumSub command functionality.
+     *
+     * This test verifies that the pubsubNumSub command correctly returns
+     * the number of subscribers for specified channels.
+     *
+     * It covers the following scenarios:
+     * - Checking that no subscribers exist initially
+     * - Creating multiple clients with different channel subscriptions
+     * - Verifying the correct number of subscribers for each channel
+     * - Testing pubsubNumSub with no channels specified
+     *
+     * @param clusterMode - Indicates if the test should be run in cluster mode.
+     */
+    it.each([true, false])(
+        "test pubsub numsub_%p",
+        async (clusterMode) => {
+            let pubSub1:
+                | GlideClusterClientConfiguration.PubSubSubscriptions
+                | GlideClientConfiguration.PubSubSubscriptions
+                | null = null;
+            let pubSub2:
+                | GlideClusterClientConfiguration.PubSubSubscriptions
+                | GlideClientConfiguration.PubSubSubscriptions
+                | null = null;
+            let pubSub3:
+                | GlideClusterClientConfiguration.PubSubSubscriptions
+                | GlideClientConfiguration.PubSubSubscriptions
+                | null = null;
+            let client1: TGlideClient | null = null;
+            let client2: TGlideClient | null = null;
+            let client3: TGlideClient | null = null;
+            let client4: TGlideClient | null = null;
+            let client: TGlideClient | null = null;
+
+            try {
+                const channel1 = "test_channel1";
+                const channel2 = "test_channel2";
+                const channel3 = "test_channel3";
+                const channel4 = "test_channel4";
+
+                // Set up subscriptions
+                pubSub1 = createPubSubSubscription(
+                    clusterMode,
+                    {
+                        [GlideClusterClientConfiguration.PubSubChannelModes
+                            .Exact]: new Set([channel1, channel2, channel3]),
+                    },
+                    {
+                        [GlideClientConfiguration.PubSubChannelModes.Exact]:
+                            new Set([channel1, channel2, channel3]),
+                    },
+                );
+                pubSub2 = createPubSubSubscription(
+                    clusterMode,
+                    {
+                        [GlideClusterClientConfiguration.PubSubChannelModes
+                            .Exact]: new Set([channel2, channel3]),
+                    },
+                    {
+                        [GlideClientConfiguration.PubSubChannelModes.Exact]:
+                            new Set([channel2, channel3]),
+                    },
+                );
+                pubSub3 = createPubSubSubscription(
+                    clusterMode,
+                    {
+                        [GlideClusterClientConfiguration.PubSubChannelModes
+                            .Exact]: new Set([channel3]),
+                    },
+                    {
+                        [GlideClientConfiguration.PubSubChannelModes.Exact]:
+                            new Set([channel3]),
+                    },
+                );
+
+                // Create a client and check initial subscribers
+                if (clusterMode) {
+                    client = await GlideClusterClient.createClient(
+                        getOptions(clusterMode),
+                    );
+                } else {
+                    client = await GlideClient.createClient(
+                        getOptions(clusterMode),
+                    );
+                }
+
+                expect(
+                    await client.pubsubNumSub([channel1, channel2, channel3]),
+                ).toEqual({
+                    [channel1]: 0,
+                    [channel2]: 0,
+                    [channel3]: 0,
+                });
+
+                [client1, client2] = await createClients(
+                    clusterMode,
+                    getOptions(clusterMode),
+                    getOptions(clusterMode),
+                    pubSub1,
+                    pubSub2,
+                );
+                [client3, client4] = await createClients(
+                    clusterMode,
+                    getOptions(clusterMode),
+                    getOptions(clusterMode),
+                    pubSub3,
+                );
+
+                // Test pubsubNumsub
+                const subscribers = await client2.pubsubNumSub([
+                    channel1,
+                    channel2,
+                    channel3,
+                    channel4,
+                ]);
+                expect(subscribers).toEqual({
+                    [channel1]: 1,
+                    [channel2]: 2,
+                    [channel3]: 3,
+                    [channel4]: 0,
+                });
+
+                // Test pubsubNumsub with no channels
+                const emptySubscribers = await client2.pubsubNumSub();
+                expect(emptySubscribers).toEqual({});
+            } finally {
+                if (client1) {
+                    await clientCleanup(
+                        client1,
+                        clusterMode ? pubSub1! : undefined,
+                    );
+                }
+
+                if (client2) {
+                    await clientCleanup(
+                        client2,
+                        clusterMode ? pubSub2! : undefined,
+                    );
+                }
+
+                if (client3) {
+                    await clientCleanup(
+                        client3,
+                        clusterMode ? pubSub3! : undefined,
+                    );
+                }
+
+                if (client4) {
+                    await clientCleanup(client4);
+                }
+
+                if (client) {
+                    await clientCleanup(client);
+                }
+            }
+        },
+        TIMEOUT,
+    );
+
+    /**
+     * Tests the pubsubShardchannels command functionality.
+     *
+     * This test verifies that the pubsubShardchannels command correctly returns
+     * the active sharded channels matching a specified pattern.
+     *
+     * It covers the following scenarios:
+     * - Checking that no sharded channels exist initially
+     * - Subscribing to multiple sharded channels
+     * - Retrieving all active sharded channels without a pattern
+     * - Retrieving sharded channels matching a specific pattern
+     * - Verifying that a non-matching pattern returns no channels
+     *
+     * @param clusterMode - Indicates if the test should be run in cluster mode.
+     */
+    it.each([true])(
+        "test pubsub shardchannels_%p",
+        async (clusterMode) => {
+            const minVersion = "7.0.0";
+
+            if (cmeCluster.checkIfServerVersionLessThan(minVersion)) {
+                return; // Skip test if server version is less than required
+            }
+
+            let pubSub: GlideClusterClientConfiguration.PubSubSubscriptions | null =
+                null;
+            let client1: TGlideClient | null = null;
+            let client2: TGlideClient | null = null;
+            let client: TGlideClient | null = null;
+
+            try {
+                const channel1 = "test_shardchannel1";
+                const channel2 = "test_shardchannel2";
+                const channel3 = "some_shardchannel3";
+                const pattern = "test_*";
+
+                client = await GlideClusterClient.createClient(
+                    getOptions(clusterMode),
+                );
+
+                // Assert no sharded channels exist yet
+                expect(await client.pubsubShardChannels()).toEqual([]);
+
+                pubSub = createPubSubSubscription(
+                    clusterMode,
+                    {
+                        [GlideClusterClientConfiguration.PubSubChannelModes
+                            .Sharded]: new Set([channel1, channel2, channel3]),
+                    },
+                    {},
+                );
+
+                [client1, client2] = await createClients(
+                    clusterMode,
+                    getOptions(clusterMode),
+                    getOptions(clusterMode),
+                    pubSub,
+                );
+
+                // Test pubsubShardchannels without pattern
+                const channels = await (
+                    client2 as GlideClusterClient
+                ).pubsubShardChannels();
+                expect(new Set(channels)).toEqual(
+                    new Set([channel1, channel2, channel3]),
+                );
+
+                // Test pubsubShardchannels with pattern
+                const channelsWithPattern = await (
+                    client2 as GlideClusterClient
+                ).pubsubShardChannels(pattern);
+                expect(new Set(channelsWithPattern)).toEqual(
+                    new Set([channel1, channel2]),
+                );
+
+                // Test with non-matching pattern
+                const nonMatchingChannels = await (
+                    client2 as GlideClusterClient
+                ).pubsubShardChannels("non_matching_*");
+                expect(nonMatchingChannels).toEqual([]);
+            } finally {
+                if (client1) {
+                    await clientCleanup(client1, pubSub ? pubSub : undefined);
+                }
+
+                if (client2) {
+                    await clientCleanup(client2);
+                }
+
+                if (client) {
+                    await clientCleanup(client);
+                }
+            }
+        },
+        TIMEOUT,
+    );
+
+    /**
+     * Tests the pubsubShardnumsub command functionality.
+     *
+     * This test verifies that the pubsubShardnumsub command correctly returns
+     * the number of subscribers for specified sharded channels.
+     *
+     * It covers the following scenarios:
+     * - Checking that no subscribers exist initially for sharded channels
+     * - Creating multiple clients with different sharded channel subscriptions
+     * - Verifying the correct number of subscribers for each sharded channel
+     * - Testing pubsubShardnumsub with no channels specified
+     *
+     * @param clusterMode - Indicates if the test should be run in cluster mode.
+     */
+    it.each([true])(
+        "test pubsub shardnumsub_%p",
+        async (clusterMode) => {
+            let pubSub1: GlideClusterClientConfiguration.PubSubSubscriptions | null =
+                null;
+            let pubSub2: GlideClusterClientConfiguration.PubSubSubscriptions | null =
+                null;
+            let pubSub3: GlideClusterClientConfiguration.PubSubSubscriptions | null =
+                null;
+            let client1: TGlideClient | null = null;
+            let client2: TGlideClient | null = null;
+            let client3: TGlideClient | null = null;
+            let client4: TGlideClient | null = null;
+            let client: TGlideClient | null = null;
+
+            try {
+                const channel1 = "test_shardchannel1";
+                const channel2 = "test_shardchannel2";
+                const channel3 = "test_shardchannel3";
+                const channel4 = "test_shardchannel4";
+
+                // Set up subscriptions
+                pubSub1 = createPubSubSubscription(
+                    clusterMode,
+                    {
+                        [GlideClusterClientConfiguration.PubSubChannelModes
+                            .Sharded]: new Set([channel1, channel2, channel3]),
+                    },
+                    {},
+                );
+                pubSub2 = createPubSubSubscription(
+                    clusterMode,
+                    {
+                        [GlideClusterClientConfiguration.PubSubChannelModes
+                            .Sharded]: new Set([channel2, channel3]),
+                    },
+                    {},
+                );
+                pubSub3 = createPubSubSubscription(
+                    clusterMode,
+                    {
+                        [GlideClusterClientConfiguration.PubSubChannelModes
+                            .Sharded]: new Set([channel3]),
+                    },
+                    {},
+                );
+
+                // Create a client and check initial subscribers
+                client = await GlideClusterClient.createClient(
+                    getOptions(clusterMode),
+                );
+                const minVersion = "7.0.0";
+
+                if (cmeCluster.checkIfServerVersionLessThan(minVersion)) {
+                    return; // Skip test if server version is less than required
+                }
+
+                expect(
+                    await (client as GlideClusterClient).pubsubShardNumSub([
+                        channel1,
+                        channel2,
+                        channel3,
+                    ]),
+                ).toEqual({
+                    [channel1]: 0,
+                    [channel2]: 0,
+                    [channel3]: 0,
+                });
+
+                [client1, client2] = await createClients(
+                    clusterMode,
+                    getOptions(clusterMode),
+                    getOptions(clusterMode),
+                    pubSub1,
+                    pubSub2,
+                );
+                [client3, client4] = await createClients(
+                    clusterMode,
+                    getOptions(clusterMode),
+                    getOptions(clusterMode),
+                    pubSub3,
+                );
+
+                // Test pubsubShardnumsub
+                const subscribers = await (
+                    client4 as GlideClusterClient
+                ).pubsubShardNumSub([channel1, channel2, channel3, channel4]);
+                expect(subscribers).toEqual({
+                    [channel1]: 1,
+                    [channel2]: 2,
+                    [channel3]: 3,
+                    [channel4]: 0,
+                });
+
+                // Test pubsubShardnumsub with no channels
+                const emptySubscribers = await (
+                    client4 as GlideClusterClient
+                ).pubsubShardNumSub();
+                expect(emptySubscribers).toEqual({});
+            } finally {
+                if (client1) {
+                    await clientCleanup(client1, pubSub1 ? pubSub1 : undefined);
+                }
+
+                if (client2) {
+                    await clientCleanup(client2, pubSub2 ? pubSub2 : undefined);
+                }
+
+                if (client3) {
+                    await clientCleanup(client3, pubSub3 ? pubSub3 : undefined);
+                }
+
+                if (client4) {
+                    await clientCleanup(client4);
+                }
+
+                if (client) {
+                    await clientCleanup(client);
+                }
+            }
+        },
+        TIMEOUT,
+    );
+
+    /**
+     * Tests that pubsubChannels doesn't return sharded channels and pubsubShardchannels
+     * doesn't return regular channels.
+     *
+     * This test verifies the separation between regular and sharded channels in PUBSUB operations.
+     *
+     * It covers the following scenarios:
+     * - Subscribing to both a regular channel and a sharded channel
+     * - Verifying that pubsubChannels only returns the regular channel
+     * - Verifying that pubsubShardchannels only returns the sharded channel
+     *
+     * @param clusterMode - Indicates if the test should be run in cluster mode.
+     */
+    it.each([true])(
+        "test pubsub channels and shardchannels separation_%p",
+        async (clusterMode) => {
+            let pubSub: GlideClusterClientConfiguration.PubSubSubscriptions | null =
+                null;
+            let client1: TGlideClient | null = null;
+            let client2: TGlideClient | null = null;
+
+            try {
+                const regularChannel = "regular_channel";
+                const shardChannel = "shard_channel";
+
+                pubSub = createPubSubSubscription(
+                    clusterMode,
+                    {
+                        [GlideClusterClientConfiguration.PubSubChannelModes
+                            .Exact]: new Set([regularChannel]),
+                        [GlideClusterClientConfiguration.PubSubChannelModes
+                            .Sharded]: new Set([shardChannel]),
+                    },
+                    {},
+                );
+
+                [client1, client2] = await createClients(
+                    clusterMode,
+                    getOptions(clusterMode),
+                    getOptions(clusterMode),
+                    pubSub,
+                );
+
+                const minVersion = "7.0.0";
+
+                if (cmeCluster.checkIfServerVersionLessThan(minVersion)) {
+                    return; // Skip test if server version is less than required
+                }
+
+                // Test pubsubChannels
+                const regularChannels = await client2.pubsubChannels();
+                expect(regularChannels).toEqual([regularChannel]);
+
+                // Test pubsubShardchannels
+                const shardChannels = await (
+                    client2 as GlideClusterClient
+                ).pubsubShardChannels();
+                expect(shardChannels).toEqual([shardChannel]);
+            } finally {
+                if (client1) {
+                    await clientCleanup(client1, pubSub ? pubSub : undefined);
+                }
+
+                if (client2) {
+                    await clientCleanup(client2);
+                }
+            }
+        },
+        TIMEOUT,
+    );
+
+    /**
+     * Tests that pubsubNumSub doesn't count sharded channel subscribers and pubsubShardnumsub
+     * doesn't count regular channel subscribers.
+     *
+     * This test verifies the separation between regular and sharded channel subscribers in PUBSUB operations.
+     *
+     * It covers the following scenarios:
+     * - Subscribing to both a regular channel and a sharded channel with two clients
+     * - Verifying that pubsubNumSub only counts subscribers for the regular channel
+     * - Verifying that pubsubShardnumsub only counts subscribers for the sharded channel
+     *
+     * @param clusterMode - Indicates if the test should be run in cluster mode.
+     */
+    it.each([true])(
+        "test pubsub numsub and shardnumsub separation_%p",
+        async (clusterMode) => {
+            let pubSub1: GlideClusterClientConfiguration.PubSubSubscriptions | null =
+                null;
+            let pubSub2: GlideClusterClientConfiguration.PubSubSubscriptions | null =
+                null;
+            let client1: TGlideClient | null = null;
+            let client2: TGlideClient | null = null;
+
+            try {
+                const regularChannel = "regular_channel";
+                const shardChannel = "shard_channel";
+
+                pubSub1 = createPubSubSubscription(
+                    clusterMode,
+                    {
+                        [GlideClusterClientConfiguration.PubSubChannelModes
+                            .Exact]: new Set([regularChannel]),
+                        [GlideClusterClientConfiguration.PubSubChannelModes
+                            .Sharded]: new Set([shardChannel]),
+                    },
+                    {},
+                );
+                pubSub2 = createPubSubSubscription(
+                    clusterMode,
+                    {
+                        [GlideClusterClientConfiguration.PubSubChannelModes
+                            .Exact]: new Set([regularChannel]),
+                        [GlideClusterClientConfiguration.PubSubChannelModes
+                            .Sharded]: new Set([shardChannel]),
+                    },
+                    {},
+                );
+
+                [client1, client2] = await createClients(
+                    clusterMode,
+                    getOptions(clusterMode),
+                    getOptions(clusterMode),
+                    pubSub1,
+                    pubSub2,
+                );
+
+                const minVersion = "7.0.0";
+
+                if (cmeCluster.checkIfServerVersionLessThan(minVersion)) {
+                    return; // Skip test if server version is less than required
+                }
+
+                // Test pubsubNumsub
+                const regularSubscribers = await client2.pubsubNumSub([
+                    regularChannel,
+                    shardChannel,
+                ]);
+                expect(regularSubscribers).toEqual({
+                    [regularChannel]: 2,
+                    [shardChannel]: 0,
+                });
+
+                // Test pubsubShardnumsub
+                const shardSubscribers = await (
+                    client2 as GlideClusterClient
+                ).pubsubShardNumSub([regularChannel, shardChannel]);
+                expect(shardSubscribers).toEqual({
+                    [regularChannel]: 0,
+                    [shardChannel]: 2,
+                });
+            } finally {
+                if (client1) {
+                    await clientCleanup(client1, pubSub1 ? pubSub1 : undefined);
+                }
+
+                if (client2) {
+                    await clientCleanup(client2, pubSub2 ? pubSub2 : undefined);
+                }
+            }
+        },
+        TIMEOUT,
+    );
 });

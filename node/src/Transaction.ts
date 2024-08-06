@@ -51,9 +51,9 @@ import {
     StreamReadOptions,
     StreamTrimOptions,
     ZAddOptions,
+    createBLMPop,
     createBLMove,
     createBLPop,
-    createBLMPop,
     createBRPop,
     createBZMPop,
     createBitCount,
@@ -76,6 +76,7 @@ import {
     createExists,
     createExpire,
     createExpireAt,
+    createExpireTime,
     createFCall,
     createFCallReadOnly,
     createFlushAll,
@@ -112,8 +113,8 @@ import {
     createLIndex,
     createLInsert,
     createLLen,
-    createLMove,
     createLMPop,
+    createLMove,
     createLPop,
     createLPos,
     createLPush,
@@ -133,13 +134,19 @@ import {
     createObjectRefcount,
     createPExpire,
     createPExpireAt,
+    createPExpireTime,
     createPTTL,
     createPersist,
     createPfAdd,
     createPfCount,
     createPfMerge,
     createPing,
+    createPubSubChannels,
+    createPubSubNumPat,
+    createPubSubNumSub,
+    createPubSubShardNumSub,
     createPublish,
+    createPubsubShardChannels,
     createRPop,
     createRPush,
     createRPushX,
@@ -1333,6 +1340,22 @@ export class BaseTransaction<T extends BaseTransaction<T>> {
         return this.addAndReturn(createExpireAt(key, unixSeconds, option));
     }
 
+    /**
+     * Returns the absolute Unix timestamp (since January 1, 1970) at which the given `key` will expire, in seconds.
+     * To get the expiration with millisecond precision, use {@link pexpiretime}.
+     *
+     * See https://valkey.io/commands/expiretime/ for details.
+     *
+     * @param key - The `key` to determine the expiration value of.
+     *
+     * Command Response - The expiration Unix timestamp in seconds, `-2` if `key` does not exist or `-1` if `key` exists but has no associated expire.
+     *
+     * since Valkey version 7.0.0.
+     */
+    public expireTime(key: string): T {
+        return this.addAndReturn(createExpireTime(key));
+    }
+
     /** Sets a timeout on `key` in milliseconds. After the timeout has expired, the key will automatically be deleted.
      * If `key` already has an existing expire set, the time to live is updated to the new value.
      * If `milliseconds` is non-positive number, the key will be deleted rather than expired.
@@ -1375,6 +1398,21 @@ export class BaseTransaction<T extends BaseTransaction<T>> {
         return this.addAndReturn(
             createPExpireAt(key, unixMilliseconds, option),
         );
+    }
+
+    /**
+     * Returns the absolute Unix timestamp (since January 1, 1970) at which the given `key` will expire, in milliseconds.
+     *
+     * See https://valkey.io/commands/pexpiretime/ for details.
+     *
+     * @param key - The `key` to determine the expiration value of.
+     *
+     * Command Response - The expiration Unix timestamp in seconds, `-2` if `key` does not exist or `-1` if `key` exists but has no associated expire.
+     *
+     * since Valkey version 7.0.0.
+     */
+    public pexpireTime(key: string): T {
+        return this.addAndReturn(createPExpireTime(key));
     }
 
     /** Returns the remaining time to live of `key` that has a timeout.
@@ -2777,6 +2815,52 @@ export class BaseTransaction<T extends BaseTransaction<T>> {
     ): T {
         return this.addAndReturn(createBLMPop(timeout, keys, direction, count));
     }
+
+    /**
+     * Lists the currently active channels.
+     * The command is routed to all nodes, and aggregates the response to a single array.
+     *
+     * See https://valkey.io/commands/pubsub-channels for more details.
+     *
+     * @param pattern - A glob-style pattern to match active channels.
+     *                  If not provided, all active channels are returned.
+     * Command Response - A list of currently active channels matching the given pattern.
+     *          If no pattern is specified, all active channels are returned.
+     */
+    public pubsubChannels(pattern?: string): T {
+        return this.addAndReturn(createPubSubChannels(pattern));
+    }
+
+    /**
+     * Returns the number of unique patterns that are subscribed to by clients.
+     *
+     * Note: This is the total number of unique patterns all the clients are subscribed to,
+     * not the count of clients subscribed to patterns.
+     * The command is routed to all nodes, and aggregates the response to the sum of all pattern subscriptions.
+     *
+     * See https://valkey.io/commands/pubsub-numpat for more details.
+     *
+     * Command Response - The number of unique patterns.
+     */
+    public pubsubNumPat(): T {
+        return this.addAndReturn(createPubSubNumPat());
+    }
+
+    /**
+     * Returns the number of subscribers (exclusive of clients subscribed to patterns) for the specified channels.
+     *
+     * Note that it is valid to call this command without channels. In this case, it will just return an empty map.
+     * The command is routed to all nodes, and aggregates the response to a single map of the channels and their number of subscriptions.
+     *
+     * See https://valkey.io/commands/pubsub-numsub for more details.
+     *
+     * @param channels - The list of channels to query for the number of subscribers.
+     *                   If not provided, returns an empty map.
+     * Command Response - A map where keys are the channel names and values are the number of subscribers.
+     */
+    public pubsubNumSub(channels?: string[]): T {
+        return this.addAndReturn(createPubSubNumSub(channels));
+    }
 }
 
 /**
@@ -3044,5 +3128,36 @@ export class ClusterTransaction extends BaseTransaction<ClusterTransaction> {
         sharded: boolean = false,
     ): ClusterTransaction {
         return this.addAndReturn(createPublish(message, channel, sharded));
+    }
+
+    /**
+     * Lists the currently active shard channels.
+     * The command is routed to all nodes, and aggregates the response to a single array.
+     *
+     * See https://valkey.io/commands/pubsub-shardchannels for more details.
+     *
+     * @param pattern - A glob-style pattern to match active shard channels.
+     *                  If not provided, all active shard channels are returned.
+     * Command Response - A list of currently active shard channels matching the given pattern.
+     *          If no pattern is specified, all active shard channels are returned.
+     */
+    public pubsubShardChannels(pattern?: string): ClusterTransaction {
+        return this.addAndReturn(createPubsubShardChannels(pattern));
+    }
+
+    /**
+     * Returns the number of subscribers (exclusive of clients subscribed to patterns) for the specified shard channels.
+     *
+     * Note that it is valid to call this command without channels. In this case, it will just return an empty map.
+     * The command is routed to all nodes, and aggregates the response to a single map of the channels and their number of subscriptions.
+     *
+     * See https://valkey.io/commands/pubsub-shardnumsub for more details.
+     *
+     * @param channels - The list of shard channels to query for the number of subscribers.
+     *                   If not provided, returns an empty map.
+     * @returns A map where keys are the shard channel names and values are the number of subscribers.
+     */
+    public pubsubShardNumSub(channels?: string[]): ClusterTransaction {
+        return this.addAndReturn(createPubSubShardNumSub(channels));
     }
 }

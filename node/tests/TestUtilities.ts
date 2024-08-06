@@ -472,6 +472,8 @@ export async function transactionTest(
     const key22 = "{key}" + uuidv4(); // list for sort
     const key23 = "{key}" + uuidv4(); // zset random
     const key24 = "{key}" + uuidv4(); // list value
+    const key25 = "{key}" + uuidv4(); // sorted set
+    const key26 = "{key}" + uuidv4(); // sorted set
     const field = uuidv4();
     const value = uuidv4();
     // array of tuples - first element is test name/description, second - expected return value
@@ -772,6 +774,22 @@ export async function transactionTest(
         responseData.push(['zmscore(key12, ["two", "one"]', [2.0, 1.0]]);
         baseTransaction.zinterstore(key12, [key12, key13]);
         responseData.push(["zinterstore(key12, [key12, key13])", 0]);
+        baseTransaction.zadd(key25, { one: 1, two: 2 });
+        responseData.push(["zadd(key25, { one: 1, two: 2 })", 2]);
+        baseTransaction.zadd(key26, { one: 1, two: 2, three: 3.5 });
+        responseData.push(["zadd(key26, { one: 1, two: 2, three: 3.5 })", 3]);
+        baseTransaction.zinter([key26, key25]);
+        responseData.push(["zinter([key26, key25])", ["one", "two"]]);
+        baseTransaction.zinterWithScores([key26, key25]);
+        responseData.push([
+            "zinterWithScores([key26, key25])",
+            { one: 2, two: 4 },
+        ]);
+        baseTransaction.zunionWithScores([key26, key25]);
+        responseData.push([
+            "zunionWithScores([key26, key25])",
+            { one: 2, two: 4, three: 3.5 },
+        ]);
     } else {
         baseTransaction.zinterstore(key12, [key12, key13]);
         responseData.push(["zinterstore(key12, [key12, key13])", 2]);

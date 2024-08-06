@@ -192,6 +192,7 @@ import {
     createZDiffStore,
     createZDiffWithScores,
     createZIncrBy,
+    createZInter,
     createZInterCard,
     createZInterstore,
     createZLexCount,
@@ -211,6 +212,7 @@ import {
     createZRevRankWithScore,
     createZScan,
     createZScore,
+    createZUnion,
 } from "./Commands";
 import { command_request } from "./ProtobufMessage";
 
@@ -1676,6 +1678,8 @@ export class BaseTransaction<T extends BaseTransaction<T>> {
      *  KeyWeight[] - for weighted keys with score multipliers.
      * @param aggregationType - Specifies the aggregation strategy to apply when combining the scores of elements. See `AggregationType`.
      * Command Response - The number of elements in the resulting sorted set stored at `destination`.
+     *
+     * since Valkey version 6.2.0.
      */
     public zinterstore(
         destination: string,
@@ -1685,6 +1689,90 @@ export class BaseTransaction<T extends BaseTransaction<T>> {
         return this.addAndReturn(
             createZInterstore(destination, keys, aggregationType),
         );
+    }
+
+    /**
+     * Computes the intersection of sorted sets given by the specified `keys` and returns a list of intersecting elements.
+     * To get the scores as well, see `zinter_withscores`.
+     * To store the result in a key as a sorted set, see `zinterstore`.
+     *
+     * When in cluster mode, all keys in `keys` must map to the same hash slot.
+     *
+     * See https://valkey.io/commands/zinter/ for more details.
+     *
+     * @param keys - The keys of the sorted sets.
+     * Command Response - The resulting array of intersecting elements.
+     *
+     * since Valkey version 6.2.0.
+     */
+    public zinter(keys: string[]): T {
+        return this.addAndReturn(createZInter(keys));
+    }
+
+    /**
+     * Computes the intersection of sorted sets given by the specified `keys` and returns a list of intersecting elements with scores.
+     * To get the elements only, see `zinter`.
+     * To store the result in a key as a sorted set, see `zinterstore`.
+     *
+     * When in cluster mode, all keys in `keys` must map to the same hash slot.
+     *
+     * See https://valkey.io/commands/zinter/ for more details.
+     *
+     * @param keys - The keys of the sorted sets with possible formats:
+     *  string[] - for keys only.
+     *  KeyWeight[] - for weighted keys with score multipliers.
+     * @param aggregationType - Specifies the aggregation strategy to apply when combining the scores of elements. See `AggregationType`.
+     * Command Response - The resulting sorted set with scores.
+     *
+     * since Valkey version 6.2.0.
+     */
+    public zinterWithScores(
+        keys: string[] | KeyWeight[],
+        aggregationType?: AggregationType,
+    ): T {
+        return this.addAndReturn(createZInter(keys, aggregationType, true));
+    }
+
+    /**
+     * Computes the union of sorted sets given by the specified `keys` and returns a list of union elements.
+     * To get the scores as well, see `zunion_withscores`.
+     *
+     * To store the result in a key as a sorted set, see `zunionstore`.
+     *
+     * When in cluster mode, all keys in `keys` must map to the same hash slot.
+     *
+     * See https://valkey.io/commands/zunion/ for more details.
+     *
+     * @param keys - The keys of the sorted sets.
+     * Command Response - The resulting array of union elements.
+     *
+     * since Valkey version 6.2.0.
+     */
+    public zunion(keys: string[]): T {
+        return this.addAndReturn(createZUnion(keys));
+    }
+
+    /**
+     * Computes the intersection of sorted sets given by the specified `keys` and returns a list of union elements with scores.
+     * To get the elements only, see `zunion`.
+     *
+     * When in cluster mode, all keys in `keys` must map to the same hash slot.
+     *
+     * See https://valkey.io/commands/zunion/ for more details.
+     *
+     * @param keys - The keys of the sorted sets with possible formats:
+     *  string[] - for keys only.
+     *  KeyWeight[] - for weighted keys with score multipliers.
+     * @param aggregationType - Specifies the aggregation strategy to apply when combining the scores of elements. See `AggregationType`.
+     * Commnd Response - The resulting sorted set with scores.
+     *
+     * since Valkey version 6.2.0.
+     */
+    public zunionWithScores(
+        keys: string[] | KeyWeight[],
+        aggregationType?: AggregationType,
+    ): T {
+        return this.addAndReturn(createZUnion(keys, aggregationType, true));
     }
 
     /**

@@ -3726,6 +3726,346 @@ export function runBaseTests<Context>(config: {
         config.timeout,
     );
 
+    async function zinterBasicTest(client: BaseClient) {
+        const key1 = "{testKey}:1-" + uuidv4();
+        const key2 = "{testKey}:2-" + uuidv4();
+
+        const membersScores1 = { one: 1.0, two: 2.0 };
+        const membersScores2 = { one: 1.5, two: 2.5, three: 3.5 };
+
+        expect(await client.zadd(key1, membersScores1)).toEqual(2);
+        expect(await client.zadd(key2, membersScores2)).toEqual(3);
+
+        const resultZinter = await client.zinter([key1, key2]);
+        const expectedZinter = ["one", "two"];
+        expect(resultZinter).toEqual(expectedZinter);
+    }
+
+    async function zinterWithScoresBasicTest(client: BaseClient) {
+        const key1 = "{testKey}:1-" + uuidv4();
+        const key2 = "{testKey}:2-" + uuidv4();
+
+        const membersScores1 = { one: 1.0, two: 2.0 };
+        const membersScores2 = { one: 1.5, two: 2.5, three: 3.5 };
+
+        expect(await client.zadd(key1, membersScores1)).toEqual(2);
+        expect(await client.zadd(key2, membersScores2)).toEqual(3);
+
+        const resultZinterWithScores = await client.zinterWithScores([
+            key1,
+            key2,
+        ]);
+        const expectedZinterWithScores = {
+            one: 2.5,
+            two: 4.5,
+        };
+        expect(resultZinterWithScores).toEqual(expectedZinterWithScores);
+    }
+
+    async function zinterWithScoresWithMaxAggregation(client: BaseClient) {
+        const key1 = "{testKey}:1-" + uuidv4();
+        const key2 = "{testKey}:2-" + uuidv4();
+
+        const membersScores1 = { one: 1.0, two: 2.0 };
+        const membersScores2 = { one: 1.5, two: 2.5, three: 3.5 };
+
+        expect(await client.zadd(key1, membersScores1)).toEqual(2);
+        expect(await client.zadd(key2, membersScores2)).toEqual(3);
+
+        // Intersection results are aggregated by the MAX score of elements
+        const zinterWithScoresResults = await client.zinterWithScores(
+            [key1, key2],
+            "MAX",
+        );
+        const expectedMapMax = {
+            one: 1.5,
+            two: 2.5,
+        };
+        expect(zinterWithScoresResults).toEqual(expectedMapMax);
+    }
+
+    async function zinterWithScoresWithMinAggregation(client: BaseClient) {
+        const key1 = "{testKey}:1-" + uuidv4();
+        const key2 = "{testKey}:2-" + uuidv4();
+
+        const membersScores1 = { one: 1.0, two: 2.0 };
+        const membersScores2 = { one: 1.5, two: 2.5, three: 3.5 };
+
+        expect(await client.zadd(key1, membersScores1)).toEqual(2);
+        expect(await client.zadd(key2, membersScores2)).toEqual(3);
+
+        // Intersection results are aggregated by the MIN score of elements
+        const zinterWithScoresResults = await client.zinterWithScores(
+            [key1, key2],
+            "MIN",
+        );
+        const expectedMapMin = {
+            one: 1.0,
+            two: 2.0,
+        };
+        expect(zinterWithScoresResults).toEqual(expectedMapMin);
+    }
+
+    async function zinterWithScoresWithSumAggregation(client: BaseClient) {
+        const key1 = "{testKey}:1-" + uuidv4();
+        const key2 = "{testKey}:2-" + uuidv4();
+
+        const membersScores1 = { one: 1.0, two: 2.0 };
+        const membersScores2 = { one: 1.5, two: 2.5, three: 3.5 };
+
+        expect(await client.zadd(key1, membersScores1)).toEqual(2);
+        expect(await client.zadd(key2, membersScores2)).toEqual(3);
+
+        // Intersection results are aggregated by the SUM score of elements
+        const zinterWithScoresResults = await client.zinterWithScores(
+            [key1, key2],
+            "SUM",
+        );
+        const expectedMapSum = {
+            one: 2.5,
+            two: 4.5,
+        };
+        expect(zinterWithScoresResults).toEqual(expectedMapSum);
+    }
+
+    async function zinterWithScoresWithWeightsAndAggregation(
+        client: BaseClient,
+    ) {
+        const key1 = "{testKey}:1-" + uuidv4();
+        const key2 = "{testKey}:2-" + uuidv4();
+
+        const membersScores1 = { one: 1.0, two: 2.0 };
+        const membersScores2 = { one: 1.5, two: 2.5, three: 3.5 };
+
+        expect(await client.zadd(key1, membersScores1)).toEqual(2);
+        expect(await client.zadd(key2, membersScores2)).toEqual(3);
+
+        // Intersection results are aggregated by the SUM score of elements with weights
+        const zinterWithScoresResults = await client.zinterWithScores(
+            [
+                [key1, 3],
+                [key2, 2],
+            ],
+            "SUM",
+        );
+        const expectedMapSum = {
+            one: 6,
+            two: 11,
+        };
+        expect(zinterWithScoresResults).toEqual(expectedMapSum);
+    }
+
+    async function zinterEmptyCases(client: BaseClient) {
+        const key1 = "{testKey}:1-" + uuidv4();
+
+        // Non existing key zinter
+        expect(
+            await client.zinter([key1, "{testKey}-non_existing_key"]),
+        ).toEqual([]);
+
+        // Non existing key zinterWithScores
+        expect(
+            await client.zinterWithScores([key1, "{testKey}-non_existing_key"]),
+        ).toEqual({});
+
+        // Empty list check zinter
+        await expect(client.zinter([])).rejects.toThrow();
+
+        // Empty list check zinterWithScores
+        await expect(client.zinterWithScores([])).rejects.toThrow();
+    }
+
+    it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
+        `zinter test_%p`,
+        async (protocol) => {
+            await runTest(async (client: BaseClient) => {
+                await zinterBasicTest(client);
+                await zinterWithScoresBasicTest(client);
+                await zinterWithScoresWithMaxAggregation(client);
+                await zinterWithScoresWithMinAggregation(client);
+                await zinterWithScoresWithSumAggregation(client);
+                await zinterWithScoresWithWeightsAndAggregation(client);
+                await zinterEmptyCases(client);
+            }, protocol);
+        },
+        config.timeout,
+    );
+
+    async function zunionBasicTest(client: BaseClient) {
+        const key1 = "{testKey}:1-" + uuidv4();
+        const key2 = "{testKey}:2-" + uuidv4();
+
+        const membersScores1 = { one: 1.0, two: 2.0 };
+        const membersScores2 = { one: 1.5, two: 2.5, three: 3.5 };
+
+        expect(await client.zadd(key1, membersScores1)).toEqual(2);
+        expect(await client.zadd(key2, membersScores2)).toEqual(3);
+
+        const resultZunion = await client.zunion([key1, key2]);
+        const expectedZunion = ["one", "two", "three"];
+
+        expect(resultZunion.sort()).toEqual(expectedZunion.sort());
+    }
+
+    async function zunionWithScoresBasicTest(client: BaseClient) {
+        const key1 = "{testKey}:1-" + uuidv4();
+        const key2 = "{testKey}:2-" + uuidv4();
+
+        const membersScores1 = { one: 1.0, two: 2.0 };
+        const membersScores2 = { one: 1.5, two: 2.5, three: 3.5 };
+
+        expect(await client.zadd(key1, membersScores1)).toEqual(2);
+        expect(await client.zadd(key2, membersScores2)).toEqual(3);
+
+        const resultZunionWithScores = await client.zunionWithScores([
+            key1,
+            key2,
+        ]);
+        const expectedZunionWithScores = {
+            one: 2.5,
+            two: 4.5,
+            three: 3.5,
+        };
+        expect(resultZunionWithScores).toEqual(expectedZunionWithScores);
+    }
+
+    async function zunionWithScoresWithMaxAggregation(client: BaseClient) {
+        const key1 = "{testKey}:1-" + uuidv4();
+        const key2 = "{testKey}:2-" + uuidv4();
+
+        const membersScores1 = { one: 1.0, two: 2.0 };
+        const membersScores2 = { one: 1.5, two: 2.5, three: 3.5 };
+
+        expect(await client.zadd(key1, membersScores1)).toEqual(2);
+        expect(await client.zadd(key2, membersScores2)).toEqual(3);
+
+        // Union results are aggregated by the MAX score of elements
+        const zunionWithScoresResults = await client.zunionWithScores(
+            [key1, key2],
+            "MAX",
+        );
+        const expectedMapMax = {
+            one: 1.5,
+            two: 2.5,
+            three: 3.5,
+        };
+        expect(zunionWithScoresResults).toEqual(expectedMapMax);
+    }
+
+    async function zunionWithScoresWithMinAggregation(client: BaseClient) {
+        const key1 = "{testKey}:1-" + uuidv4();
+        const key2 = "{testKey}:2-" + uuidv4();
+
+        const membersScores1 = { one: 1.0, two: 2.0 };
+        const membersScores2 = { one: 1.5, two: 2.5, three: 3.5 };
+
+        expect(await client.zadd(key1, membersScores1)).toEqual(2);
+        expect(await client.zadd(key2, membersScores2)).toEqual(3);
+
+        // Union results are aggregated by the MIN score of elements
+        const zunionWithScoresResults = await client.zunionWithScores(
+            [key1, key2],
+            "MIN",
+        );
+        const expectedMapMin = {
+            one: 1.0,
+            two: 2.0,
+            three: 3.5,
+        };
+        expect(zunionWithScoresResults).toEqual(expectedMapMin);
+    }
+
+    async function zunionWithScoresWithSumAggregation(client: BaseClient) {
+        const key1 = "{testKey}:1-" + uuidv4();
+        const key2 = "{testKey}:2-" + uuidv4();
+
+        const membersScores1 = { one: 1.0, two: 2.0 };
+        const membersScores2 = { one: 1.5, two: 2.5, three: 3.5 };
+
+        expect(await client.zadd(key1, membersScores1)).toEqual(2);
+        expect(await client.zadd(key2, membersScores2)).toEqual(3);
+
+        // Union results are aggregated by the SUM score of elements
+        const zunionWithScoresResults = await client.zunionWithScores(
+            [key1, key2],
+            "SUM",
+        );
+        const expectedMapSum = {
+            one: 2.5,
+            two: 4.5,
+            three: 3.5,
+        };
+        expect(zunionWithScoresResults).toEqual(expectedMapSum);
+    }
+
+    async function zunionWithScoresWithWeightsAndAggregation(
+        client: BaseClient,
+    ) {
+        const key1 = "{testKey}:1-" + uuidv4();
+        const key2 = "{testKey}:2-" + uuidv4();
+
+        const membersScores1 = { one: 1.0, two: 2.0 };
+        const membersScores2 = { one: 1.5, two: 2.5, three: 3.5 };
+
+        expect(await client.zadd(key1, membersScores1)).toEqual(2);
+        expect(await client.zadd(key2, membersScores2)).toEqual(3);
+
+        // Union results are aggregated by the SUM score of elements with weights
+        const zunionWithScoresResults = await client.zunionWithScores(
+            [
+                [key1, 3],
+                [key2, 2],
+            ],
+            "SUM",
+        );
+        const expectedMapSum = {
+            one: 6,
+            two: 11,
+            three: 7,
+        };
+        expect(zunionWithScoresResults).toEqual(expectedMapSum);
+    }
+
+    async function zunionEmptyCases(client: BaseClient) {
+        const key1 = "{testKey}:1-" + uuidv4();
+
+        const membersScores1 = { one: 1.0, two: 2.0 };
+
+        expect(await client.zadd(key1, membersScores1)).toEqual(2);
+
+        // Non existing key zunion
+        expect(
+            await client.zunion([key1, "{testKey}-non_existing_key"]),
+        ).toEqual(["one", "two"]);
+
+        // Non existing key zunionWithScores
+        expect(
+            await client.zunionWithScores([key1, "{testKey}-non_existing_key"]),
+        ).toEqual(membersScores1);
+
+        // Empty list check zunion
+        await expect(client.zunion([])).rejects.toThrow();
+
+        // Empty list check zunionWithScores
+        await expect(client.zunionWithScores([])).rejects.toThrow();
+    }
+
+    it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
+        `zunion test_%p`,
+        async (protocol) => {
+            await runTest(async (client: BaseClient) => {
+                await zunionBasicTest(client);
+                await zunionWithScoresBasicTest(client);
+                await zunionWithScoresWithMaxAggregation(client);
+                await zunionWithScoresWithMinAggregation(client);
+                await zunionWithScoresWithSumAggregation(client);
+                await zunionWithScoresWithWeightsAndAggregation(client);
+                await zunionEmptyCases(client);
+            }, protocol);
+        },
+        config.timeout,
+    );
+
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `type test_%p`,
         async (protocol) => {

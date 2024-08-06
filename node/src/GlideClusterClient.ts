@@ -6,7 +6,8 @@ import * as net from "net";
 import {
     BaseClient,
     BaseClientConfiguration,
-    PubSubMsg, // eslint-disable-line @typescript-eslint/no-unused-vars
+    PubSubMsg,
+    ReadFrom, // eslint-disable-line @typescript-eslint/no-unused-vars
     ReturnType,
 } from "./BaseClient";
 import {

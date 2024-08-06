@@ -201,6 +201,29 @@ describe("GlideClient", () => {
     );
 
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
+        "bytes decoder client test %p",
+        async (protocol) => {
+            const clientConfig = getClientConfigurationOption(
+                cluster.getAddresses(),
+                protocol,
+            );
+            clientConfig.defaultDecoder = Decoder.Bytes;
+            client = await GlideClient.createClient(clientConfig);
+            expect(await client.select(0)).toEqual("OK");
+
+            const key = uuidv4();
+            const value = uuidv4();
+            const valueEncoded = Buffer.from(value);
+            const result = await client.set(key, value);
+            expect(result).toEqual("OK");
+
+            expect(await client.get(key)).toEqual(valueEncoded);
+            expect(await client.get(key, Decoder.String)).toEqual(value);
+            expect(await client.get(key, Decoder.Bytes)).toEqual(valueEncoded);
+        },
+    );
+
+    it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `can send transactions_%p`,
         async (protocol) => {
             client = await GlideClient.createClient(

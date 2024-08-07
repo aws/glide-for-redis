@@ -1190,6 +1190,50 @@ export function runBaseTests<Context>(config: {
     );
 
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
+        `getrange test_%p`,
+        async (protocol) => {
+            await runTest(async (client: BaseClient, cluster) => {
+                const key = uuidv4();
+                const nonStringKey = uuidv4();
+
+                expect(await client.set(key, "This is a string")).toEqual("OK");
+                expect(await client.getrange(key, 0, 3)).toEqual("This");
+                expect(await client.getrange(key, -3, -1)).toEqual("ing");
+                expect(await client.getrange(key, 0, -1)).toEqual(
+                    "This is a string",
+                );
+
+                // out of range
+                expect(await client.getrange(key, 10, 100)).toEqual("string");
+                expect(await client.getrange(key, -200, -3)).toEqual(
+                    "This is a stri",
+                );
+                expect(await client.getrange(key, 100, 200)).toEqual("");
+
+                // incorrect range
+                expect(await client.getrange(key, -1, -3)).toEqual("");
+
+                // a bug fixed in version 8: https://github.com/redis/redis/issues/13207
+                expect(await client.getrange(key, -200, -100)).toEqual(
+                    cluster.checkIfServerVersionLessThan("8.0.0") ? "T" : "",
+                );
+
+                // empty key (returning null isn't implemented)
+                expect(await client.getrange(nonStringKey, 0, -1)).toEqual(
+                    cluster.checkIfServerVersionLessThan("8.0.0") ? "" : null,
+                );
+
+                // non-string key
+                expect(await client.lpush(nonStringKey, ["_"])).toEqual(1);
+                await expect(
+                    client.getrange(nonStringKey, 0, -1),
+                ).rejects.toThrow(RequestError);
+            }, protocol);
+        },
+        config.timeout,
+    );
+
+    it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `testing hset and hget with multiple existing fields and one non existing field_%p`,
         async (protocol) => {
             await runTest(async (client: BaseClient) => {
@@ -6727,6 +6771,93 @@ export function runBaseTests<Context>(config: {
                 expect(await client.set(nonListKey, "blmpop")).toBe("OK");
                 await expect(
                     client.blmpop([nonListKey], ListDirection.RIGHT, 0.1, 1),
+                ).rejects.toThrow(RequestError);
+            }, protocol);
+        },
+        config.timeout,
+    );
+
+    it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
+        `xgroupCreate and xgroupDestroy test_%p`,
+        async (protocol) => {
+            await runTest(async (client: BaseClient, cluster) => {
+                const key = uuidv4();
+                const nonExistentKey = uuidv4();
+                const stringKey = uuidv4();
+                const groupName1 = uuidv4();
+                const groupName2 = uuidv4();
+                const streamId = "0-1";
+
+                // trying to create a consumer group for a non-existing stream without the "MKSTREAM" arg results in error
+                await expect(
+                    client.xgroupCreate(nonExistentKey, groupName1, streamId),
+                ).rejects.toThrow(RequestError);
+
+                // calling with the "MKSTREAM" arg should create the new stream automatically
+                expect(
+                    await client.xgroupCreate(key, groupName1, streamId, {
+                        mkStream: true,
+                    }),
+                ).toEqual("OK");
+
+                // invalid arg - group names must be unique, but group_name1 already exists
+                await expect(
+                    client.xgroupCreate(key, groupName1, streamId),
+                ).rejects.toThrow(RequestError);
+
+                // Invalid stream ID format
+                await expect(
+                    client.xgroupCreate(
+                        key,
+                        groupName2,
+                        "invalid_stream_id_format",
+                    ),
+                ).rejects.toThrow(RequestError);
+
+                expect(await client.xgroupDestroy(key, groupName1)).toEqual(
+                    true,
+                );
+                // calling xgroup_destroy again returns False because the group was already destroyed above
+                expect(await client.xgroupDestroy(key, groupName1)).toEqual(
+                    false,
+                );
+
+                // attempting to destroy a group for a non-existing key should raise an error
+                await expect(
+                    client.xgroupDestroy(nonExistentKey, groupName1),
+                ).rejects.toThrow(RequestError);
+
+                // "ENTRIESREAD" option was added in Valkey 7.0.0
+                if (cluster.checkIfServerVersionLessThan("7.0.0")) {
+                    await expect(
+                        client.xgroupCreate(key, groupName1, streamId, {
+                            entriesRead: "10",
+                        }),
+                    ).rejects.toThrow(RequestError);
+                } else {
+                    expect(
+                        await client.xgroupCreate(key, groupName1, streamId, {
+                            entriesRead: "10",
+                        }),
+                    ).toEqual("OK");
+
+                    // invalid entries_read_id - cannot be the zero ("0-0") ID
+                    await expect(
+                        client.xgroupCreate(key, groupName1, streamId, {
+                            entriesRead: "0-0",
+                        }),
+                    ).rejects.toThrow(RequestError);
+                }
+
+                // key exists, but it is not a stream
+                expect(await client.set(stringKey, "foo")).toEqual("OK");
+                await expect(
+                    client.xgroupCreate(stringKey, groupName1, streamId, {
+                        mkStream: true,
+                    }),
+                ).rejects.toThrow(RequestError);
+                await expect(
+                    client.xgroupDestroy(stringKey, groupName1),
                 ).rejects.toThrow(RequestError);
             }, protocol);
         },

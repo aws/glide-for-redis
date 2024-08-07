@@ -3234,7 +3234,7 @@ class CoreCommands(Protocol):
             options (Optional[StreamClaimOptions]): Stream claim options.
 
         Returns:
-            A Mapping of message entries with the format
+            Mapping[bytes, List[List[bytes]]]: A Mapping of message entries with the format
                 {"entryId": [["entry", "data"], ...], ...} that are claimed by the consumer.
 
         Examples:
@@ -3268,7 +3268,7 @@ class CoreCommands(Protocol):
         min_idle_time_ms: int,
         ids: List[TEncodable],
         options: Optional[StreamClaimOptions] = None,
-    ) -> List[TEncodable]:
+    ) -> List[bytes]:
         """
         Changes the ownership of a pending message. This function returns a List with
         only the message/entry IDs, and is equivalent to using JUSTID in the Valkey API.
@@ -3284,7 +3284,7 @@ class CoreCommands(Protocol):
             options (Optional[StreamClaimOptions]): Stream claim options.
 
         Returns:
-            A List of message ids claimed by the consumer.
+            List[bytes]: A List of message ids claimed by the consumer.
 
         Examples:
             # read messages from streamId for consumer1
@@ -3296,7 +3296,7 @@ class CoreCommands(Protocol):
                 }
                 # "1-0" is now read, and we can assign the pending messages to consumer2
             >>> await client.xclaim_just_id("mystream", "mygroup", "consumer2", 0, ["1-0"])
-                ["1-0"]
+                [b"1-0"]
         """
 
         args = [
@@ -3312,7 +3312,7 @@ class CoreCommands(Protocol):
             args.extend(options.to_args())
 
         return cast(
-            List[TEncodable],
+            List[bytes],
             await self._execute_command(RequestType.XClaim, args),
         )
 

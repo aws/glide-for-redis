@@ -104,6 +104,21 @@ export function createGetDel(key: string): command_request.Command {
     return createCommand(RequestType.GetDel, [key]);
 }
 
+/**
+ * @internal
+ */
+export function createGetRange(
+    key: string,
+    start: number,
+    end: number,
+): command_request.Command {
+    return createCommand(RequestType.GetRange, [
+        key,
+        start.toString(),
+        end.toString(),
+    ]);
+}
+
 export type SetOptions = {
     /**
      *  `onlyIfDoesNotExist` - Only set the key if it does not already exist.
@@ -2295,6 +2310,61 @@ export function createXRead(
  */
 export function createXLen(key: string): command_request.Command {
     return createCommand(RequestType.XLen, [key]);
+}
+
+/**
+ * Optional arguments for {@link BaseClient.xgroupCreate|xgroupCreate}.
+ *
+ * See https://valkey.io/commands/xgroup-create/ for more details.
+ */
+export type StreamGroupOptions = {
+    /**
+     * If `true`and the stream doesn't exist, creates a new stream with a length of `0`.
+     */
+    mkStream?: boolean;
+    /**
+     * An arbitrary ID (that isn't the first ID, last ID, or the zero `"0-0"`. Use it to
+     * find out how many entries are between the arbitrary ID (excluding it) and the stream's last
+     * entry.
+     *
+     * since Valkey version 7.0.0.
+     */
+    entriesRead?: string;
+};
+
+/**
+ * @internal
+ */
+export function createXGroupCreate(
+    key: string,
+    groupName: string,
+    id: string,
+    options?: StreamGroupOptions,
+): command_request.Command {
+    const args: string[] = [key, groupName, id];
+
+    if (options) {
+        if (options.mkStream) {
+            args.push("MKSTREAM");
+        }
+
+        if (options.entriesRead) {
+            args.push("ENTRIESREAD");
+            args.push(options.entriesRead);
+        }
+    }
+
+    return createCommand(RequestType.XGroupCreate, args);
+}
+
+/**
+ * @internal
+ */
+export function createXGroupDestroy(
+    key: string,
+    groupName: string,
+): command_request.Command {
+    return createCommand(RequestType.XGroupDestroy, [key, groupName]);
 }
 
 /**

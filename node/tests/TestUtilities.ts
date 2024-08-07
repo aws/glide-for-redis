@@ -474,6 +474,8 @@ export async function transactionTest(
     const key24 = "{key}" + uuidv4(); // list value
     const field = uuidv4();
     const value = uuidv4();
+    const groupName1 = uuidv4();
+    const groupName2 = uuidv4();
     // array of tuples - first element is test name/description, second - expected return value
     const responseData: [string, ReturnType][] = [];
 
@@ -500,6 +502,8 @@ export async function transactionTest(
     responseData.push(['set(key1, "bar")', "OK"]);
     baseTransaction.randomKey();
     responseData.push(["randomKey()", key1]);
+    baseTransaction.getrange(key1, 0, -1);
+    responseData.push(["getrange(key1, 0, -1)", "bar"]);
     baseTransaction.getdel(key1);
     responseData.push(["getdel(key1)", "bar"]);
     baseTransaction.set(key1, "bar");
@@ -875,6 +879,17 @@ export async function transactionTest(
         'xtrim(key9, { method: "minid", threshold: "0-2", exact: true }',
         1,
     ]);
+    baseTransaction.xgroupCreate(key9, groupName1, "0-0");
+    responseData.push(['xgroupCreate(key9, groupName1, "0-0")', "OK"]);
+    baseTransaction.xgroupCreate(key9, groupName2, "0-0", { mkStream: true });
+    responseData.push([
+        'xgroupCreate(key9, groupName2, "0-0", { mkStream: true })',
+        "OK",
+    ]);
+    baseTransaction.xgroupDestroy(key9, groupName1);
+    responseData.push(["xgroupDestroy(key9, groupName1)", true]);
+    baseTransaction.xgroupDestroy(key9, groupName2);
+    responseData.push(["xgroupDestroy(key9, groupName2)", true]);
     baseTransaction.xdel(key9, ["0-3", "0-5"]);
     responseData.push(["xdel(key9, [['0-3', '0-5']])", 1]);
     baseTransaction.rename(key9, key10);

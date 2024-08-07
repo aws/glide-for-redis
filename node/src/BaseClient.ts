@@ -44,6 +44,7 @@ import {
     SearchOrigin,
     SetOptions,
     StreamAddOptions,
+    StreamGroupOptions,
     StreamReadOptions,
     StreamTrimOptions,
     ZAddOptions,
@@ -73,6 +74,7 @@ import {
     createGet,
     createGetBit,
     createGetDel,
+    createGetRange,
     createHDel,
     createHExists,
     createHGet,
@@ -151,6 +153,8 @@ import {
     createWatch,
     createXAdd,
     createXDel,
+    createXGroupCreate,
+    createXGroupDestroy,
     createXLen,
     createXRead,
     createXTrim,
@@ -841,6 +845,41 @@ export class BaseClient {
      */
     public getdel(key: string): Promise<string | null> {
         return this.createWritePromise(createGetDel(key));
+    }
+
+    /**
+     * Returns the substring of the string value stored at `key`, determined by the offsets
+     * `start` and `end` (both are inclusive). Negative offsets can be used in order to provide
+     * an offset starting from the end of the string. So `-1` means the last character, `-2` the
+     * penultimate and so forth. If `key` does not exist, an empty string is returned. If `start`
+     * or `end` are out of range, returns the substring within the valid range of the string.
+     *
+     * See https://valkey.io/commands/getrange/ for details.
+     *
+     * @param key - The key of the string.
+     * @param start - The starting offset.
+     * @param end - The ending offset.
+     * @returns A substring extracted from the value stored at `key`.
+     *
+     * @example
+     * ```typescript
+     * await client.set("mykey", "This is a string")
+     * let result = await client.getrange("mykey", 0, 3)
+     * console.log(result); // Output: "This"
+     * result = await client.getrange("mykey", -3, -1)
+     * console.log(result); // Output: "ing" - extracted last 3 characters of a string
+     * result = await client.getrange("mykey", 0, 100)
+     * console.log(result); // Output: "This is a string"
+     * result = await client.getrange("mykey", 5, 6)
+     * console.log(result); // Output: ""
+     * ```
+     */
+    public async getrange(
+        key: string,
+        start: number,
+        end: number,
+    ): Promise<string | null> {
+        return this.createWritePromise(createGetRange(key, start, end));
     }
 
     /** Set the given key with the given value. Return value is dependent on the passed options.
@@ -3631,6 +3670,56 @@ export class BaseClient {
      */
     public xlen(key: string): Promise<number> {
         return this.createWritePromise(createXLen(key));
+    }
+
+    /**
+     * Creates a new consumer group uniquely identified by `groupname` for the stream stored at `key`.
+     *
+     * See https://valkey.io/commands/xgroup-create/ for more details.
+     *
+     * @param key - The key of the stream.
+     * @param groupName - The newly created consumer group name.
+     * @param id - Stream entry ID that specifies the last delivered entry in the stream from the new
+     *     group’s perspective. The special ID `"$"` can be used to specify the last entry in the stream.
+     * @returns `"OK"`.
+     *
+     * @example
+     * ```typescript
+     * // Create the consumer group "mygroup", using zero as the starting ID:
+     * console.log(await client.xgroupCreate("mystream", "mygroup", "0-0")); // Output is "OK"
+     * ```
+     */
+    public async xgroupCreate(
+        key: string,
+        groupName: string,
+        id: string,
+        options?: StreamGroupOptions,
+    ): Promise<string> {
+        return this.createWritePromise(
+            createXGroupCreate(key, groupName, id, options),
+        );
+    }
+
+    /**
+     * Destroys the consumer group `groupname` for the stream stored at `key`.
+     *
+     * See https://valkey.io/commands/xgroup-destroy/ for more details.
+     *
+     * @param key - The key of the stream.
+     * @param groupname - The newly created consumer group name.
+     * @returns `true` if the consumer group is destroyed. Otherwise, `false`.
+     *
+     * @example
+     * ```typescript
+     * // Destroys the consumer group "mygroup"
+     * console.log(await client.xgroupDestroy("mystream", "mygroup")); // Output is true
+     * ```
+     */
+    public async xgroupDestroy(
+        key: string,
+        groupName: string,
+    ): Promise<boolean> {
+        return this.createWritePromise(createXGroupDestroy(key, groupName));
     }
 
     private readonly MAP_READ_FROM_STRATEGY: Record<

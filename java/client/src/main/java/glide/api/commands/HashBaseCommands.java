@@ -591,7 +591,7 @@ public interface HashBaseCommands {
      */
     CompletableFuture<String[][]> hrandfieldWithCountWithValues(String key, long count);
 
-    /*
+    /**
      * Retrieves up to <code>count</code> random field names along with their values from the hash
      * value stored at <code>key</code>.
      *

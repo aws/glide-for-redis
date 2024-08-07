@@ -14,6 +14,7 @@ import {
     FlushMode,
     FunctionListOptions,
     FunctionListResponse,
+    FunctionStatsResponse,
     InfoOptions,
     LolwutOptions,
     SortClusterOptions,
@@ -35,6 +36,7 @@ import {
     createFunctionFlush,
     createFunctionList,
     createFunctionLoad,
+    createFunctionStats,
     createInfo,
     createLastSave,
     createLolwut,
@@ -834,7 +836,7 @@ export class GlideClusterClient extends BaseClient {
      * since Valkey version 7.0.0.
      *
      * @param mode - The flushing mode, could be either {@link FlushMode.SYNC} or {@link FlushMode.ASYNC}.
-     * @param route - The command will be routed to all primary node, unless `route` is provided, in which
+     * @param route - The command will be routed to all primary nodes, unless `route` is provided, in which
      *   case the client will route the command to the nodes defined by `route`.
      * @returns A simple OK response.
      *
@@ -888,6 +890,65 @@ export class GlideClusterClient extends BaseClient {
     ): Promise<ClusterResponse<FunctionListResponse>> {
         return this.createWritePromise(
             createFunctionList(options),
+            toProtobufRoute(route),
+        );
+    }
+
+    /**
+     * Returns information about the function that's currently running and information about the
+     * available execution engines.
+     *
+     * See https://valkey.io/commands/function-stats/ for details.
+     *
+     * since Valkey version 7.0.0.
+     *
+     * @param route - The client will route the command to the nodes defined by `route`.
+     *     If not defined, the command will be routed to all primary nodes.
+     * @returns A `Record` with two keys:
+     *     - `"running_script"` with information about the running script.
+     *     - `"engines"` with information about available engines and their stats.
+     *
+     * See example for more details.
+     *
+     * @example
+     * ```typescript
+     * const response = await client.functionStats("randomNode");
+     * console.log(response); // Output:
+     * // {
+     * //     "running_script":
+     * //     {
+     * //         "name": "deep_thought",
+     * //         "command": ["fcall", "deep_thought", "0"],
+     * //         "duration_ms": 5008
+     * //     },
+     * //     "engines":
+     * //     {
+     * //         "LUA":
+     * //         {
+     * //             "libraries_count": 2,
+     * //             "functions_count": 3
+     * //         }
+     * //     }
+     * // }
+     * // Output if no scripts running:
+     * // {
+     * //     "running_script": null
+     * //     "engines":
+     * //     {
+     * //         "LUA":
+     * //         {
+     * //             "libraries_count": 2,
+     * //             "functions_count": 3
+     * //         }
+     * //     }
+     * // }
+     * ```
+     */
+    public async functionStats(
+        route?: Routes,
+    ): Promise<ClusterResponse<FunctionStatsResponse>> {
+        return this.createWritePromise(
+            createFunctionStats(),
             toProtobufRoute(route),
         );
     }

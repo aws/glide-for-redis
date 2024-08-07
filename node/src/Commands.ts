@@ -1194,6 +1194,17 @@ export function createSPop(
 /**
  * @internal
  */
+export function createSRandMember(
+    key: string,
+    count?: number,
+): command_request.Command {
+    const args: string[] = count == undefined ? [key] : [key, count.toString()];
+    return createCommand(RequestType.SRandMember, args);
+}
+
+/**
+ * @internal
+ */
 export function createCustomCommand(args: string[]) {
     return createCommand(RequestType.CustomCommand, args);
 }
@@ -2172,6 +2183,19 @@ export function createFunctionList(
     return createCommand(RequestType.FunctionList, args);
 }
 
+/** Type of the response of `FUNCTION STATS` command. */
+export type FunctionStatsResponse = Record<
+    string,
+    | null
+    | Record<string, string | string[] | number>
+    | Record<string, Record<string, number>>
+>;
+
+/** @internal */
+export function createFunctionStats(): command_request.Command {
+    return createCommand(RequestType.FunctionStats, []);
+}
+
 /**
  * Represents offsets specifying a string interval to analyze in the {@link BaseClient.bitcount|bitcount} command. The offsets are
  * zero-based indexes, with `0` being the first index of the string, `1` being the next index and so on.
@@ -2333,6 +2357,14 @@ export function createXRead(
  */
 export function createXLen(key: string): command_request.Command {
     return createCommand(RequestType.XLen, [key]);
+}
+
+/** @internal */
+export function createXInfoConsumers(
+    key: string,
+    group: string,
+): command_request.Command {
+    return createCommand(RequestType.XInfoConsumers, [key, group]);
 }
 
 /** Optional parameters for {@link BaseClient.xclaim|xclaim} command. */
@@ -3165,6 +3197,18 @@ export function createHStrlen(
     return createCommand(RequestType.HStrlen, [key, field]);
 }
 
+/** @internal */
+export function createHRandField(
+    key: string,
+    count?: number,
+    withValues?: boolean,
+): command_request.Command {
+    const args = [key];
+    if (count !== undefined) args.push(count.toString());
+    if (withValues) args.push("WITHVALUES");
+    return createCommand(RequestType.HRandField, args);
+}
+
 /**
  * @internal
  */
@@ -3291,6 +3335,14 @@ export function createSetRange(
     return createCommand(RequestType.SetRange, [key, offset.toString(), value]);
 }
 
+/** @internal */
+export function createAppend(
+    key: string,
+    value: string,
+): command_request.Command {
+    return createCommand(RequestType.Append, [key, value]);
+}
+
 /**
  * @internal
  */
@@ -3374,4 +3426,24 @@ export function createPubSubShardNumSub(
     channels?: string[],
 ): command_request.Command {
     return createCommand(RequestType.PubSubSNumSub, channels ? channels : []);
+}
+
+/**
+ * @internal
+ */
+export function createBZPopMax(
+    keys: string[],
+    timeout: number,
+): command_request.Command {
+    return createCommand(RequestType.BZPopMax, [...keys, timeout.toString()]);
+}
+
+/**
+ * @internal
+ */
+export function createBZPopMin(
+    keys: string[],
+    timeout: number,
+): command_request.Command {
+    return createCommand(RequestType.BZPopMin, [...keys, timeout.toString()]);
 }

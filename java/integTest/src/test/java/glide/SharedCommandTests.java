@@ -1438,7 +1438,7 @@ public class SharedCommandTests {
             assertEquals(data.get(pair[0]), pair[1]);
         }
 
-        // Key exists, but it is not a List
+        // Key exists, but it is not a hash
         assertEquals(OK, client.set(key2, "value").get());
         Exception executionException =
                 assertThrows(ExecutionException.class, () -> client.hrandfield(key2).get());

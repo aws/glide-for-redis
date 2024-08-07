@@ -1,4 +1,7 @@
 #### Changes
+* Node: Added XINFO CONSUMERS command ([#2093](https://github.com/valkey-io/valkey-glide/pull/2093))
+* Node: Added HRANDFIELD command ([#2096](https://github.com/valkey-io/valkey-glide/pull/2096))
+* Node: Added FUNCTION STATS commands ([#2082](https://github.com/valkey-io/valkey-glide/pull/2082))
 * Node: Added XCLAIM command ([#2092](https://github.com/valkey-io/valkey-glide/pull/2092))
 * Node: Added EXPIRETIME and PEXPIRETIME commands ([#2063](https://github.com/valkey-io/valkey-glide/pull/2063))
 * Node: Added SORT commands ([#2028](https://github.com/valkey-io/valkey-glide/pull/2028))
@@ -49,15 +52,18 @@
 * Node: Added PFMERGE command ([#2053](https://github.com/valkey-io/valkey-glide/pull/2053))
 * Node: Added WATCH and UNWATCH commands ([#2076](https://github.com/valkey-io/valkey-glide/pull/2076))
 * Node: Added ZLEXCOUNT command ([#2022](https://github.com/valkey-io/valkey-glide/pull/2022))
-* Node: Added ZREMRANGEBYLEX command ([#2025](https://github.com/valkey-io/valkey-glide/pull/2025))
+* Node: Added ZREMRANGEBYLEX command ([#2025]((https://github.com/valkey-io/valkey-glide/pull/2025))
+* Node: Added SRANDMEMBER command ([#2067](https://github.com/valkey-io/valkey-glide/pull/2067))
 * Node: Added ZSCAN command ([#2061](https://github.com/valkey-io/valkey-glide/pull/2061))
 * Node: Added SETRANGE command ([#2066](https://github.com/valkey-io/valkey-glide/pull/2066))
+* Node: Added APPEND command ([#2095](https://github.com/valkey-io/valkey-glide/pull/2095))
 * Node: Added XDEL command ([#2064](https://github.com/valkey-io/valkey-glide/pull/2064))
 * Node: Added LMPOP & BLMPOP command ([#2050](https://github.com/valkey-io/valkey-glide/pull/2050))
 * Node: Added PUBSUB support ([#1964](https://github.com/valkey-io/valkey-glide/pull/1964))
 * Node: Added PUBSUB * commands ([#2090](https://github.com/valkey-io/valkey-glide/pull/2090))
 * Python: Added PUBSUB * commands ([#2043](https://github.com/valkey-io/valkey-glide/pull/2043))
 * Node: Added XGROUP CREATE & XGROUP DESTROY commands ([#2084](https://github.com/valkey-io/valkey-glide/pull/2084))
+* Node: Added BZPOPMAX & BZPOPMIN command ([#2077]((https://github.com/valkey-io/valkey-glide/pull/2077))
 
 #### Breaking Changes
 * Node: (Refactor) Convert classes to types ([#2005](https://github.com/valkey-io/valkey-glide/pull/2005))

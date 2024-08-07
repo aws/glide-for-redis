@@ -14,6 +14,7 @@ import {
     FlushMode,
     FunctionListOptions,
     FunctionListResponse,
+    FunctionStatsResponse,
     InfoOptions,
     LolwutOptions,
     SortOptions,
@@ -33,6 +34,7 @@ import {
     createFunctionFlush,
     createFunctionList,
     createFunctionLoad,
+    createFunctionStats,
     createInfo,
     createLastSave,
     createLolwut,
@@ -543,6 +545,58 @@ export class GlideClient extends BaseClient {
         options?: FunctionListOptions,
     ): Promise<FunctionListResponse> {
         return this.createWritePromise(createFunctionList(options));
+    }
+
+    /**
+     * Returns information about the function that's currently running and information about the
+     * available execution engines.
+     *
+     * See https://valkey.io/commands/function-stats/ for details.
+     *
+     * since Valkey version 7.0.0.
+     *
+     * @returns A `Record` with two keys:
+     *     - `"running_script"` with information about the running script.
+     *     - `"engines"` with information about available engines and their stats.
+     *
+     * See example for more details.
+     *
+     * @example
+     * ```typescript
+     * const response = await client.functionStats();
+     * console.log(response); // Output:
+     * // {
+     * //     "running_script":
+     * //     {
+     * //         "name": "deep_thought",
+     * //         "command": ["fcall", "deep_thought", "0"],
+     * //         "duration_ms": 5008
+     * //     },
+     * //     "engines":
+     * //     {
+     * //         "LUA":
+     * //         {
+     * //             "libraries_count": 2,
+     * //             "functions_count": 3
+     * //         }
+     * //     }
+     * // }
+     * // Output if no scripts running:
+     * // {
+     * //     "running_script": null
+     * //     "engines":
+     * //     {
+     * //         "LUA":
+     * //         {
+     * //             "libraries_count": 2,
+     * //             "functions_count": 3
+     * //         }
+     * //     }
+     * // }
+     * ```
+     */
+    public async functionStats(): Promise<FunctionStatsResponse> {
+        return this.createWritePromise(createFunctionStats());
     }
 
     /**

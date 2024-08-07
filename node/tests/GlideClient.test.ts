@@ -25,6 +25,7 @@ import { command_request } from "../src/ProtobufMessage";
 import { runBaseTests } from "./SharedTests";
 import {
     checkFunctionListResponse,
+    checkFunctionStatsResponse,
     convertStringArrayToBuffer,
     flushAndCloseClient,
     generateLuaLibCode,
@@ -142,21 +143,18 @@ describe("GlideClient", () => {
                 ),
             );
 
-            const blmovePromise = client.blmove(
-                "source",
-                "destination",
-                ListDirection.LEFT,
-                ListDirection.LEFT,
-                0.1,
-            );
-
-            const blmpopPromise = client.blmpop(
-                ["key1", "key2"],
-                ListDirection.LEFT,
-                0.1,
-            );
-
-            const promiseList = [blmovePromise, blmpopPromise];
+            const promiseList = [
+                client.blmove(
+                    "source",
+                    "destination",
+                    ListDirection.LEFT,
+                    ListDirection.LEFT,
+                    0.1,
+                ),
+                client.blmpop(["key1", "key2"], ListDirection.LEFT, 0.1),
+                client.bzpopmax(["key1", "key2"], 0),
+                client.bzpopmin(["key1", "key2"], 0),
+            ];
 
             try {
                 for (const promise of promiseList) {
@@ -507,7 +505,7 @@ describe("GlideClient", () => {
     );
 
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
-        "function load test_%p",
+        "function load function list function stats test_%p",
         async (protocol) => {
             if (cluster.checkIfServerVersionLessThan("7.0.0")) return;
 
@@ -533,6 +531,9 @@ describe("GlideClient", () => {
                 expect(
                     await client.fcallReadonly(funcName, [], ["one", "two"]),
                 ).toEqual("one");
+
+                let functionStats = await client.functionStats();
+                checkFunctionStatsResponse(functionStats, [], 1, 1);
 
                 let functionList = await client.functionList({
                     libNamePattern: libName,
@@ -592,6 +593,9 @@ describe("GlideClient", () => {
                     newCode,
                 );
 
+                functionStats = await client.functionStats();
+                checkFunctionStatsResponse(functionStats, [], 1, 2);
+
                 expect(
                     await client.fcall(func2Name, [], ["one", "two"]),
                 ).toEqual(2);
@@ -600,6 +604,8 @@ describe("GlideClient", () => {
                 ).toEqual(2);
             } finally {
                 expect(await client.functionFlush()).toEqual("OK");
+                const functionStats = await client.functionStats();
+                checkFunctionStatsResponse(functionStats, [], 0, 0);
                 client.close();
             }
         },

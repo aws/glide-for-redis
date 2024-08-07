@@ -24,6 +24,7 @@ import {
     FlushMode,
     FunctionListOptions,
     FunctionListResponse, // eslint-disable-line @typescript-eslint/no-unused-vars
+    FunctionStatsResponse, // eslint-disable-line @typescript-eslint/no-unused-vars
     GeoAddOptions,
     GeoBoxShape, // eslint-disable-line @typescript-eslint/no-unused-vars
     GeoCircleShape, // eslint-disable-line @typescript-eslint/no-unused-vars
@@ -53,11 +54,14 @@ import {
     StreamReadOptions,
     StreamTrimOptions,
     ZAddOptions,
+    createAppend,
     createBLMPop,
     createBLMove,
     createBLPop,
     createBRPop,
     createBZMPop,
+    createBZPopMax,
+    createBZPopMin,
     createBitCount,
     createBitField,
     createBitOp,
@@ -87,6 +91,7 @@ import {
     createFunctionFlush,
     createFunctionList,
     createFunctionLoad,
+    createFunctionStats,
     createGeoAdd,
     createGeoDist,
     createGeoHash,
@@ -105,6 +110,7 @@ import {
     createHLen,
     createHMGet,
     createHScan,
+    createHRandField,
     createHSet,
     createHSetNX,
     createHStrlen,
@@ -169,6 +175,7 @@ import {
     createSMembers,
     createSMove,
     createSPop,
+    createSRandMember,
     createSRem,
     createSUnion,
     createSUnionStore,
@@ -187,6 +194,7 @@ import {
     createXAdd,
     createXClaim,
     createXDel,
+    createXInfoConsumers,
     createXLen,
     createXRead,
     createXTrim,
@@ -851,6 +859,62 @@ export class BaseTransaction<T extends BaseTransaction<T>> {
         return this.addAndReturn(createHStrlen(key, field));
     }
 
+    /**
+     * Returns a random field name from the hash value stored at `key`.
+     *
+     * See https://valkey.io/commands/hrandfield/ for more details.
+     *
+     * since Valkey version 6.2.0.
+     *
+     * @param key - The key of the hash.
+     *
+     * Command Response - A random field name from the hash stored at `key`, or `null` when
+     *     the key does not exist.
+     */
+    public hrandfield(key: string): T {
+        return this.addAndReturn(createHRandField(key));
+    }
+
+    /**
+     * Retrieves up to `count` random field names from the hash value stored at `key`.
+     *
+     * See https://valkey.io/commands/hrandfield/ for more details.
+     *
+     * since Valkey version 6.2.0.
+     *
+     * @param key - The key of the hash.
+     * @param count - The number of field names to return.
+     *
+     *     If `count` is positive, returns unique elements. If negative, allows for duplicates.
+     *
+     * Command Response - An `array` of random field names from the hash stored at `key`,
+     *     or an `empty array` when the key does not exist.
+     */
+    public hrandfieldCount(key: string, count: number): T {
+        return this.addAndReturn(createHRandField(key, count));
+    }
+
+    /**
+     * Retrieves up to `count` random field names along with their values from the hash
+     * value stored at `key`.
+     *
+     * See https://valkey.io/commands/hrandfield/ for more details.
+     *
+     * since Valkey version 6.2.0.
+     *
+     * @param key - The key of the hash.
+     * @param count - The number of field names to return.
+     *
+     *     If `count` is positive, returns unique elements. If negative, allows for duplicates.
+     *
+     * Command Response - A 2D `array` of `[fieldName, value]` `arrays`, where `fieldName` is a random
+     *     field name from the hash and `value` is the associated value of the field name.
+     *     If the hash does not exist or is empty, the response will be an empty `array`.
+     */
+    public hrandfieldWithValues(key: string, count: number): T {
+        return this.addAndReturn(createHRandField(key, count, true));
+    }
+
     /** Inserts all the specified values at the head of the list stored at `key`.
      * `elements` are inserted one after the other to the head of the list, from the leftmost element to the rightmost element.
      * If `key` does not exist, it is created as empty list before performing the push operations.
@@ -1322,6 +1386,31 @@ export class BaseTransaction<T extends BaseTransaction<T>> {
      */
     public spopCount(key: string, count: number): T {
         return this.addAndReturn(createSPop(key, count), true);
+    }
+
+    /** Returns a random element from the set value stored at `key`.
+     *
+     * See https://valkey.io/commands/srandmember for more details.
+     *
+     * @param key - The key from which to retrieve the set member.
+     * Command Response - A random element from the set, or null if `key` does not exist.
+     */
+    public srandmember(key: string): T {
+        return this.addAndReturn(createSRandMember(key));
+    }
+
+    /** Returns one or more random elements from the set value stored at `key`.
+     *
+     * See https://valkey.io/commands/srandmember for more details.
+     *
+     * @param key - The key of the sorted set.
+     * @param count - The number of members to return.
+     *                If `count` is positive, returns unique members.
+     *                If `count` is negative, allows for duplicates members.
+     * Command Response - A list of members from the set. If the set does not exist or is empty, an empty list will be returned.
+     */
+    public srandmemberCount(key: string, count: number): T {
+        return this.addAndReturn(createSRandMember(key, count));
     }
 
     /** Returns the number of keys in `keys` that exist in the database.
@@ -1819,6 +1908,25 @@ export class BaseTransaction<T extends BaseTransaction<T>> {
         return this.addAndReturn(createZPopMin(key, count));
     }
 
+    /**
+     * Blocks the connection until it removes and returns a member with the lowest score from the
+     * first non-empty sorted set, with the given `key` being checked in the order they
+     * are provided.
+     * `BZPOPMIN` is the blocking variant of {@link zpopmin}.
+     *
+     * See https://valkey.io/commands/bzpopmin/ for more details.
+     *
+     * @param keys - The keys of the sorted sets.
+     * @param timeout - The number of seconds to wait for a blocking operation to complete. A value of
+     *     `0` will block indefinitely. Since 6.0.0: timeout is interpreted as a double instead of an integer.
+     *
+     * Command Response - An `array` containing the key where the member was popped out, the member, itself, and the member score.
+     *     If no member could be popped and the `timeout` expired, returns `null`.
+     */
+    public bzpopmin(keys: string[], timeout: number): T {
+        return this.addAndReturn(createBZPopMin(keys, timeout));
+    }
+
     /** Removes and returns the members with the highest scores from the sorted set stored at `key`.
      * If `count` is provided, up to `count` members with the highest scores are removed and returned.
      * Otherwise, only one member with the highest score is removed and returned.
@@ -1833,6 +1941,25 @@ export class BaseTransaction<T extends BaseTransaction<T>> {
      */
     public zpopmax(key: string, count?: number): T {
         return this.addAndReturn(createZPopMax(key, count));
+    }
+
+    /**
+     * Blocks the connection until it removes and returns a member with the highest score from the
+     * first non-empty sorted set, with the given `key` being checked in the order they
+     * are provided.
+     * `BZPOPMAX` is the blocking variant of {@link zpopmax}.
+     *
+     * See https://valkey.io/commands/bzpopmax/ for more details.
+     *
+     * @param keys - The keys of the sorted sets.
+     * @param timeout - The number of seconds to wait for a blocking operation to complete. A value of
+     *     `0` will block indefinitely. Since 6.0.0: timeout is interpreted as a double instead of an integer.
+     *
+     * Command Response - An `array` containing the key where the member was popped out, the member, itself, and the member score.
+     *     If no member could be popped and the `timeout` expired, returns `null`.
+     */
+    public bzpopmax(keys: string[], timeout: number): T {
+        return this.addAndReturn(createBZPopMax(keys, timeout));
     }
 
     /** Echoes the provided `message` back.
@@ -2150,6 +2277,22 @@ export class BaseTransaction<T extends BaseTransaction<T>> {
      */
     public xlen(key: string): T {
         return this.addAndReturn(createXLen(key));
+    }
+
+    /**
+     * Returns the list of all consumers and their attributes for the given consumer group of the
+     * stream stored at `key`.
+     *
+     * See https://valkey.io/commands/xinfo-consumers/ for more details.
+     *
+     * @param key - The key of the stream.
+     * @param group - The consumer group name.
+     *
+     * Command Response - An `Array` of `Records`, where each mapping contains the attributes
+     *     of a consumer for the given consumer group of the stream at `key`.
+     */
+    public xinfoConsumers(key: string, group: string): T {
+        return this.addAndReturn(createXInfoConsumers(key, group));
     }
 
     /**
@@ -2510,6 +2653,23 @@ export class BaseTransaction<T extends BaseTransaction<T>> {
      */
     public functionList(options?: FunctionListOptions): T {
         return this.addAndReturn(createFunctionList(options));
+    }
+
+    /**
+     * Returns information about the function that's currently running and information about the
+     * available execution engines.
+     *
+     * See https://valkey.io/commands/function-stats/ for details.
+     *
+     * since Valkey version 7.0.0.
+     *
+     * Command Response - A `Record` of type {@link FunctionStatsResponse} with two keys:
+     *
+     * - `"running_script"` with information about the running script.
+     * - `"engines"` with information about available engines and their stats.
+     */
+    public functionStats(): T {
+        return this.addAndReturn(createFunctionStats());
     }
 
     /**
@@ -2952,6 +3112,21 @@ export class BaseTransaction<T extends BaseTransaction<T>> {
      */
     public setrange(key: string, offset: number, value: string): T {
         return this.addAndReturn(createSetRange(key, offset, value));
+    }
+
+    /**
+     * Appends a `value` to a `key`. If `key` does not exist it is created and set as an empty string,
+     * so `APPEND` will be similar to {@link set} in this special case.
+     *
+     * See https://valkey.io/commands/append/ for more details.
+     *
+     * @param key - The key of the string.
+     * @param value - The key of the string.
+     *
+     * Command Response - The length of the string after appending the value.
+     */
+    public append(key: string, value: string): T {
+        return this.addAndReturn(createAppend(key, value));
     }
 
     /**

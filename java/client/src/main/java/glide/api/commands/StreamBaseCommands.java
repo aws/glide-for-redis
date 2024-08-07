@@ -202,8 +202,9 @@ public interface StreamBaseCommands {
      * @param keysAndIds A <code>Map</code> of keys and entry ids to read from. The <code>
      *     Map</code> is composed of a stream's key and the id of the entry after which the stream
      *     will be read.
-     * @return A <code>{@literal Map<String, Map<String, String[][]>>}</code> with stream
-     *      keys, to <code>Map</code> of stream-ids, to an array of pairings with format <code>[[field, entry], [field, entry], ...]<code>.
+     * @return A <code>{@literal Map<String, Map<String, String[][]>>}</code> with stream keys, to
+     *     <code>Map</code> of stream-ids, to an array of pairings with format <code>
+     *     [[field, entry], [field, entry], ...]</code>.
      * @example
      *     <pre>{@code
      * Map<String, String> xreadKeys = Map.of("streamKey", "0-0");
@@ -215,6 +216,7 @@ public interface StreamBaseCommands {
      *             System.out.printf("stream id: %s; field: %s; value: %s\n", streamEntry.getKey(), entity[0], entity[1])
      *         );
      *     }
+     * }
      * }</pre>
      */
     CompletableFuture<Map<String, Map<String, String[][]>>> xread(Map<String, String> keysAndIds);
@@ -228,8 +230,9 @@ public interface StreamBaseCommands {
      * @param keysAndIds A <code>Map</code> of keys and entry ids to read from. The <code>
      *     Map</code> is composed of a stream's key and the id of the entry after which the stream
      *     will be read.
-     * @return A <code>{@literal Map<String, Map<String, String[][]>>}</code> with stream
-     *      keys, to <code>Map</code> of stream-ids, to an array of pairings with format <code>[[field, entry], [field, entry], ...]<code>.
+     * @return A <code>{@literal Map<String, Map<String, String[][]>>}</code> with stream keys, to
+     *     <code>Map</code> of stream-ids, to an array of pairings with format <code>
+     *     [[field, entry], [field, entry], ...]</code>.
      * @example
      *     <pre>{@code
      * Map<GlideString, GlideString> xreadKeys = Map.of(gs("streamKey"), gs("0-0"));
@@ -241,6 +244,7 @@ public interface StreamBaseCommands {
      *             System.out.printf("stream id: %s; field: %s; value: %s\n", streamEntry.getKey(), entity[0], entity[1])
      *         );
      *     }
+     * }
      * }</pre>
      */
     CompletableFuture<Map<GlideString, Map<GlideString, GlideString[][]>>> xreadBinary(
@@ -256,8 +260,9 @@ public interface StreamBaseCommands {
      *     Map</code> is composed of a stream's key and the id of the entry after which the stream
      *     will be read.
      * @param options Options detailing how to read the stream {@link StreamReadOptions}.
-     * @return A <code>{@literal Map<String, Map<String, String[][]>>}</code> with stream
-     *     keys, to <code>Map</code> of stream-ids, to an array of pairings with format <code>[[field, entry], [field, entry], ...]<code>.
+     * @return A <code>{@literal Map<String, Map<String, String[][]>>}</code> with stream keys, to
+     *     <code>Map</code> of stream-ids, to an array of pairings with format <code>
+     *     [[field, entry], [field, entry], ...]</code>.
      * @example
      *     <pre>{@code
      * // retrieve streamKey entries and block for 1 second if is no stream data
@@ -271,6 +276,7 @@ public interface StreamBaseCommands {
      *             System.out.printf("stream id: %s; field: %s; value: %s\n", streamEntry.getKey(), entity[0], entity[1])
      *         );
      *     }
+     * }
      * }</pre>
      */
     CompletableFuture<Map<String, Map<String, String[][]>>> xread(
@@ -286,8 +292,9 @@ public interface StreamBaseCommands {
      *     Map</code> is composed of a stream's key and the id of the entry after which the stream
      *     will be read.
      * @param options Options detailing how to read the stream {@link StreamReadOptions}.
-     * @return A <code>{@literal Map<GlideString, Map<GlideString, GlideString[][]>>}</code> with stream
-     *     keys, to <code>Map</code> of stream-ids, to an array of pairings with format <code>[[field, entry], [field, entry], ...]<code>.
+     * @return A <code>{@literal Map<GlideString, Map<GlideString, GlideString[][]>>}</code> with
+     *     stream keys, to <code>Map</code> of stream-ids, to an array of pairings with format <code>
+     *     [[field, entry], [field, entry], ...]</code>.
      * @example
      *     <pre>{@code
      * // retrieve streamKey entries and block for 1 second if is no stream data
@@ -301,6 +308,7 @@ public interface StreamBaseCommands {
      *             System.out.printf("stream id: %s; field: %s; value: %s\n", streamEntry.getKey(), entity[0], entity[1])
      *         );
      *     }
+     * }
      * }</pre>
      */
     CompletableFuture<Map<GlideString, Map<GlideString, GlideString[][]>>> xreadBinary(
@@ -429,7 +437,8 @@ public interface StreamBaseCommands {
      *       <li>Use {@link InfRangeBound#MAX} to end with the maximum available ID.
      *     </ul>
      *
-     * @return A <code>Map</code> of key to stream entry data, where entry data is an array of pairings with format <code>[[field, entry], [field, entry], ...]<code>.
+     * @return A <code>Map</code> of key to stream entry data, where entry data is an array of
+     *     pairings with format <code>[[field, entry], [field, entry], ...]</code>.
      * @example
      *     <pre>{@code
      * // Retrieve all stream entries
@@ -466,7 +475,8 @@ public interface StreamBaseCommands {
      *       <li>Use {@link InfRangeBound#MAX} to end with the maximum available ID.
      *     </ul>
      *
-     * @return A <code>Map</code> of key to stream entry data, where entry data is an array of pairings with format <code>[[field, entry], [field, entry], ...]<code>.
+     * @return A <code>Map</code> of key to stream entry data, where entry data is an array of
+     *     pairings with format <code>[[field, entry], [field, entry], ...]</code>.
      * @example
      *     <pre>{@code
      * // Retrieve all stream entries
@@ -505,7 +515,8 @@ public interface StreamBaseCommands {
      *     </ul>
      *
      * @param count Maximum count of stream entries to return.
-     * @return A <code>Map</code> of key to stream entry data, where entry data is an array of pairings with format <code>[[field, entry], [field, entry], ...]<code>.
+     * @return A <code>Map</code> of key to stream entry data, where entry data is an array of
+     *     pairings with format <code>[[field, entry], [field, entry], ...]</code>.
      * @example
      *     <pre>{@code
      * // Retrieve the first 2 stream entries
@@ -541,7 +552,8 @@ public interface StreamBaseCommands {
      *     </ul>
      *
      * @param count Maximum count of stream entries to return.
-     * @return A <code>Map</code> of key to stream entry data, where entry data is an array of pairings with format <code>[[field, entry], [field, entry], ...]<code>.
+     * @return A <code>Map</code> of key to stream entry data, where entry data is an array of
+     *     pairings with format <code>[[field, entry], [field, entry], ...]</code>.
      * @example
      *     <pre>{@code
      * // Retrieve the first 2 stream entries
@@ -578,7 +590,8 @@ public interface StreamBaseCommands {
      *       <li>Use {@link InfRangeBound#MIN} to start with the minimum available ID.
      *     </ul>
      *
-     * @return A <code>Map</code> of key to stream entry data, where entry data is an array of pairings with format <code>[[field, entry], [field, entry], ...]<code>.
+     * @return A <code>Map</code> of key to stream entry data, where entry data is an array of
+     *     pairings with format <code>[[field, entry], [field, entry], ...]</code>.
      * @example
      *     <pre>{@code
      * // Retrieve all stream entries
@@ -618,7 +631,8 @@ public interface StreamBaseCommands {
      *       <li>Use {@link InfRangeBound#MIN} to start with the minimum available ID.
      *     </ul>
      *
-     * @return A <code>Map</code> of key to stream entry data, where entry data is an array of pairings with format <code>[[field, entry], [field, entry], ...]<code>.
+     * @return A <code>Map</code> of key to stream entry data, where entry data is an array of
+     *     pairings with format <code>[[field, entry], [field, entry], ...]</code>.
      * @example
      *     <pre>{@code
      * // Retrieve all stream entries
@@ -659,7 +673,8 @@ public interface StreamBaseCommands {
      *     </ul>
      *
      * @param count Maximum count of stream entries to return.
-     * @return A <code>Map</code> of key to stream entry data, where entry data is an array of pairings with format <code>[[field, entry], [field, entry], ...]<code>.
+     * @return A <code>Map</code> of key to stream entry data, where entry data is an array of
+     *     pairings with format <code>[[field, entry], [field, entry], ...]</code>.
      * @example
      *     <pre>{@code
      * // Retrieve the first 2 stream entries
@@ -677,8 +692,8 @@ public interface StreamBaseCommands {
 
     /**
      * Returns stream entries matching a given range of IDs in reverse order.<br>
-     * Equivalent to {@link #xrange(GlideString, StreamRange, StreamRange, long)} but returns the entries
-     * in reverse order.
+     * Equivalent to {@link #xrange(GlideString, StreamRange, StreamRange, long)} but returns the
+     * entries in reverse order.
      *
      * @see <a href="https://valkey.io/commands/xrevrange/">valkey.io</a> for details.
      * @param key The key of the stream.
@@ -697,7 +712,8 @@ public interface StreamBaseCommands {
      *     </ul>
      *
      * @param count Maximum count of stream entries to return.
-     * @return A <code>Map</code> of key to stream entry data, where entry data is an array of pairings with format <code>[[field, entry], [field, entry], ...]<code>.
+     * @return A <code>Map</code> of key to stream entry data, where entry data is an array of
+     *     pairings with format <code>[[field, entry], [field, entry], ...]</code>.
      * @example
      *     <pre>{@code
      * // Retrieve the first 2 stream entries
@@ -976,12 +992,14 @@ public interface StreamBaseCommands {
      * @see <a href="https://valkey.io/commands/xreadgroup/">valkey.io</a> for details.
      * @param keysAndIds A <code>Map</code> of keys and entry ids to read from. The <code>
      *     Map</code> is composed of a stream's key and the id of the entry after which the stream
-     *     will be read. Use the special id of <code>{@literal ">"}</code> to receive only new messages.
+     *     will be read. Use the special id of <code>{@literal ">"}</code> to receive only new
+     *     messages.
      * @param group The consumer group name.
      * @param consumer The consumer name.
-     * @return A <code>{@literal Map<String, Map<String, String[][]>>}</code> with stream
-     *      keys, to <code>Map</code> of stream-ids, to an array of pairings with format <code>[[field, entry], [field, entry], ...]</code>.
-     *      Returns <code>null</code> if there is no stream that can be served.
+     * @return A <code>{@literal Map<String, Map<String, String[][]>>}</code> with stream keys, to
+     *     <code>Map</code> of stream-ids, to an array of pairings with format <code>
+     *     [[field, entry], [field, entry], ...]</code>. Returns <code>null</code> if there is no
+     *     stream that can be served.
      * @example
      *     <pre>{@code
      * // create a new stream at "mystream", with stream id "1-0"
@@ -997,7 +1015,7 @@ public interface StreamBaseCommands {
      *         );
      *     }
      * }
-     * </pre>
+     * }</pre>
      */
     CompletableFuture<Map<String, Map<String, String[][]>>> xreadgroup(
             Map<String, String> keysAndIds, String group, String consumer);
@@ -1010,12 +1028,14 @@ public interface StreamBaseCommands {
      * @see <a href="https://valkey.io/commands/xreadgroup/">valkey.io</a> for details.
      * @param keysAndIds A <code>Map</code> of keys and entry ids to read from. The <code>
      *     Map</code> is composed of a stream's key and the id of the entry after which the stream
-     *     will be read. Use the special id of <code>{@literal gs(">")}</code> to receive only new messages.
+     *     will be read. Use the special id of <code>{@literal gs(">")}</code> to receive only new
+     *     messages.
      * @param group The consumer group name.
      * @param consumer The consumer name.
-     * @return A <code>{@literal Map<GlideString, Map<GlideString, GlideString[][]>>}</code> with stream
-     *      keys, to <code>Map</code> of stream-ids, to an array of pairings with format <code>[[field, entry], [field, entry], ...]</code>.
-     *      Returns <code>null</code> if there is no stream that can be served.
+     * @return A <code>{@literal Map<GlideString, Map<GlideString, GlideString[][]>>}</code> with
+     *     stream keys, to <code>Map</code> of stream-ids, to an array of pairings with format <code>
+     *     [[field, entry], [field, entry], ...]</code>. Returns <code>null</code> if there is no
+     *     stream that can be served.
      * @example
      *     <pre>{@code
      * // create a new stream at gs("mystream"), with stream id gs("1-0")
@@ -1031,7 +1051,7 @@ public interface StreamBaseCommands {
      *         );
      *     }
      * }
-     * </pre>
+     * }</pre>
      */
     CompletableFuture<Map<GlideString, Map<GlideString, GlideString[][]>>> xreadgroup(
             Map<GlideString, GlideString> keysAndIds, GlideString group, GlideString consumer);
@@ -1044,13 +1064,15 @@ public interface StreamBaseCommands {
      * @see <a href="https://valkey.io/commands/xreadgroup/">valkey.io</a> for details.
      * @param keysAndIds A <code>Map</code> of keys and entry ids to read from. The <code>
      *     Map</code> is composed of a stream's key and the id of the entry after which the stream
-     *     will be read. Use the special id of <code>{@literal ">"}</code> to receive only new messages.
+     *     will be read. Use the special id of <code>{@literal ">"}</code> to receive only new
+     *     messages.
      * @param group The consumer group name.
      * @param consumer The consumer name.
      * @param options Options detailing how to read the stream {@link StreamReadGroupOptions}.
-     * @return A <code>{@literal Map<String, Map<String, String[][]>>}</code> with stream
-     *      keys, to <code>Map</code> of stream-ids, to an array of pairings with format <code>[[field, entry], [field, entry], ...]<code>.
-     *      Returns <code>null</code> if there is no stream that can be served.
+     * @return A <code>{@literal Map<String, Map<String, String[][]>>}</code> with stream keys, to
+     *     <code>Map</code> of stream-ids, to an array of pairings with format <code>
+     *     [[field, entry], [field, entry], ...]</code>. Returns <code>null</code> if there is no
+     *     stream that can be served.
      * @example
      *     <pre>{@code
      * // create a new stream at "mystream", with stream id "1-0"
@@ -1067,7 +1089,7 @@ public interface StreamBaseCommands {
      *         );
      *     }
      * }
-     * </pre>
+     * }</pre>
      */
     CompletableFuture<Map<String, Map<String, String[][]>>> xreadgroup(
             Map<String, String> keysAndIds,
@@ -1083,13 +1105,15 @@ public interface StreamBaseCommands {
      * @see <a href="https://valkey.io/commands/xreadgroup/">valkey.io</a> for details.
      * @param keysAndIds A <code>Map</code> of keys and entry ids to read from. The <code>
      *     Map</code> is composed of a stream's key and the id of the entry after which the stream
-     *     will be read. Use the special id of <code>{@literal gs(">")}</code> to receive only new messages.
+     *     will be read. Use the special id of <code>{@literal gs(">")}</code> to receive only new
+     *     messages.
      * @param group The consumer group name.
      * @param consumer The consumer name.
      * @param options Options detailing how to read the stream {@link StreamReadGroupOptions}.
-     * @return A <code>{@literal Map<GlideString, Map<GlideString, GlideString[][]>>}</code> with stream
-     *      keys, to <code>Map</code> of stream-ids, to an array of pairings with format <code>[[field, entry], [field, entry], ...]<code>.
-     *      Returns <code>null</code> if there is no stream that can be served.
+     * @return A <code>{@literal Map<GlideString, Map<GlideString, GlideString[][]>>}</code> with
+     *     stream keys, to <code>Map</code> of stream-ids, to an array of pairings with format <code>
+     *     [[field, entry], [field, entry], ...]</code>. Returns <code>null</code> if there is no
+     *     stream that can be served.
      * @example
      *     <pre>{@code
      * // create a new stream at gs("mystream"), with stream id gs("1-0")
@@ -1106,7 +1130,7 @@ public interface StreamBaseCommands {
      *         );
      *     }
      * }
-     * </pre>
+     * }</pre>
      */
     CompletableFuture<Map<GlideString, Map<GlideString, GlideString[][]>>> xreadgroup(
             Map<GlideString, GlideString> keysAndIds,
@@ -1115,8 +1139,9 @@ public interface StreamBaseCommands {
             StreamReadGroupOptions options);
 
     /**
-     * Returns the number of messages that were successfully acknowledged by the consumer group member of a stream.
-     * This command should be called on a pending message so that such message does not get processed again.
+     * Returns the number of messages that were successfully acknowledged by the consumer group member
+     * of a stream. This command should be called on a pending message so that such message does not
+     * get processed again.
      *
      * @see <a href="https://valkey.io/commands/xack/">valkey.io</a> for details.
      * @param key The key of the stream.
@@ -1130,13 +1155,14 @@ public interface StreamBaseCommands {
      * var readResult = client.xreadgroup(Map.of("mystream", entryId), "mygroup", "my0consumer").get();
      * // acknowledge messages on stream
      * assert 1L == client.xack("mystream", "mygroup", new String[] {entryId}).get();
-     * </pre>
+     * }</pre>
      */
     CompletableFuture<Long> xack(String key, String group, String[] ids);
 
     /**
-     * Returns the number of messages that were successfully acknowledged by the consumer group member of a stream.
-     * This command should be called on a pending message so that such message does not get processed again.
+     * Returns the number of messages that were successfully acknowledged by the consumer group member
+     * of a stream. This command should be called on a pending message so that such message does not
+     * get processed again.
      *
      * @param key The key of the stream.
      * @param group The consumer group name.
@@ -1149,7 +1175,7 @@ public interface StreamBaseCommands {
      * var readResult = client.xreadgroup(Map.of(gs("mystream"), entryId), gs("mygroup"), gs("my0consumer")).get();
      * // acknowledge messages on stream
      * assert 1L == client.xack(gs("mystream"), gs("mygroup"), new GlideString[] {entryId}).get();
-     * </pre>
+     * }</pre>
      */
     CompletableFuture<Long> xack(GlideString key, GlideString group, GlideString[] ids);
 
@@ -1160,22 +1186,26 @@ public interface StreamBaseCommands {
      * @param key The key of the stream.
      * @param group The consumer group name.
      * @return An <code>array</code> that includes the summary of pending messages, with the format
-     * <code>[NumOfMessages, StartId, EndId, [Consumer, NumOfMessages]]</code>, where:
-     * <ul>
-     *      <li> <code>NumOfMessages</code>: The total number of pending messages for this consumer group.
-     *      <li> <code>StartId</code>: The smallest ID among the pending messages.
-     *      <li> <code>EndId</code>: The greatest ID among the pending messages.
-     *      <li> <code>[[Consumer, NumOfMessages], ...]</code>: A 2D-<code>array</code> of every consumer
-     *      in the consumer group with at least one pending message, and the number of pending messages it has.
-     * </ul>
+     *     <code>[NumOfMessages, StartId, EndId, [Consumer, NumOfMessages]]</code>, where:
+     *     <ul>
+     *       <li><code>NumOfMessages</code>: The total number of pending messages for this consumer
+     *           group.
+     *       <li><code>StartId</code>: The smallest ID among the pending messages.
+     *       <li><code>EndId</code>: The greatest ID among the pending messages.
+     *       <li><code>[[Consumer, NumOfMessages], ...]</code>: A 2D-<code>array</code> of every
+     *           consumer in the consumer group with at least one pending message, and the number of
+     *           pending messages it has.
+     *     </ul>
+     *
      * @example
-     *       <pre>{@code
+     *     <pre>{@code
      * // Retrieve a summary of all pending messages from key "my_stream"
      * Object[] result = client.xpending("my_stream", "my_group").get();
      * System.out.println("Number of pending messages: " + result[0]);
      * System.out.println("Start and End ID of messages: [" + result[1] + ", " + result[2] + "]");
      * for (Object[] consumerResult : (Object[][]) result[3]) {
      *     System.out.println("Number of Consumer messages: [" + consumerResult[0] + ", " + consumerResult[1] + "]");
+     * }
      * }</pre>
      */
     CompletableFuture<Object[]> xpending(String key, String group);
@@ -1187,28 +1217,33 @@ public interface StreamBaseCommands {
      * @param key The key of the stream.
      * @param group The consumer group name.
      * @return An <code>array</code> that includes the summary of pending messages, with the format
-     * <code>[NumOfMessages, StartId, EndId, [Consumer, NumOfMessages]]</code>, where:
-     * <ul>
-     *      <li> <code>NumOfMessages</code>: The total number of pending messages for this consumer group.
-     *      <li> <code>StartId</code>: The smallest ID among the pending messages.
-     *      <li> <code>EndId</code>: The greatest ID among the pending messages.
-     *      <li> <code>[[Consumer, NumOfMessages], ...]</code>: A 2D-<code>array</code> of every consumer
-     *      in the consumer group with at least one pending message, and the number of pending messages it has.
-     * </ul>
+     *     <code>[NumOfMessages, StartId, EndId, [Consumer, NumOfMessages]]</code>, where:
+     *     <ul>
+     *       <li><code>NumOfMessages</code>: The total number of pending messages for this consumer
+     *           group.
+     *       <li><code>StartId</code>: The smallest ID among the pending messages.
+     *       <li><code>EndId</code>: The greatest ID among the pending messages.
+     *       <li><code>[[Consumer, NumOfMessages], ...]</code>: A 2D-<code>array</code> of every
+     *           consumer in the consumer group with at least one pending message, and the number of
+     *           pending messages it has.
+     *     </ul>
+     *
      * @example
-     *       <pre>{@code
+     *     <pre>{@code
      * // Retrieve a summary of all pending messages from key "my_stream"
      * Object[] result = client.xpending(gs("my_stream"), gs("my_group")).get();
      * System.out.println("Number of pending messages: " + result[0]);
      * System.out.println("Start and End ID of messages: [" + result[1] + ", " + result[2] + "]");
      * for (Object[] consumerResult : (Object[][]) result[3]) {
      *     System.out.println("Number of Consumer messages: [" + consumerResult[0] + ", " + consumerResult[1] + "]");
+     * }
      * }</pre>
      */
     CompletableFuture<Object[]> xpending(GlideString key, GlideString group);
 
     /**
-     * Returns an extended form of stream message information for pending messages matching a given range of IDs.
+     * Returns an extended form of stream message information for pending messages matching a given
+     * range of IDs.
      *
      * @see <a href="https://valkey.io/commands/xpending/">valkey.io</a> for details.
      * @param key The key of the stream.
@@ -1226,28 +1261,34 @@ public interface StreamBaseCommands {
      *       <li>Use {@link IdBound#ofExclusive} to specify an exclusive bounded stream ID.
      *       <li>Use {@link InfRangeBound#MAX} to end with the maximum available ID.
      *     </ul>
+     *
      * @param count Limits the number of messages returned.
-     * @return A 2D-<code>array</code> of 4-tuples containing extended message information with the format
-     * <code>[[ID, Consumer, TimeElapsed, NumOfDelivered], ... ]</code>, where:
-     * <ul>
-     *      <li> <code>ID</code>: The ID of the message.
-     *      <li> <code>Consumer</code>: The name of the consumer that fetched the message and has still to acknowledge it. We call it the current owner of the message.
-     *      <li> <code>TimeElapsed</code>: The number of milliseconds that elapsed since the last time this message was delivered to this consumer.
-     *      <li> <code>NumOfDelivered</code>: The number of times this message was delivered.
-     * </ul>
+     * @return A 2D-<code>array</code> of 4-tuples containing extended message information with the
+     *     format <code>[[ID, Consumer, TimeElapsed, NumOfDelivered], ... ]</code>, where:
+     *     <ul>
+     *       <li><code>ID</code>: The ID of the message.
+     *       <li><code>Consumer</code>: The name of the consumer that fetched the message and has
+     *           still to acknowledge it. We call it the current owner of the message.
+     *       <li><code>TimeElapsed</code>: The number of milliseconds that elapsed since the last time
+     *           this message was delivered to this consumer.
+     *       <li><code>NumOfDelivered</code>: The number of times this message was delivered.
+     *     </ul>
+     *
      * @example
-     *       <pre>{@code
+     *     <pre>{@code
      * // Retrieve up to 10 pending messages from key "my_stream" in extended form
      * Object[][] result = client.xpending("my_stream", "my_group", InfRangeBound.MIN, InfRangeBound.MAX, 10L).get();
      * for (Object[] messageResult : result) {
      *     System.out.printf("Message %s from consumer %s was read %s times", messageResult[0], messageResult[1], messageResult[2]);
+     * }
      * }</pre>
      */
     CompletableFuture<Object[][]> xpending(
             String key, String group, StreamRange start, StreamRange end, long count);
 
     /**
-     * Returns an extended form of stream message information for pending messages matching a given range of IDs.
+     * Returns an extended form of stream message information for pending messages matching a given
+     * range of IDs.
      *
      * @see <a href="https://valkey.io/commands/xpending/">valkey.io</a> for details.
      * @param key The key of the stream.
@@ -1265,28 +1306,34 @@ public interface StreamBaseCommands {
      *       <li>Use {@link IdBound#ofExclusive} to specify an exclusive bounded stream ID.
      *       <li>Use {@link InfRangeBound#MAX} to end with the maximum available ID.
      *     </ul>
+     *
      * @param count Limits the number of messages returned.
-     * @return A 2D-<code>array</code> of 4-tuples containing extended message information with the format
-     * <code>[[ID, Consumer, TimeElapsed, NumOfDelivered], ... ]</code>, where:
-     * <ul>
-     *      <li> <code>ID</code>: The ID of the message.
-     *      <li> <code>Consumer</code>: The name of the consumer that fetched the message and has still to acknowledge it. We call it the current owner of the message.
-     *      <li> <code>TimeElapsed</code>: The number of milliseconds that elapsed since the last time this message was delivered to this consumer.
-     *      <li> <code>NumOfDelivered</code>: The number of times this message was delivered.
-     * </ul>
+     * @return A 2D-<code>array</code> of 4-tuples containing extended message information with the
+     *     format <code>[[ID, Consumer, TimeElapsed, NumOfDelivered], ... ]</code>, where:
+     *     <ul>
+     *       <li><code>ID</code>: The ID of the message.
+     *       <li><code>Consumer</code>: The name of the consumer that fetched the message and has
+     *           still to acknowledge it. We call it the current owner of the message.
+     *       <li><code>TimeElapsed</code>: The number of milliseconds that elapsed since the last time
+     *           this message was delivered to this consumer.
+     *       <li><code>NumOfDelivered</code>: The number of times this message was delivered.
+     *     </ul>
+     *
      * @example
-     *       <pre>{@code
+     *     <pre>{@code
      * // Retrieve up to 10 pending messages from key "my_stream" in extended form
      * Object[][] result = client.xpending(gs("my_stream"), gs("my_group"), InfRangeBound.MIN, InfRangeBound.MAX, 10L).get();
      * for (Object[] messageResult : result) {
      *     System.out.printf("Message %s from consumer %s was read %s times", messageResult[0], messageResult[1], messageResult[2]);
+     * }
      * }</pre>
      */
     CompletableFuture<Object[][]> xpending(
             GlideString key, GlideString group, StreamRange start, StreamRange end, long count);
 
     /**
-     * Returns an extended form of stream message information for pending messages matching a given range of IDs.
+     * Returns an extended form of stream message information for pending messages matching a given
+     * range of IDs.
      *
      * @see <a href="https://valkey.io/commands/xpending/">valkey.io</a> for details.
      * @param key The key of the stream.
@@ -1304,18 +1351,22 @@ public interface StreamBaseCommands {
      *       <li>Use {@link IdBound#ofExclusive} to specify an exclusive bounded stream ID.
      *       <li>Use {@link InfRangeBound#MAX} to end with the maximum available ID.
      *     </ul>
+     *
      * @param count Limits the number of messages returned.
      * @param options Stream add options {@link StreamPendingOptions}.
-     * @return A 2D-<code>array</code> of 4-tuples containing extended message information with the format
-     * <code>[[ID, Consumer, TimeElapsed, NumOfDelivered], ... ]</code>, where:
-     * <ul>
-     *      <li> <code>ID</code>: The ID of the message.
-     *      <li> <code>Consumer</code>: The name of the consumer that fetched the message and has still to acknowledge it. We call it the current owner of the message.
-     *      <li> <code>TimeElapsed</code>: The number of milliseconds that elapsed since the last time this message was delivered to this consumer.
-     *      <li> <code>NumOfDelivered</code>: The number of times this message was delivered.
-     * </ul>
+     * @return A 2D-<code>array</code> of 4-tuples containing extended message information with the
+     *     format <code>[[ID, Consumer, TimeElapsed, NumOfDelivered], ... ]</code>, where:
+     *     <ul>
+     *       <li><code>ID</code>: The ID of the message.
+     *       <li><code>Consumer</code>: The name of the consumer that fetched the message and has
+     *           still to acknowledge it. We call it the current owner of the message.
+     *       <li><code>TimeElapsed</code>: The number of milliseconds that elapsed since the last time
+     *           this message was delivered to this consumer.
+     *       <li><code>NumOfDelivered</code>: The number of times this message was delivered.
+     *     </ul>
+     *
      * @example
-     *       <pre>{@code
+     *     <pre>{@code
      * // Retrieve up to 10 pending messages from key "my_stream" and consumer "my_consumer" in extended form
      * Object[][] result = client.xpending(
      *     "my_stream",
@@ -1327,6 +1378,7 @@ public interface StreamBaseCommands {
      * ).get();
      * for (Object[] messageResult : result) {
      *     System.out.printf("Message %s from consumer %s was read %s times", messageResult[0], messageResult[1], messageResult[2]);
+     * }
      * }</pre>
      */
     CompletableFuture<Object[][]> xpending(
@@ -1338,7 +1390,8 @@ public interface StreamBaseCommands {
             StreamPendingOptions options);
 
     /**
-     * Returns an extended form of stream message information for pending messages matching a given range of IDs.
+     * Returns an extended form of stream message information for pending messages matching a given
+     * range of IDs.
      *
      * @see <a href="https://valkey.io/commands/xpending/">valkey.io</a> for details.
      * @param key The key of the stream.
@@ -1356,18 +1409,22 @@ public interface StreamBaseCommands {
      *       <li>Use {@link IdBound#ofExclusive} to specify an exclusive bounded stream ID.
      *       <li>Use {@link InfRangeBound#MAX} to end with the maximum available ID.
      *     </ul>
+     *
      * @param count Limits the number of messages returned.
      * @param options Stream add options {@link StreamPendingOptionsBinary}.
-     * @return A 2D-<code>array</code> of 4-tuples containing extended message information with the format
-     * <code>[[ID, Consumer, TimeElapsed, NumOfDelivered], ... ]</code>, where:
-     * <ul>
-     *      <li> <code>ID</code>: The ID of the message.
-     *      <li> <code>Consumer</code>: The name of the consumer that fetched the message and has still to acknowledge it. We call it the current owner of the message.
-     *      <li> <code>TimeElapsed</code>: The number of milliseconds that elapsed since the last time this message was delivered to this consumer.
-     *      <li> <code>NumOfDelivered</code>: The number of times this message was delivered.
-     * </ul>
+     * @return A 2D-<code>array</code> of 4-tuples containing extended message information with the
+     *     format <code>[[ID, Consumer, TimeElapsed, NumOfDelivered], ... ]</code>, where:
+     *     <ul>
+     *       <li><code>ID</code>: The ID of the message.
+     *       <li><code>Consumer</code>: The name of the consumer that fetched the message and has
+     *           still to acknowledge it. We call it the current owner of the message.
+     *       <li><code>TimeElapsed</code>: The number of milliseconds that elapsed since the last time
+     *           this message was delivered to this consumer.
+     *       <li><code>NumOfDelivered</code>: The number of times this message was delivered.
+     *     </ul>
+     *
      * @example
-     *       <pre>{@code
+     *     <pre>{@code
      * // Retrieve up to 10 pending messages from key "my_stream" and consumer "my_consumer" in extended form
      * Object[][] result = client.xpending(
      *     gs("my_stream"),
@@ -1379,6 +1436,7 @@ public interface StreamBaseCommands {
      * ).get();
      * for (Object[] messageResult : result) {
      *     System.out.printf("Message %s from consumer %s was read %s times", messageResult[0], messageResult[1], messageResult[2]);
+     * }
      * }</pre>
      */
     CompletableFuture<Object[][]> xpending(
@@ -1401,7 +1459,7 @@ public interface StreamBaseCommands {
      * @return A <code>Map</code> of message entries with the format <code>
      *     {"entryId": [["entry", "data"], ...], ...}</code> that are claimed by the consumer.
      * @example
-     *     <pre>
+     *     <pre>{@code
      * // read messages from streamId for consumer1
      * var readResult = client.xreadgroup(Map.of("mystream", ">"), "mygroup", "consumer1").get();
      * // "entryId" is now read, and we can assign the pending messages to consumer2
@@ -1412,7 +1470,7 @@ public interface StreamBaseCommands {
      *         System.out.printf("{%s=%s}%n", entry[0], entry[1]);
      *     }
      * }
-     * </pre>
+     * }</pre>
      */
     CompletableFuture<Map<String, String[][]>> xclaim(
             String key, String group, String consumer, long minIdleTime, String[] ids);
@@ -1429,7 +1487,7 @@ public interface StreamBaseCommands {
      * @return A <code>Map</code> of message entries with the format <code>
      *     {"entryId": [["entry", "data"], ...], ...}</code> that are claimed by the consumer.
      * @example
-     *     <pre>
+     *     <pre>{@code
      * // read messages from streamId for consumer1
      * var readResult = client.xreadgroup(Map.of(gs("mystream"), gs(">")), gs("mygroup"), gs("consumer1")).get();
      * // "entryId" is now read, and we can assign the pending messages to consumer2
@@ -1440,7 +1498,7 @@ public interface StreamBaseCommands {
      *         System.out.printf("{%s=%s}%n", entry[0], entry[1]);
      *     }
      * }
-     * </pre>
+     * }</pre>
      */
     CompletableFuture<Map<GlideString, GlideString[][]>> xclaim(
             GlideString key,
@@ -1462,7 +1520,7 @@ public interface StreamBaseCommands {
      * @return A <code>Map</code> of message entries with the format <code>
      *     {"entryId": [["entry", "data"], ...], ...}</code> that are claimed by the consumer.
      * @example
-     *     <pre>
+     *     <pre>{@code
      * // assign (force) unread and unclaimed messages to consumer2
      * StreamClaimOptions options = StreamClaimOptions.builder().force().build();
      * Map<String, String[][]> results = client.xclaim("mystream", "mygroup", "consumer2", 0L, new String[] {entryId}, options).get();
@@ -1472,7 +1530,7 @@ public interface StreamBaseCommands {
      *         System.out.printf("{%s=%s}%n", entry[0], entry[1]);
      *     }
      * }
-     * </pre>
+     * }</pre>
      */
     CompletableFuture<Map<String, String[][]>> xclaim(
             String key,
@@ -1495,7 +1553,7 @@ public interface StreamBaseCommands {
      * @return A <code>Map</code> of message entries with the format <code>
      *     {"entryId": [["entry", "data"], ...], ...}</code> that are claimed by the consumer.
      * @example
-     *     <pre>
+     *     <pre>{@code
      * // assign (force) unread and unclaimed messages to consumer2
      * StreamClaimOptions options = StreamClaimOptions.builder().force().build();
      * Map<GlideString, GlideString[][]> results = client.xclaim(gs("mystream"), gs("mygroup"), gs("consumer2"), 0L, new GlideString[] {entryId}, options).get();
@@ -1505,7 +1563,7 @@ public interface StreamBaseCommands {
      *         System.out.printf("{%s=%s}%n", entry[0], entry[1]);
      *     }
      * }
-     * </pre>
+     * }</pre>
      */
     CompletableFuture<Map<GlideString, GlideString[][]>> xclaim(
             GlideString key,
@@ -1527,7 +1585,7 @@ public interface StreamBaseCommands {
      * @param ids An array of entry ids.
      * @return An <code>array</code> of message ids claimed by the consumer.
      * @example
-     *     <pre>
+     *     <pre>{@code
      * // read messages from streamId for consumer1
      * var readResult = client.xreadgroup(Map.of("mystream", ">"), "mygroup", "consumer1").get();
      * // "entryId" is now read, and we can assign the pending messages to consumer2
@@ -1535,7 +1593,7 @@ public interface StreamBaseCommands {
      * for (String id: results) {
      *     System.out.printf("consumer2 claimed stream entry ID: %s %n", id);
      * }
-     * </pre>
+     * }</pre>
      */
     CompletableFuture<String[]> xclaimJustId(
             String key, String group, String consumer, long minIdleTime, String[] ids);
@@ -1552,7 +1610,7 @@ public interface StreamBaseCommands {
      * @param ids An array of entry ids.
      * @return An <code>array</code> of message ids claimed by the consumer.
      * @example
-     *     <pre>
+     *     <pre>{@code
      * // read messages from streamId for consumer1
      * var readResult = client.xreadgroup(Map.of(gs("mystream"), gs(">")), gs("mygroup"), gs("consumer1")).get();
      * // "entryId" is now read, and we can assign the pending messages to consumer2
@@ -1560,7 +1618,7 @@ public interface StreamBaseCommands {
      * for (GlideString id: results) {
      *     System.out.printf("consumer2 claimed stream entry ID: %s %n", id);
      * }
-     * </pre>
+     * }</pre>
      */
     CompletableFuture<GlideString[]> xclaimJustId(
             GlideString key,
@@ -1582,13 +1640,14 @@ public interface StreamBaseCommands {
      * @param options Stream claim options {@link StreamClaimOptions}.
      * @return An <code>array</code> of message ids claimed by the consumer.
      * @example
-     *     <pre>
+     *     <pre>{@code
      * // assign (force) unread and unclaimed messages to consumer2
      * StreamClaimOptions options = StreamClaimOptions.builder().force().build();
      * String[] results = client.xclaimJustId("mystream", "mygroup", "consumer2", 0L, new String[] {entryId}, options).get();
      * for (String id: results) {
      *     System.out.printf("consumer2 claimed stream entry ID: %s %n", id);
      * }
+     * }</pre>
      */
     CompletableFuture<String[]> xclaimJustId(
             String key,
@@ -1611,13 +1670,14 @@ public interface StreamBaseCommands {
      * @param options Stream claim options {@link StreamClaimOptions}.
      * @return An <code>array</code> of message ids claimed by the consumer.
      * @example
-     *     <pre>
+     *     <pre>{@code
      * // assign (force) unread and unclaimed messages to consumer2
      * StreamClaimOptions options = StreamClaimOptions.builder().force().build();
      * GlideString[] results = client.xclaimJustId(gs("mystream"), gs("mygroup"), gs("consumer2"), 0L, new GlideString[] {entryId}, options).get();
      * for (GlideString id: results) {
      *     System.out.printf("consumer2 claimed stream entry ID: %s %n", id);
      * }
+     * }</pre>
      */
     CompletableFuture<GlideString[]> xclaimJustId(
             GlideString key,

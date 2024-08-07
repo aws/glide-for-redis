@@ -1288,13 +1288,16 @@ export function runBaseTests<Context>(config: {
                 }
 
                 // Check if all keys from charMap are in resultKeys
-                const allKeysIncluded = Object.keys(charMap).every((key) =>
-                    Object.keys(charMap),
+                const allKeysIncluded = resultKeys.every(
+                    (key) => key in charMap,
                 );
                 expect(allKeysIncluded).toEqual(true);
 
-                const allValuesIncluded = Object.keys(charMap).every((key) =>
-                    Object.values(charMap),
+                console.log(resultValues);
+                console.log(Object.keys(charMap));
+
+                const allValuesIncluded = resultValues.every((value) =>
+                    charMap.hasValue(value),
                 );
                 expect(allValuesIncluded).toEqual(true);
 
@@ -1351,13 +1354,13 @@ export function runBaseTests<Context>(config: {
                     }
                 } while (resultCursor != "0"); // 0 is returned for the cursor of the last iteration.
 
-                const allSecondResultKeys = Object.keys(numberMap).every(
-                    (key) => Object.values(numberMap),
+                const allSecondResultKeys = secondResultAllKeys.every(
+                    (key) => key in numberMap,
                 );
                 expect(allSecondResultKeys).toEqual(true);
 
-                const allSecondResultValues = Object.keys(numberMap).every(
-                    (key) => Object.values(numberMap),
+                const allSecondResultValues = secondResultAllValues.every(
+                    (key) => key in numberMap,
                 );
                 expect(allSecondResultValues).toEqual(true);
 

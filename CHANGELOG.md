@@ -1,4 +1,5 @@
 #### Changes
+* Node: Added HSCAN command ([#2098](https://github.com/valkey-io/valkey-glide/pull/2098/))
 * Node: Added XINFO CONSUMERS command ([#2093](https://github.com/valkey-io/valkey-glide/pull/2093))
 * Node: Added HRANDFIELD command ([#2096](https://github.com/valkey-io/valkey-glide/pull/2096))
 * Node: Added FUNCTION STATS commands ([#2082](https://github.com/valkey-io/valkey-glide/pull/2082))

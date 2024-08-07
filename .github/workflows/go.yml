@@ -106,7 +106,9 @@ jobs:
 
             - name: Run tests
               working-directory: ./go
-              run: make test
+              run: |
+                LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GITHUB_WORKSPACE/go/target/release/deps/
+                make test
 
             - uses: ./.github/workflows/test-benchmark
               with:
@@ -185,7 +187,9 @@ jobs:
 
             - name: Run tests
               working-directory: ./go
-              run: make test
+              run: |
+                LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GITHUB_WORKSPACE/go/target/release/deps/
+                make test
 
             - name: Upload cluster manager logs
               if: always()

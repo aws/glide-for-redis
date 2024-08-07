@@ -544,6 +544,13 @@ export async function transactionTest(
     responseData.push(["del([key1])", 1]);
     baseTransaction.hset(key4, { [field]: value });
     responseData.push(["hset(key4, { [field]: value })", 1]);
+    baseTransaction.hscan(key4, "0");
+    responseData.push(['hscan(key4, "0")', ["0", [field, value]]]);
+    baseTransaction.hscan(key4, "0", { match: "*", count: 20 });
+    responseData.push([
+        'hscan(key4, "0", {match: "*", count: 20})',
+        ["0", [field, value]],
+    ]);
     baseTransaction.hstrlen(key4, field);
     responseData.push(["hstrlen(key4, field)", value.length]);
     baseTransaction.hlen(key4);

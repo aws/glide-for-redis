@@ -1365,9 +1365,7 @@ export function runBaseTests<Context>(config: {
                 result = await client.hscan(key1, initialCursor, {
                     match: "*",
                 });
-                expect(
-                    result[resultCursorIndex],
-                ).not.toEqual("0");
+                expect(result[resultCursorIndex]).not.toEqual("0");
                 expect(
                     result[resultCollectionIndex].length,
                 ).toBeGreaterThanOrEqual(defaultCount);

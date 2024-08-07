@@ -3,6 +3,7 @@
  */
 
 import {
+    BaseClient, // eslint-disable-line @typescript-eslint/no-unused-vars
     ReadFrom, // eslint-disable-line @typescript-eslint/no-unused-vars
 } from "./BaseClient";
 
@@ -3027,6 +3028,8 @@ export class BaseTransaction<T extends BaseTransaction<T>> {
      *     - `"matches"` is mapped to a three dimensional array of integers that stores pairs
      *           of indices that represent the location of the common subsequences in the strings held
      *           by `key1` and `key2`.
+     *
+     *     See example of {@link BaseClient.lcsIdx|lcsIdx} for more details.
      */
     public lcsIdx(
         key1: string,

@@ -222,6 +222,7 @@ import command_request.CommandRequestOuterClass.Command;
 import command_request.CommandRequestOuterClass.Command.ArgsArray;
 import command_request.CommandRequestOuterClass.RequestType;
 import command_request.CommandRequestOuterClass.Transaction;
+import glide.api.commands.StringBaseCommands;
 import glide.api.models.commands.ExpireOptions;
 import glide.api.models.commands.FlushMode;
 import glide.api.models.commands.GetExOptions;
@@ -3035,7 +3036,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * , and stores the result in <code>destination</code>. If <code>destination</code> already
      * exists, it is overwritten. Otherwise, a new sorted set will be created.<br>
      * To perform a <code>zinterstore</code> operation while specifying aggregation settings, use
-     * {@link #zinterstore(Object, KeysOrWeightedKeys, Aggregate)}.
+     * {@link #zinterstore(String, KeysOrWeightedKeys, Aggregate)}.
      *
      * @see <a href="https://valkey.io/commands/zinterstore/">valkey.io</a> for more details.
      * @param destination The key of the destination sorted set.
@@ -3061,7 +3062,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * , and stores the result in <code>destination</code>. If <code>destination</code> already
      * exists, it is overwritten. Otherwise, a new sorted set will be created.<br>
      * To perform a <code>zinterstore</code> operation while specifying aggregation settings, use
-     * {@link #zinterstore(Object, KeysOrWeightedKeys, Aggregate)}.
+     * {@link #zinterstore(GlideString, KeysOrWeightedKeysBinary, Aggregate)}.
      *
      * @see <a href="https://valkey.io/commands/zinterstore/">valkey.io</a> for more details.
      * @param destination The key of the destination sorted set.
@@ -6240,27 +6241,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
     }
 
     /**
-     * Returns the longest common subsequence between strings stored at <code>key1</code> and <code>
-     *  key2</code>.
-     *
-     * @since Valkey 7.0 and above.
-     * @implNote {@link ArgType} is limited to {@link String} or {@link GlideString}, any other type
-     *     will throw {@link IllegalArgumentException}.
-     * @see <a href="https://valkey.io/commands/lcs/">valkey.io</a> for details.
-     * @param key1 The key that stores the first string.
-     * @param key2 The key that stores the second string.
-     * @return Command Response - A <code>String</code> containing the longest common subsequence
-     *     between the 2 strings. An empty <code>String</code> is returned if the keys do not exist or
-     *     have no common subsequences.
-     */
-    public <ArgType> T lcs(@NonNull ArgType key1, @NonNull ArgType key2) {
-        checkTypeOrThrow(key1);
-        protobufTransaction.addCommands(buildCommand(LCS, newArgsBuilder().add(key1).add(key2)));
-        return getThis();
-    }
-
-    /**
-     * Returns the length of the longest common subsequence between strings stored at <code>key1
+     * Returns all the longest common subsequences combined between strings stored at <code>key1
      * </code> and <code>key2</code>.
      *
      * @since Valkey 7.0 and above.
@@ -6269,7 +6250,28 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @see <a href="https://valkey.io/commands/lcs/">valkey.io</a> for details.
      * @param key1 The key that stores the first string.
      * @param key2 The key that stores the second string.
-     * @return Command Response - The length of the longest common subsequence between the 2 strings.
+     * @return Command Response - A <code>String</code> containing all the longest common subsequences
+     *     combined between the 2 strings. An empty <code>String</code>/<code>GlideString</code> is
+     *     returned if the keys do not exist or have no common subsequences.
+     */
+    public <ArgType> T lcs(@NonNull ArgType key1, @NonNull ArgType key2) {
+        checkTypeOrThrow(key1);
+        protobufTransaction.addCommands(buildCommand(LCS, newArgsBuilder().add(key1).add(key2)));
+        return getThis();
+    }
+
+    /**
+     * Returns the total length of all the longest common subsequences between strings stored at
+     * <code>key1</code> and <code>key2</code>.
+     *
+     * @since Valkey 7.0 and above.
+     * @implNote {@link ArgType} is limited to {@link String} or {@link GlideString}, any other type
+     *     will throw {@link IllegalArgumentException}.
+     * @see <a href="https://valkey.io/commands/lcs/">valkey.io</a> for details.
+     * @param key1 The key that stores the first string.
+     * @param key2 The key that stores the second string.
+     * @return Command Response - The total length of all the longest common subsequences between the
+     *     2 strings.
      */
     public <ArgType> T lcsLen(@NonNull ArgType key1, @NonNull ArgType key2) {
         checkTypeOrThrow(key1);
@@ -6322,35 +6324,16 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @param key1 The key that stores the first string.
      * @param key2 The key that stores the second string.
      * @return Command Response - A <code>Map</code> containing the indices of the longest common
-     *     subsequence between the 2 strings and the length of the longest common subsequence. The
-     *     resulting map contains two keys, "matches" and "len":
+     *     subsequence between the 2 strings and the total length of all the longest common
+     *     subsequences. The resulting map contains two keys, "matches" and "len":
      *     <ul>
-     *       <li>"len" is mapped to the length of the longest common subsequence between the 2 strings
-     *           stored as <code>Long</code>.
+     *       <li>"len" is mapped to the total length of the all longest common subsequences between
+     *           the 2 strings stored as <code>Long</code>.
      *       <li>"matches" is mapped to a three dimensional <code>Long</code> array that stores pairs
      *           of indices that represent the location of the common subsequences in the strings held
      *           by <code>key1</code> and <code>key2</code>.
      *     </ul>
-     *
-     * @example If <code>key1</code> holds the string <code>"abcd123"</code> and <code>key2</code>
-     *     holds the string <code>"bcdef123"</code> then the sample result would be
-     *     <pre>{@code
-     * new Long[][][] {
-     *     {
-     *         {4L, 6L},
-     *         {5L, 7L}
-     *     },
-     *     {
-     *         {1L, 3L},
-     *         {0L, 2L}
-     *     }
-     * }
-     * }</pre>
-     *     The result indicates that the first substring match is <code>"123"</code> in <code>key1
-     *     </code> at index <code>4</code> to <code>6</code> which matches the substring in <code>key2
-     *     </code> at index <code>5</code> to <code>7</code>. And the second substring match is <code>
-     *      "bcd"</code> in <code>key1</code> at index <code>1</code> to <code>3</code> which matches
-     *     the substring in <code>key2</code> at index <code>0</code> to <code>2</code>.
+     *     See example of {@link StringBaseCommands#lcsIdx(String, String)} for more details.
      */
     public <ArgType> T lcsIdx(@NonNull ArgType key1, @NonNull ArgType key2) {
         checkTypeOrThrow(key1);
@@ -6360,8 +6343,8 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
     }
 
     /**
-     * Returns the indices and length of the longest common subsequence between strings stored at
-     * <code>key1</code> and <code>key2</code>.
+     * Returns the indices and the total length of all the longest common subsequences between strings
+     * stored at <code>key1</code> and <code>key2</code>.
      *
      * @since Valkey 7.0 and above.
      * @implNote {@link ArgType} is limited to {@link String} or {@link GlideString}, any other type
@@ -6371,35 +6354,17 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @param key2 The key that stores the second string.
      * @param minMatchLen The minimum length of matches to include in the result.
      * @return Command Response - A <code>Map</code> containing the indices of the longest common
-     *     subsequence between the 2 strings and the length of the longest common subsequence. The
-     *     resulting map contains two keys, "matches" and "len":
+     *     subsequence between the 2 strings and the total length of all the longest common
+     *     subsequences. The resulting map contains two keys, "matches" and "len":
      *     <ul>
-     *       <li>"len" is mapped to the length of the longest common subsequence between the 2 strings
-     *           stored as <code>Long</code>.
+     *       <li>"len" is mapped to the total length of the all longest common subsequences between
+     *           the 2 strings stored as <code>Long</code>. This value doesn't count towards the
+     *           <code>minMatchLen</code> filter.
      *       <li>"matches" is mapped to a three dimensional <code>Long</code> array that stores pairs
      *           of indices that represent the location of the common subsequences in the strings held
      *           by <code>key1</code> and <code>key2</code>.
      *     </ul>
-     *
-     * @example If <code>key1</code> holds the string <code>"abcd123"</code> and <code>key2</code>
-     *     holds the string <code>"bcdef123"</code> then the sample result would be
-     *     <pre>{@code
-     * new Long[][][] {
-     *     {
-     *         {4L, 6L},
-     *         {5L, 7L}
-     *     },
-     *     {
-     *         {1L, 3L},
-     *         {0L, 2L}
-     *     }
-     * }
-     * }</pre>
-     *     The result indicates that the first substring match is <code>"123"</code> in <code>key1
-     *     </code> at index <code>4</code> to <code>6</code> which matches the substring in <code>key2
-     *     </code> at index <code>5</code> to <code>7</code>. And the second substring match is <code>
-     *      "bcd"</code> in <code>key1</code> at index <code>1</code> to <code>3</code> which matches
-     *     the substring in <code>key2</code> at index <code>0</code> to <code>2</code>.
+     *     See example of {@link StringBaseCommands#lcsIdx(String, String, long)} for more details.
      */
     public <ArgType> T lcsIdx(@NonNull ArgType key1, @NonNull ArgType key2, long minMatchLen) {
         checkTypeOrThrow(key1);
@@ -6416,7 +6381,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
     }
 
     /**
-     * Returns the indices and length of the longest common subsequence between strings stored at
+     * Returns the indices and lengths of the longest common subsequences between strings stored at
      * <code>key1</code> and <code>key2</code>.
      *
      * @since Valkey 7.0 and above.
@@ -6426,39 +6391,17 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @param key1 The key that stores the first string.
      * @param key2 The key that stores the second string.
      * @return Command Response - A <code>Map</code> containing the indices of the longest common
-     *     subsequence between the 2 strings and the length of the longest common subsequence. The
+     *     subsequence between the 2 strings and the lengths of the longest common subsequences. The
      *     resulting map contains two keys, "matches" and "len":
      *     <ul>
-     *       <li>"len" is mapped to the length of the longest common subsequence between the 2 strings
-     *           stored as <code>Long</code>.
-     *       <li>"matches" is mapped to a three dimensional <code>Long</code> array that stores pairs
-     *           of indices that represent the location of the common subsequences in the strings held
-     *           by <code>key1</code> and <code>key2</code>.
+     *       <li>"len" is mapped to the total length of the all longest common subsequences between
+     *           the 2 strings stored as <code>Long</code>.
+     *       <li>"matches" is mapped to a three dimensional array that stores pairs of indices that
+     *           represent the location of the common subsequences in the strings held by <code>key1
+     *            </code> and <code>key2</code> and the match length.
      *     </ul>
-     *
-     * @example If <code>key1</code> holds the string <code>"abcd1234"</code> and <code>key2</code>
-     *     holds the string <code>"bcdef1234"</code> then the sample result would be
-     *     <pre>{@code
-     * new Object[] {
-     *     new Object[] {
-     *         new Long[] {4L, 7L},
-     *         new Long[] {5L, 8L},
-     *         4L
-     *     },
-     *     new Object[] {
-     *         new Long[] {1L, 3L},
-     *         new Long[] {0L, 2L},
-     *         3L
-     *     }
-     * }
-     * }</pre>
-     *     The result indicates that the first substring match is <code>"1234"</code> in <code>key1
-     *     </code> at index <code>4</code> to <code>7</code> which matches the substring in <code>key2
-     *     </code> at index <code>5</code> to <code>8</code> and the last element in the array is the
-     *     length of the substring match which is <code>4</code>. And the second substring match is
-     *     <code>"bcd"</code> in <code>key1</code> at index <code>1</code> to <code>3</code> which
-     *     matches the substring in <code>key2</code> at index <code>0</code> to <code>2</code> and
-     *     the last element in the array is the length of the substring match which is <code>3</code>.
+     *     See example of {@link StringBaseCommands#lcsIdxWithMatchLen(String, String)} for more
+     *     details.
      */
     public <ArgType> T lcsIdxWithMatchLen(@NonNull ArgType key1, @NonNull ArgType key2) {
         checkTypeOrThrow(key1);
@@ -6474,7 +6417,7 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
     }
 
     /**
-     * Returns the indices and length of the longest common subsequence between strings stored at
+     * Returns the indices and lengths of the longest common subsequences between strings stored at
      * <code>key1</code> and <code>key2</code>.
      *
      * @since Valkey 7.0 and above.
@@ -6485,39 +6428,17 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
      * @param key2 The key that stores the second string.
      * @param minMatchLen The minimum length of matches to include in the result.
      * @return Command Response - A <code>Map</code> containing the indices of the longest common
-     *     subsequence between the 2 strings and the length of the longest common subsequence. The
+     *     subsequence between the 2 strings and the lengths of the longest common subsequences. The
      *     resulting map contains two keys, "matches" and "len":
      *     <ul>
-     *       <li>"len" is mapped to the length of the longest common subsequence between the 2 strings
-     *           stored as <code>Long</code>.
-     *       <li>"matches" is mapped to a three dimensional <code>Long</code> array that stores pairs
-     *           of indices that represent the location of the common subsequences in the strings held
-     *           by <code>key1</code> and <code>key2</code>.
+     *       <li>"len" is mapped to the total length of the all longest common subsequences between
+     *           the 2 strings stored as <code>Long</code>.
+     *       <li>"matches" is mapped to a three dimensional array that stores pairs of indices that
+     *           represent the location of the common subsequences in the strings held by <code>key1
+     *            </code> and <code>key2</code> and the match length.
      *     </ul>
-     *
-     * @example If <code>key1</code> holds the string <code>"abcd1234"</code> and <code>key2</code>
-     *     holds the string <code>"bcdef1234"</code> then the sample result would be
-     *     <pre>{@code
-     * new Object[] {
-     *     new Object[] {
-     *         new Long[] { 4L, 7L },
-     *         new Long[] { 5L, 8L },
-     *         4L
-     *     },
-     *     new Object[] {
-     *         new Long[] { 1L, 3L },
-     *         new Long[] { 0L, 2L },
-     *         3L
-     *     }
-     * }
-     * }</pre>
-     *     The result indicates that the first substring match is <code>"1234"</code> in <code>key1
-     *     </code> at index <code>4</code> to <code>7</code> which matches the substring in <code>key2
-     *     </code> at index <code>5</code> to <code>8</code> and the last element in the array is the
-     *     length of the substring match which is <code>4</code>. And the second substring match is
-     *     <code>"bcd"</code> in <code>key1</code> at index <code>1</code> to <code>3</code> which
-     *     matches the substring in <code>key2</code> at index <code>0</code> to <code>2</code> and
-     *     the last element in the array is the length of the substring match which is <code>3</code>.
+     *     See example of {@link StringBaseCommands#lcsIdxWithMatchLen(String, String, long)} for more
+     *     details.
      */
     public <ArgType> T lcsIdxWithMatchLen(
             @NonNull ArgType key1, @NonNull ArgType key2, long minMatchLen) {

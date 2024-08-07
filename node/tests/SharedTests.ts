@@ -10,7 +10,6 @@
 import { expect, it } from "@jest/globals";
 import { v4 as uuidv4 } from "uuid";
 import {
-    BaseScanOptions,
     BitFieldGet,
     BitFieldIncrBy,
     BitFieldOverflow,
@@ -1249,14 +1248,16 @@ export function runBaseTests<Context>(config: {
                 const numberMap: Record<string, string> = {};
 
                 for (let i = 0; i < 10000; i++) {
-                    (numberMap[i] = i.toString()), "num" + i;
+                    // (numberMap[i] = i.toString()), "num" + i;
+                    numberMap[i.toString()] = "num" + i;
                 }
 
                 const charMembers = ["a", "b", "c", "d", "e"];
                 const charMap: Record<string, string> = {};
 
                 for (let i = 0; i < charMembers.length; i++) {
-                    (charMap[i] = charMembers[i]), i.toString();
+                    // (charMap[i] = charMembers[i]), i.toString();
+                    charMap[charMembers[i]] = i.toString();
                 }
 
                 // Empty set
@@ -1304,7 +1305,6 @@ export function runBaseTests<Context>(config: {
                 });
 
                 expect(result[resultCursorIndex]).toEqual(initialCursor);
-                expect(resultCollectionIndex).toEqual(123123);
                 expect(result[resultCollectionIndex]).toEqual(["a", "0"]);
 
                 // Result contains a subset of the key

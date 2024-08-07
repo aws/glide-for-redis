@@ -1247,8 +1247,7 @@ export function runBaseTests<Context>(config: {
                 // Setup test data - use a large number of entries to force an iterative cursor.
                 const numberMap: Record<string, string> = {};
 
-                for (let i = 0; i < 10000; i++) {
-                    // (numberMap[i] = i.toString()), "num" + i;
+                for (let i = 0; i < 50000; i++) {
                     numberMap[i.toString()] = "num" + i;
                 }
 
@@ -1256,7 +1255,6 @@ export function runBaseTests<Context>(config: {
                 const charMap: Record<string, string> = {};
 
                 for (let i = 0; i < charMembers.length; i++) {
-                    // (charMap[i] = charMembers[i]), i.toString();
                     charMap[charMembers[i]] = i.toString();
                 }
 
@@ -1308,9 +1306,8 @@ export function runBaseTests<Context>(config: {
                 expect(result[resultCollectionIndex]).toEqual(["a", "0"]);
 
                 // Result contains a subset of the key
-                const combinedMap: Record<string, string> = {};
-                expect(await client.hset(key1, combinedMap)).toEqual(
-                    numberMap.size,
+                expect(await client.hset(key1, numberMap)).toEqual(
+                    Object.keys(numberMap).length,
                 );
 
                 let resultCursor = "0";
@@ -1369,19 +1366,17 @@ export function runBaseTests<Context>(config: {
                     match: "*",
                 });
                 expect(
-                    result[resultCursorIndex].toString(),
-                ).toBeGreaterThanOrEqual(0);
+                    result[resultCursorIndex],
+                ).not.toEqual("0");
                 expect(
                     result[resultCollectionIndex].length,
                 ).toBeGreaterThanOrEqual(defaultCount);
 
                 // Test count
                 result = await client.hscan(key1, initialCursor, {
-                    match: "20",
+                    count: 20,
                 });
-                expect(
-                    result[resultCursorIndex].toString(),
-                ).toBeGreaterThanOrEqual(0);
+                expect(result[resultCursorIndex]).not.toEqual("0");
                 expect(
                     result[resultCollectionIndex].length,
                 ).toBeGreaterThanOrEqual(20);

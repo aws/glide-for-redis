@@ -25,7 +25,7 @@ import {
     ScoreFilter,
 } from "..";
 import { RedisCluster } from "../../utils/TestUtils.js";
-import { FlushMode, SortOrder } from "../build-ts/src/Commands";
+import { FlushMode, GeoUnit, SortOrder } from "../build-ts/src/Commands";
 import { runBaseTests } from "./SharedTests";
 import {
     checkClusterResponse,
@@ -354,6 +354,12 @@ describe("GlideClusterClient", () => {
                     client.zdiffWithScores(["abc", "zxy", "lkn"]),
                     client.zdiffstore("abc", ["zxy", "lkn"]),
                     client.copy("abc", "zxy", true),
+                    client.geosearchstore(
+                        "abc",
+                        "zxy",
+                        { member: "_" },
+                        { radius: 5, unit: GeoUnit.METERS },
+                    ),
                 );
             }
 

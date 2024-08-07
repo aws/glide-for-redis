@@ -768,7 +768,7 @@ public interface GeospatialIndicesBaseCommands {
      *           axis-aligned rectangle, determined by height and width.
      *     </ul>
      *
-     * @return The number of elements in the resulting set.
+     * @return The number of elements in the resulting sorted set stored at <code>destination</code>.
      * @example
      *     <pre>{@code
      * Long result = client
@@ -812,7 +812,7 @@ public interface GeospatialIndicesBaseCommands {
      *           axis-aligned rectangle, determined by height and width.
      *     </ul>
      *
-     * @return The number of elements in the resulting set.
+     * @return The number of elements in the resulting sorted set stored at <code>destination</code>.
      * @example
      *     <pre>{@code
      * Long result = client
@@ -861,7 +861,7 @@ public interface GeospatialIndicesBaseCommands {
      *
      * @param resultOptions Optional inputs for sorting/limiting the results. See - {@link
      *     GeoSearchResultOptions}
-     * @return The number of elements in the resulting set.
+     * @return The number of elements in the resulting sorted set stored at <code>destination</code>.
      * @example
      *     <pre>{@code
      * Long result = client
@@ -912,7 +912,7 @@ public interface GeospatialIndicesBaseCommands {
      *
      * @param resultOptions Optional inputs for sorting/limiting the results. See - {@link
      *     GeoSearchResultOptions}
-     * @return The number of elements in the resulting set.
+     * @return The number of elements in the resulting sorted set stored at <code>destination</code>.
      * @example
      *     <pre>{@code
      * Long result = client
@@ -962,7 +962,7 @@ public interface GeospatialIndicesBaseCommands {
      *     </ul>
      *
      * @param options The optional inputs to request additional information.
-     * @return The number of elements in the resulting set.
+     * @return The number of elements in the resulting sorted set stored at <code>destination</code>.
      * @example
      *     <pre>{@code
      * Long result = client
@@ -1012,7 +1012,7 @@ public interface GeospatialIndicesBaseCommands {
      *     </ul>
      *
      * @param options The optional inputs to request additional information.
-     * @return The number of elements in the resulting set.
+     * @return The number of elements in the resulting sorted set stored at <code>destination</code>.
      * @example
      *     <pre>{@code
      * Long result = client
@@ -1064,7 +1064,7 @@ public interface GeospatialIndicesBaseCommands {
      * @param options The optional inputs to request additional information.
      * @param resultOptions Optional inputs for sorting/limiting the results. See - {@link
      *     GeoSearchResultOptions}
-     * @return The number of elements in the resulting set.
+     * @return The number of elements in the resulting sorted set stored at <code>destination</code>.
      * @example
      *     <pre>{@code
      * Long result = client
@@ -1118,7 +1118,7 @@ public interface GeospatialIndicesBaseCommands {
      * @param options The optional inputs to request additional information.
      * @param resultOptions Optional inputs for sorting/limiting the results. See - {@link
      *     GeoSearchResultOptions}
-     * @return The number of elements in the resulting set.
+     * @return The number of elements in the resulting sorted set stored at <code>destination</code>.
      * @example
      *     <pre>{@code
      * Long result = client

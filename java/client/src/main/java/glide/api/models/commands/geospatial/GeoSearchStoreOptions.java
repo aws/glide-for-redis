@@ -15,7 +15,14 @@ public final class GeoSearchStoreOptions {
     /** Valkey API keyword for {@link #storeDist} parameter. */
     public static final String GEOSEARCHSTORE_VALKEY_API = "STOREDIST";
 
-    /** Configure sorting the results with their distance from the center. */
+    /**
+     * Determines what is stored as the sorted set score. Defaults to <code>false</code>.<br>
+     * If set to <code>false</code>, the geohash of the location will be stored as the sorted set
+     * score.<br>
+     * If set to <code>true</code>, the distance from the center of the shape (circle or box) will be
+     * stored as the sorted set score. The distance is represented as a floating-point number in the
+     * same unit specified for that shape.
+     */
     private final boolean storeDist;
 
     /**

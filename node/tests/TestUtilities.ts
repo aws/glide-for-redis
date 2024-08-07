@@ -472,8 +472,11 @@ export async function transactionTest(
     const key22 = "{key}" + uuidv4(); // list for sort
     const key23 = "{key}" + uuidv4(); // zset random
     const key24 = "{key}" + uuidv4(); // list value
+    const key25 = "{key}" + uuidv4(); // Geospatial Data/ZSET
     const field = uuidv4();
     const value = uuidv4();
+    const groupName1 = uuidv4();
+    const groupName2 = uuidv4();
     // array of tuples - first element is test name/description, second - expected return value
     const responseData: [string, ReturnType][] = [];
 
@@ -877,8 +880,75 @@ export async function transactionTest(
         'xtrim(key9, { method: "minid", threshold: "0-2", exact: true }',
         1,
     ]);
+    baseTransaction.xgroupCreate(key9, groupName1, "0-0");
+    responseData.push(['xgroupCreate(key9, groupName1, "0-0")', "OK"]);
+    baseTransaction.xgroupCreate(key9, groupName2, "0-0", { mkStream: true });
+    responseData.push([
+        'xgroupCreate(key9, groupName2, "0-0", { mkStream: true })',
+        "OK",
+    ]);
     baseTransaction.xdel(key9, ["0-3", "0-5"]);
     responseData.push(["xdel(key9, [['0-3', '0-5']])", 1]);
+
+    // key9 has one entry here: {"0-2":[["field","value2"]]}
+
+    baseTransaction.customCommand([
+        "xgroup",
+        "createconsumer",
+        key9,
+        groupName1,
+        "consumer1",
+    ]);
+    responseData.push([
+        'xgroupCreateConsumer(key9, groupName1, "consumer1")',
+        true,
+    ]);
+    baseTransaction.customCommand([
+        "xreadgroup",
+        "group",
+        groupName1,
+        "consumer1",
+        "STREAMS",
+        key9,
+        ">",
+    ]);
+    responseData.push([
+        'xreadgroup(groupName1, "consumer1", key9, >)',
+        { [key9]: { "0-2": [["field", "value2"]] } },
+    ]);
+    baseTransaction.xclaim(key9, groupName1, "consumer1", 0, ["0-2"]);
+    responseData.push([
+        'xclaim(key9, groupName1, "consumer1", 0, ["0-2"])',
+        { "0-2": [["field", "value2"]] },
+    ]);
+    baseTransaction.xclaim(key9, groupName1, "consumer1", 0, ["0-2"], {
+        isForce: true,
+        retryCount: 0,
+        idle: 0,
+    });
+    responseData.push([
+        'xclaim(key9, groupName1, "consumer1", 0, ["0-2"], { isForce: true, retryCount: 0, idle: 0})',
+        { "0-2": [["field", "value2"]] },
+    ]);
+    baseTransaction.xclaimJustId(key9, groupName1, "consumer1", 0, ["0-2"]);
+    responseData.push([
+        'xclaimJustId(key9, groupName1, "consumer1", 0, ["0-2"])',
+        ["0-2"],
+    ]);
+    baseTransaction.xclaimJustId(key9, groupName1, "consumer1", 0, ["0-2"], {
+        isForce: true,
+        retryCount: 0,
+        idle: 0,
+    });
+    responseData.push([
+        'xclaimJustId(key9, groupName1, "consumer1", 0, ["0-2"], { isForce: true, retryCount: 0, idle: 0})',
+        ["0-2"],
+    ]);
+    baseTransaction.xgroupDestroy(key9, groupName1);
+    responseData.push(["xgroupDestroy(key9, groupName1)", true]);
+    baseTransaction.xgroupDestroy(key9, groupName2);
+    responseData.push(["xgroupDestroy(key9, groupName2)", true]);
+
     baseTransaction.rename(key9, key10);
     responseData.push(["rename(key9, key10)", "OK"]);
     baseTransaction.exists([key10]);
@@ -1090,6 +1160,17 @@ export async function transactionTest(
                     ],
                 ],
             ],
+        ]);
+
+        baseTransaction.geosearchstore(
+            key25,
+            key18,
+            { position: { longitude: 15, latitude: 37 } },
+            { width: 400, height: 400, unit: GeoUnit.KILOMETERS },
+        );
+        responseData.push([
+            "geosearchstore(key25, key18, (15, 37), 400x400 KM)",
+            2,
         ]);
     }
 

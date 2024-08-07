@@ -1,7 +1,9 @@
 #### Changes
+* Node: Added XCLAIM command ([#2092](https://github.com/valkey-io/valkey-glide/pull/2092))
 * Node: Added EXPIRETIME and PEXPIRETIME commands ([#2063](https://github.com/valkey-io/valkey-glide/pull/2063))
 * Node: Added SORT commands ([#2028](https://github.com/valkey-io/valkey-glide/pull/2028))
 * Node: Added LASTSAVE command ([#2059](https://github.com/valkey-io/valkey-glide/pull/2059))
+* Node: Added GEOSEARCHSTORE command ([#2080](https://github.com/valkey-io/valkey-glide/pull/2080))
 * Node: Added LCS command ([#2049](https://github.com/valkey-io/valkey-glide/pull/2049))
 * Node: Added MSETNX command ([#2046](https://github.com/valkey-io/valkey-glide/pull/2046))
 * Node: Added BLMOVE command ([#2027](https://github.com/valkey-io/valkey-glide/pull/2027))
@@ -55,6 +57,7 @@
 * Node: Added PUBSUB support ([#1964](https://github.com/valkey-io/valkey-glide/pull/1964))
 * Node: Added PUBSUB * commands ([#2090](https://github.com/valkey-io/valkey-glide/pull/2090))
 * Python: Added PUBSUB * commands ([#2043](https://github.com/valkey-io/valkey-glide/pull/2043))
+* Node: Added XGROUP CREATE & XGROUP DESTROY commands ([#2084](https://github.com/valkey-io/valkey-glide/pull/2084))
 
 #### Breaking Changes
 * Node: (Refactor) Convert classes to types ([#2005](https://github.com/valkey-io/valkey-glide/pull/2005))

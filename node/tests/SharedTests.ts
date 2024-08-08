@@ -1258,21 +1258,11 @@ export function runBaseTests<Context>(config: {
                     charMap[charMembers[i]] = i.toString();
                 }
 
-                // Empty set
-                let result = await client.hscan(key1, initialCursor);
-                expect(result[resultCursorIndex]).toEqual(initialCursor);
-                expect(result[resultCollectionIndex]).toEqual([]);
-
-                // Negative cursor
-                result = await client.hscan(key1, "-1");
-                expect(result[resultCursorIndex]).toEqual(initialCursor);
-                expect(result[resultCollectionIndex]).toEqual([]);
-
                 // Result contains the whole set
                 expect(await client.hset(key1, charMap)).toEqual(
                     charMembers.length,
                 );
-                result = await client.hscan(key1, initialCursor);
+                let result = await client.hscan(key1, initialCursor);
                 expect(result[resultCursorIndex]).toEqual(initialCursor);
                 expect(result[resultCollectionIndex].length).toEqual(
                     Object.keys(charMap).length * 2, // Length includes the score which is twice the map size
@@ -1287,7 +1277,7 @@ export function runBaseTests<Context>(config: {
                     resultValues.push(resultArray[i + 1]);
                 }
 
-                // Check if all keys from charMap are in resultKeys
+                // Verify if all keys from charMap are in resultKeys
                 const allKeysIncluded = resultKeys.every(
                     (key) => key in charMap,
                 );
@@ -1298,6 +1288,7 @@ export function runBaseTests<Context>(config: {
                 );
                 expect(allValuesIncluded).toEqual(true);
 
+                // Test hscan with match
                 result = await client.hscan(key1, initialCursor, {
                     match: "a",
                 });
@@ -1305,12 +1296,12 @@ export function runBaseTests<Context>(config: {
                 expect(result[resultCursorIndex]).toEqual(initialCursor);
                 expect(result[resultCollectionIndex]).toEqual(["a", "0"]);
 
-                // Result contains a subset of the key
+                // Set up testing data for key1 tests
                 expect(await client.hset(key1, numberMap)).toEqual(
                     Object.keys(numberMap).length,
                 );
 
-                let resultCursor = "0";
+                let resultCursor = initialCursor;
                 const secondResultAllKeys: string[] = [];
                 const secondResultAllValues: string[] = [];
                 let isFirstLoop = true;
@@ -1328,7 +1319,7 @@ export function runBaseTests<Context>(config: {
                     if (isFirstLoop) {
                         expect(resultCursor).not.toBe("0");
                         isFirstLoop = false;
-                    } else if (resultCursor == "0") {
+                    } else if (resultCursor === initialCursor) {
                         break;
                     }
 
@@ -1349,8 +1340,9 @@ export function runBaseTests<Context>(config: {
                         secondResultAllKeys.push(secondResultEntry[i]);
                         secondResultAllValues.push(secondResultEntry[i + 1]);
                     }
-                } while (resultCursor != "0"); // 0 is returned for the cursor of the last iteration.
+                } while (resultCursor != initialCursor); // 0 is returned for the cursor of the last iteration.
 
+                // Verify all data is found in hscan
                 const allSecondResultKeys = Object.keys(numberMap).every(
                     (key) => key in secondResultAllKeys,
                 );
@@ -1365,26 +1357,26 @@ export function runBaseTests<Context>(config: {
                 result = await client.hscan(key1, initialCursor, {
                     match: "*",
                 });
-                expect(result[resultCursorIndex]).not.toEqual("0");
+                expect(result[resultCursorIndex]).not.toEqual(initialCursor);
                 expect(
                     result[resultCollectionIndex].length,
                 ).toBeGreaterThanOrEqual(defaultCount);
 
                 // Test count
                 result = await client.hscan(key1, initialCursor, {
-                    count: 20,
+                    count: 25,
                 });
-                expect(result[resultCursorIndex]).not.toEqual("0");
+                expect(result[resultCursorIndex]).not.toEqual(initialCursor);
                 expect(
                     result[resultCollectionIndex].length,
-                ).toBeGreaterThanOrEqual(20);
+                ).toBeGreaterThanOrEqual(25);
 
                 // Test count with match returns a non-empty list
                 result = await client.hscan(key1, initialCursor, {
                     match: "1*",
-                    count: 20,
+                    count: 30,
                 });
-                expect(result[resultCursorIndex]).not.toEqual("0");
+                expect(result[resultCursorIndex]).not.toEqual(initialCursor);
                 expect(result[resultCollectionIndex].length).toBeGreaterThan(0);
 
                 // Exceptions
@@ -1406,6 +1398,29 @@ export function runBaseTests<Context>(config: {
                         count: -1,
                     }),
                 ).rejects.toThrow(RequestError);
+            }, protocol);
+        },
+        config.timeout,
+    );
+
+    it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
+        `hscan, sscan, and zscan empty set and negative cursor tests`,
+        async (protocol) => {
+            await runTest(async (client: BaseClient) => {
+                const key1 = "{key}-1" + uuidv4();
+                const initialCursor = "0";
+                const resultCursorIndex = 0;
+                const resultCollectionIndex = 1;
+
+                // Empty set
+                let result = await client.hscan(key1, initialCursor);
+                expect(result[resultCursorIndex]).toEqual(initialCursor);
+                expect(result[resultCollectionIndex]).toEqual([]);
+
+                // Negative cursor
+                result = await client.hscan(key1, "-1");
+                expect(result[resultCursorIndex]).toEqual(initialCursor);
+                expect(result[resultCollectionIndex]).toEqual([]);
             }, protocol);
         },
         config.timeout,

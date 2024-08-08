@@ -699,14 +699,14 @@ export class BaseTransaction<T extends BaseTransaction<T>> {
      * See https://valkey.io/commands/hscan for more details.
      *
      * @param key - The key of the set.
-     * @param cursor - The cursor that points to the next iteration of results. A value of `0` indicates the start of the search.
+     * @param cursor - The cursor that points to the next iteration of results. A value of `"0"` indicates the start of the search.
      * @param options - The {@link BaseScanOptions}.
      *
-     * Command Response -  An `Array` of the `cursor` and the subset of the hash held by `key`.
-     * The first element is always the `cursor` for the next iteration of results. `0` will be the `cursor`
-     * returned on the last iteration of the hash. The second element is always an `Array` of the subset of the
-     * hash held in `key`. The `Array` in the second element is always a flattened series of `String` pairs,
-     * where the value is at even indices and the score is at odd indices.
+     * Command Response -  An array of the `cursor` and the subset of the hash held by `key`.
+     * The first element is always the `cursor` for the next iteration of results. `"0"` will be the `cursor`
+     * returned on the last iteration of the hash. The second element is always an array of the subset of the
+     * hash held in `key`. The array in the second element is always a flattened series of string pairs,
+     * where the value is at even indices and the value is at odd indices.
      */
     public hscan(key: string, cursor: string, options?: BaseScanOptions): T {
         return this.addAndReturn(createHScan(key, cursor, options));

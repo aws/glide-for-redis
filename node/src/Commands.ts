@@ -441,15 +441,15 @@ export function createHScan(
     cursor: string,
     options?: BaseScanOptions,
 ): command_request.Command {
-    let args: string[] = [key, cursor];
+    const args: string[] = [key, cursor];
 
     if (options) {
         if (options.match) {
-            args = args.concat("MATCH", options.match);
+            args.push("MATCH", options.match);
         }
 
         if (options.count !== undefined) {
-            args = args.concat("COUNT", options.count.toString());
+            args.push("COUNT", options.count.toString());
         }
     }
 
@@ -3311,15 +3311,15 @@ export function createZScan(
     cursor: string,
     options?: BaseScanOptions,
 ): command_request.Command {
-    let args: string[] = [key, cursor];
+    const args: string[] = [key, cursor];
 
     if (options) {
         if (options.match) {
-            args = args.concat("MATCH", options.match);
+            args.push("MATCH", options.match);
         }
 
         if (options.count !== undefined) {
-            args = args.concat("COUNT", options.count.toString());
+            args.push("COUNT", options.count.toString());
         }
     }
 

@@ -960,59 +960,70 @@ export async function transactionTest(
 
     // key9 has one entry here: {"0-2":[["field","value2"]]}
 
-    baseTransaction.xgroupCreateConsumer(key9, groupName1, "consumer1");
+    baseTransaction.xgroupCreateConsumer(key9, groupName1, consumer);
     responseData.push([
-        "xgroupCreateConsumer(key9, groupName1, consumer1)",
+        "xgroupCreateConsumer(key9, groupName1, consumer)",
         true,
     ]);
     baseTransaction.customCommand([
         "xreadgroup",
         "group",
         groupName1,
-        "consumer1",
+        consumer,
         "STREAMS",
         key9,
         ">",
     ]);
     responseData.push([
-        'xreadgroup(groupName1, "consumer1", key9, >)',
+        "xreadgroup(groupName1, consumer, key9, >)",
         { [key9]: { "0-2": [["field", "value2"]] } },
     ]);
-    baseTransaction.xclaim(key9, groupName1, "consumer1", 0, ["0-2"]);
+    baseTransaction.xclaim(key9, groupName1, consumer, 0, ["0-2"]);
     responseData.push([
-        'xclaim(key9, groupName1, "consumer1", 0, ["0-2"])',
+        'xclaim(key9, groupName1, consumer, 0, ["0-2"])',
         { "0-2": [["field", "value2"]] },
     ]);
-    baseTransaction.xclaim(key9, groupName1, "consumer1", 0, ["0-2"], {
+    baseTransaction.xclaim(key9, groupName1, consumer, 0, ["0-2"], {
         isForce: true,
         retryCount: 0,
         idle: 0,
     });
     responseData.push([
-        'xclaim(key9, groupName1, "consumer1", 0, ["0-2"], { isForce: true, retryCount: 0, idle: 0})',
+        'xclaim(key9, groupName1, consumer, 0, ["0-2"], { isForce: true, retryCount: 0, idle: 0})',
         { "0-2": [["field", "value2"]] },
     ]);
-    baseTransaction.xclaimJustId(key9, groupName1, "consumer1", 0, ["0-2"]);
+    baseTransaction.xclaimJustId(key9, groupName1, consumer, 0, ["0-2"]);
     responseData.push([
-        'xclaimJustId(key9, groupName1, "consumer1", 0, ["0-2"])',
+        'xclaimJustId(key9, groupName1, consumer, 0, ["0-2"])',
         ["0-2"],
     ]);
-    baseTransaction.xclaimJustId(key9, groupName1, "consumer1", 0, ["0-2"], {
+    baseTransaction.xclaimJustId(key9, groupName1, consumer, 0, ["0-2"], {
         isForce: true,
         retryCount: 0,
         idle: 0,
     });
     responseData.push([
-        'xclaimJustId(key9, groupName1, "consumer1", 0, ["0-2"], { isForce: true, retryCount: 0, idle: 0})',
+        'xclaimJustId(key9, groupName1, consumer, 0, ["0-2"], { isForce: true, retryCount: 0, idle: 0})',
         ["0-2"],
     ]);
-    baseTransaction.xgroupCreateConsumer(key9, groupName1, consumer);
-    responseData.push([
-        "xgroupCreateConsumer(key9, groupName1, consumer)",
-        true,
-    ]);
+
+    if (gte(version, "6.2.0")) {
+        baseTransaction.xautoclaim(key9, groupName1, consumer, 0, "0-0", 1);
+        responseData.push([
+            'xautoclaim(key9, groupName1, consumer, 0, "0-0", 1)',
+            gte(version, "7.0.0")
+                ? ["0-0", { "0-2": [["field", "value2"]] }, []]
+                : ["0-0", { "0-2": [["field", "value2"]] }],
+        ]);
+        baseTransaction.xautoclaimJustId(key9, groupName1, consumer, 0, "0-0");
+        responseData.push([
+            'xautoclaimJustId(key9, groupName1, consumer, 0, "0-0")',
+            gte(version, "7.0.0") ? ["0-0", ["0-2"], []] : ["0-0", ["0-2"]],
+        ]);
+    }
+
     baseTransaction.xgroupDelConsumer(key9, groupName1, consumer);
-    responseData.push(["xgroupDelConsumer(key9, groupName1, consumer)", 0]);
+    responseData.push(["xgroupDelConsumer(key9, groupName1, consumer)", 1]);
     baseTransaction.xgroupDestroy(key9, groupName1);
     responseData.push(["xgroupDestroy(key9, groupName1)", true]);
     baseTransaction.xgroupDestroy(key9, groupName2);
@@ -1051,7 +1062,7 @@ export async function transactionTest(
     baseTransaction.bitpos(key17, 1);
     responseData.push(["bitpos(key17, 1)", 1]);
 
-    if (gte("6.0.0", version)) {
+    if (gte(version, "6.0.0")) {
         baseTransaction.bitfieldReadOnly(key17, [
             new BitFieldGet(new SignedEncoding(5), new BitOffset(3)),
         ]);

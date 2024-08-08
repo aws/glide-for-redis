@@ -232,6 +232,7 @@ import {
     createZScore,
     createGeoSearchStore,
     GeoSearchStoreResultOptions,
+    createXAutoClaim,
 } from "./Commands";
 import { command_request } from "./ProtobufMessage";
 
@@ -2347,6 +2348,88 @@ export class BaseTransaction<T extends BaseTransaction<T>> {
     ): T {
         return this.addAndReturn(
             createXClaim(key, group, consumer, minIdleTime, ids, options, true),
+        );
+    }
+
+    /**
+     * Transfers ownership of pending stream entries that match the specified criteria.
+     *
+     * See https://valkey.io/commands/xautoclaim/ for more details.
+     *
+     * since Valkey version 6.2.0.
+     *
+     * @param key - The key of the stream.
+     * @param group - The consumer group name.
+     * @param consumer - The group consumer.
+     * @param minIdleTime - The minimum idle time for the message to be claimed.
+     * @param start - Filters the claimed entries to those that have an ID equal or greater than the
+     *     specified value.
+     * @param count - (Optional) Limits the number of claimed entries to the specified value.
+     *
+     * Command Response - An `array` containing the following elements:
+     *   - A stream ID to be used as the start argument for the next call to `XAUTOCLAIM`. This ID is
+     *     equivalent to the next ID in the stream after the entries that were scanned, or "0-0" if
+     *     the entire stream was scanned.
+     *   - A mapping of the claimed entries.
+     *   - If you are using Valkey 7.0.0 or above, the response list will also include a list containing
+     *     the message IDs that were in the Pending Entries List but no longer exist in the stream.
+     *     These IDs are deleted from the Pending Entries List.
+     */
+    public xautoclaim(
+        key: string,
+        group: string,
+        consumer: string,
+        minIdleTime: number,
+        start: string,
+        count?: number,
+    ): T {
+        return this.addAndReturn(
+            createXAutoClaim(key, group, consumer, minIdleTime, start, count),
+        );
+    }
+
+    /**
+     * Transfers ownership of pending stream entries that match the specified criteria.
+     *
+     * See https://valkey.io/commands/xautoclaim/ for more details.
+     *
+     * since Valkey version 6.2.0.
+     *
+     * @param key - The key of the stream.
+     * @param group - The consumer group name.
+     * @param consumer - The group consumer.
+     * @param minIdleTime - The minimum idle time for the message to be claimed.
+     * @param start - Filters the claimed entries to those that have an ID equal or greater than the
+     *     specified value.
+     * @param count - (Optional) Limits the number of claimed entries to the specified value.
+     *
+     * Command Response - An `array` containing the following elements:
+     *   - A stream ID to be used as the start argument for the next call to `XAUTOCLAIM`. This ID is
+     *     equivalent to the next ID in the stream after the entries that were scanned, or "0-0" if
+     *     the entire stream was scanned.
+     *   - A list of the IDs for the claimed entries.
+     *   - If you are using Valkey 7.0.0 or above, the response list will also include a list containing
+     *     the message IDs that were in the Pending Entries List but no longer exist in the stream.
+     *     These IDs are deleted from the Pending Entries List.
+     */
+    public xautoclaimJustId(
+        key: string,
+        group: string,
+        consumer: string,
+        minIdleTime: number,
+        start: string,
+        count?: number,
+    ): T {
+        return this.addAndReturn(
+            createXAutoClaim(
+                key,
+                group,
+                consumer,
+                minIdleTime,
+                start,
+                count,
+                true,
+            ),
         );
     }
 

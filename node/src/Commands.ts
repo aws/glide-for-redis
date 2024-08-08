@@ -2472,6 +2472,28 @@ export function createXClaim(
     return createCommand(RequestType.XClaim, args);
 }
 
+/** @internal */
+export function createXAutoClaim(
+    key: string,
+    group: string,
+    consumer: string,
+    minIdleTime: number,
+    start: string,
+    count?: number,
+    justId?: boolean,
+): command_request.Command {
+    const args = [
+        key,
+        group,
+        consumer,
+        minIdleTime.toString(),
+        start.toString(),
+    ];
+    if (count !== undefined) args.push("COUNT", count.toString());
+    if (justId) args.push("JUSTID");
+    return createCommand(RequestType.XAutoClaim, args);
+}
+
 /**
  * Optional arguments for {@link BaseClient.xgroupCreate|xgroupCreate}.
  *

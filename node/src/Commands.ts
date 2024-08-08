@@ -3489,3 +3489,75 @@ export function createBZPopMin(
 ): command_request.Command {
     return createCommand(RequestType.BZPopMin, [...keys, timeout.toString()]);
 }
+
+/**
+ * Optional arguments to getex command.
+ */
+export type GetExOptions = {
+    expiry: /**
+     * Retain the time to live associated with the key. Equivalent to
+     * `PERSIST` in the VALKEY API.
+     */
+    | "persist"
+        | {
+              type: /**
+               * Set the specified expire time, in seconds. Equivalent to
+               * `EX` in the VALKEY API.
+               */
+              | "seconds"
+                  /**
+                   * Set the specified expire time, in milliseconds. Equivalent
+                   * to `PX` in the VALKEY API.
+                   */
+                  | "milliseconds"
+                  /**
+                   * Set the specified Unix time at which the key will expire,
+                   * in seconds. Equivalent to `EXAT` in the VALKEY API.
+                   */
+                  | "unixSeconds"
+                  /**
+                   * Set the specified Unix time at which the key will expire,
+                   * in milliseconds. Equivalent to `PXAT` in the VALKEY API.
+                   */
+                  | "unixMilliseconds";
+              count: number;
+          };
+};
+
+/**
+ * @internal
+ */
+export function createGetEx(
+    key: BulkString,
+    options?: GetExOptions,
+): command_request.Command {
+    const args = [key];
+
+    if (options) {
+        if (
+            options.expiry &&
+            options.expiry !== "persist" &&
+            !Number.isInteger(options.expiry.count)
+        ) {
+            throw new Error(
+                `Received expiry '${JSON.stringify(
+                    options.expiry,
+                )}'. Count must be an integer`,
+            );
+        }
+
+        if (options.expiry === "persist") {
+            args.push("PERSIST");
+        } else if (options.expiry?.type === "seconds") {
+            args.push("EX", options.expiry.count.toString());
+        } else if (options.expiry?.type === "milliseconds") {
+            args.push("PX", options.expiry.count.toString());
+        } else if (options.expiry?.type === "unixSeconds") {
+            args.push("EXAT", options.expiry.count.toString());
+        } else if (options.expiry?.type === "unixMilliseconds") {
+            args.push("PXAT", options.expiry.count.toString());
+        }
+    }
+
+    return createCommand(RequestType.GetEx, args);
+}

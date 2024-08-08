@@ -7850,6 +7850,51 @@ export function runBaseTests<Context>(config: {
         },
         config.timeout,
     );
+
+    it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
+        `getex test_%p`,
+        async (protocol) => {
+            await runTest(async (client: BaseClient, cluster: RedisCluster) => {
+                if (cluster.checkIfServerVersionLessThan("6.2.0")) {
+                    return;
+                }
+
+                const key1 = "{key}" + uuidv4();
+                const key2 = "{key}" + uuidv4();
+                const value = uuidv4();
+
+                expect(await client.set(key1, value)).toBe("OK");
+                expect(await client.getex(key1)).toEqual(value);
+                expect(await client.ttl(key1)).toBe(-1);
+
+                expect(
+                    await client.getex(key1, {
+                        expiry: { type: "seconds", count: 15 },
+                    }),
+                ).toEqual(value);
+                expect(await client.ttl(key1)).toBeGreaterThan(0);
+                expect(await client.getex(key1, { expiry: "persist" })).toEqual(
+                    value,
+                );
+                expect(await client.ttl(key1)).toBe(-1);
+
+                // non existent key
+                expect(await client.getex(key2)).toBeNull();
+
+                // invalid time measurement
+                await expect(
+                    client.getex(key1, {
+                        expiry: { type: "seconds", count: -10 },
+                    }),
+                ).rejects.toThrow(RequestError);
+
+                // Key exists, but is not a string
+                expect(await client.sadd(key2, ["a"])).toBe(1);
+                await expect(client.getex(key2)).rejects.toThrow(RequestError);
+            }, protocol);
+        },
+        config.timeout,
+    );
 }
 
 export function runCommonTests<Context>(config: {

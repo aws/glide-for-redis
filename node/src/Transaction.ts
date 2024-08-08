@@ -102,6 +102,7 @@ import {
     createGet,
     createGetBit,
     createGetDel,
+    createGetEx,
     createGetRange,
     createHDel,
     createHExists,
@@ -231,6 +232,7 @@ import {
     createZScan,
     createZScore,
     createGeoSearchStore,
+    GetExOptions,
     GeoSearchStoreResultOptions,
 } from "./Commands";
 import { command_request } from "./ProtobufMessage";
@@ -293,6 +295,19 @@ export class BaseTransaction<T extends BaseTransaction<T>> {
      */
     public get(key: string): T {
         return this.addAndReturn(createGet(key));
+    }
+
+    /**
+     * Get the value of `key` and optionally set its expiration. `GETEX` is similar to {@link get}.
+     * See https://valkey.io/commands/getex for more details.
+     *
+     * @param key - The key to retrieve from the database.
+     * @param options - (Optional) set expiriation to the given key.
+     *
+     * Command Response - If `key` exists, returns the value of `key` as a `string`. Otherwise, return `null`.
+     */
+    public getex(key: string, options?: GetExOptions): T {
+        return this.addAndReturn(createGetEx(key, options));
     }
 
     /**

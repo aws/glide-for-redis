@@ -540,6 +540,17 @@ export async function transactionTest(
     responseData.push(["dbsize()", 0]);
     baseTransaction.set(key1, "bar");
     responseData.push(['set(key1, "bar")', "OK"]);
+
+    if (gte(version, "6.2.0")) {
+        baseTransaction.getex(key1);
+        responseData.push(["getex(key1)", "bar"]);
+        baseTransaction.getex(key1, { expiry: { type: "seconds", count: 1 } });
+        responseData.push([
+            'getex(key1, {expiry: { type: "seconds", count: 1 }})',
+            "bar",
+        ]);
+    }
+
     baseTransaction.randomKey();
     responseData.push(["randomKey()", key1]);
     baseTransaction.getrange(key1, 0, -1);

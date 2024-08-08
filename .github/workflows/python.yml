@@ -15,6 +15,7 @@ on:
             - .github/workflows/lint-rust/action.yml
             - .github/workflows/install-valkey/action.yml
             - .github/json_matrices/build-matrix.json
+            - .github/json_matrices/engine-matrix.json
 
     pull_request:
         paths:
@@ -29,6 +30,7 @@ on:
             - .github/workflows/lint-rust/action.yml
             - .github/workflows/install-valkey/action.yml
             - .github/json_matrices/build-matrix.json
+            - .github/json_matrices/engine-matrix.json
     workflow_dispatch:
 
 concurrency:

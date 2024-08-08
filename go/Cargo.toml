@@ -13,6 +13,7 @@ redis = { path = "../submodules/redis-rs/redis", features = ["aio", "tokio-comp"
 glide-core = { path = "../glide-core", features = ["socket-layer"] }
 tokio = { version = "^1", features = ["rt", "macros", "rt-multi-thread", "time"] }
 protobuf = { version = "3.3.0", features = [] }
+derivative = "2.2.0"
 
 [profile.release]
 lto = true

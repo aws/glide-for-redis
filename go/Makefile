@@ -1,19 +1,22 @@
 install-build-tools:
 	go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.33.0
+	cargo install cbindgen
 
-install-dev-tools-go1.18.10:
+install-dev-tools-go1.18:
 	go install github.com/vakenbolt/go-test-report@v0.9.3
 	go install mvdan.cc/gofumpt@v0.4.0
 	go install github.com/segmentio/golines@v0.11.0
 	go install honnef.co/go/tools/cmd/staticcheck@v0.3.3
-	cargo install cbindgen
 
-install-dev-tools-go1.22.0:
+install-dev-tools-go1.18.10: install-dev-tools-go1.18
+
+install-dev-tools-go1.22:
 	go install github.com/vakenbolt/go-test-report@v0.9.3
 	go install mvdan.cc/gofumpt@v0.6.0
 	go install github.com/segmentio/golines@v0.12.2
 	go install honnef.co/go/tools/cmd/staticcheck@v0.4.6
-	cargo install cbindgen
+
+install-dev-tools-go1.22.0: install-dev-tools-go1.22
 
 install-dev-tools: install-dev-tools-go1.22.0
 
@@ -57,6 +60,9 @@ format:
 test:
 	go test -v -race ./...
 
+# Note: this task is no longer run by CI because:
+# - build failures that occur while running the task can be hidden by the task; CI still reports success in these scenarios.
+# - there is not a good way to both generate a test report and log the test outcomes to GH actions.
 test-and-report:
 	mkdir -p reports
 	go test -v -race ./... -json | go-test-report -o reports/test-report.html

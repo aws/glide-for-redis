@@ -25,6 +25,7 @@ runPython=0
 runNode=0
 runCsharp=0
 runJava=0
+runGo=0
 runRust=0
 concurrentTasks="1 10 100 1000"
 dataSize="100 4000"
@@ -76,6 +77,11 @@ function runJavaBenchmark(){
   ./gradlew :benchmarks:run --args="-resultsFile \"${BENCH_FOLDER}/$1\" --dataSize \"$2\" --concurrentTasks \"$concurrentTasks\" --clients \"$chosenClients\" --host $host $portFlag --clientCount \"$clientCount\" $tlsFlag $clusterFlag $minimalFlag"
 }
 
+function runGoBenchmark(){
+    cd ${BENCH_FOLDER}/../go/benchmarks
+    go run . -resultsFile ${BENCH_FOLDER}/$1 -dataSize $2 -concurrentTasks $concurrentTasks -clients $chosenClients -host $host $portFlag -clientCount $clientCount $tlsFlag $clusterFlag $minimalFlag
+}
+
 function runRustBenchmark(){
   rustConcurrentTasks=
   for value in $concurrentTasks
@@ -115,7 +121,7 @@ function resultFileName() {
 
 function Help() {
     echo Running the script without any arguments runs all benchmarks.
-    echo Pass -node, -csharp, -python, -java as arguments in order to run the node, csharp, python, or java benchmarks accordingly.
+    echo Pass -node, -csharp, -python, -java, -go as arguments in order to run the node, csharp, python, java, or go benchmarks accordingly.
     echo Multiple such flags can be passed.
     echo Pass -no-csv to skip analysis of the results.
     echo
@@ -204,6 +210,15 @@ do
             runJava=1
             chosenClients="Jedis"
             ;;
+        -go)
+            runAllBenchmarks=0
+            runGo=1
+            ;;
+        -go-redis)
+            runAllBenchmarks=0
+            runGo=1
+            chosenClients="go-redis"
+            ;;
         -csharp)
             runAllBenchmarks=0
             runCsharp=1
@@ -272,6 +287,13 @@ do
         javaResults=$(resultFileName java $currentDataSize)
         resultFiles+=$javaResults" "
         runJavaBenchmark $javaResults $currentDataSize
+    fi
+
+    if [ $runAllBenchmarks == 1 ] || [ $runGo == 1 ];
+    then
+        goResults=$(resultFileName go $currentDataSize)
+        resultFiles+=$goResults" "
+        runGoBenchmark $goResults $currentDataSize
     fi
 
     if [ $runAllBenchmarks == 1 ] || [ $runRust == 1 ];

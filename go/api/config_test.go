@@ -11,7 +11,7 @@ import (
 )
 
 func TestDefaultStandaloneConfig(t *testing.T) {
-	config := NewRedisClientConfiguration()
+	config := NewGlideClientConfiguration()
 	expected := &protobuf.ConnectionRequest{
 		TlsMode:            protobuf.TlsMode_NoTls,
 		ClusterModeEnabled: false,
@@ -24,7 +24,7 @@ func TestDefaultStandaloneConfig(t *testing.T) {
 }
 
 func TestDefaultClusterConfig(t *testing.T) {
-	config := NewRedisClusterClientConfiguration()
+	config := NewGlideClusterClientConfiguration()
 	expected := &protobuf.ConnectionRequest{
 		TlsMode:            protobuf.TlsMode_NoTls,
 		ClusterModeEnabled: true,
@@ -46,10 +46,10 @@ func TestConfig_allFieldsSet(t *testing.T) {
 	retries, factor, base := 5, 10, 50
 	databaseId := 1
 
-	config := NewRedisClientConfiguration().
+	config := NewGlideClientConfiguration().
 		WithUseTLS(true).
 		WithReadFrom(PreferReplica).
-		WithCredentials(NewRedisCredentials(username, password)).
+		WithCredentials(NewServerCredentials(username, password)).
 		WithRequestTimeout(timeout).
 		WithClientName(clientName).
 		WithReconnectStrategy(NewBackoffStrategy(retries, factor, base)).
@@ -104,17 +104,17 @@ func TestNodeAddress(t *testing.T) {
 	}
 }
 
-func TestRedisCredentials(t *testing.T) {
+func TestServerCredentials(t *testing.T) {
 	parameters := []struct {
-		input    *RedisCredentials
+		input    *ServerCredentials
 		expected *protobuf.AuthenticationInfo
 	}{
 		{
-			NewRedisCredentials("username", "password"),
+			NewServerCredentials("username", "password"),
 			&protobuf.AuthenticationInfo{Username: "username", Password: "password"},
 		},
 		{
-			NewRedisCredentialsWithDefaultUsername("password"),
+			NewServerCredentialsWithDefaultUsername("password"),
 			&protobuf.AuthenticationInfo{Password: "password"},
 		},
 	}

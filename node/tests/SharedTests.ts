@@ -1293,9 +1293,6 @@ export function runBaseTests<Context>(config: {
                 );
                 expect(allKeysIncluded).toEqual(true);
 
-                // const allValuesIncluded = resultValues.every((value) =>
-                //     Number(value) in Object.values(charMap),
-                // );
                 const allValuesIncluded = Object.values(charMap).every(
                     (value) => value in resultValues,
                 );
@@ -1354,37 +1351,15 @@ export function runBaseTests<Context>(config: {
                     }
                 } while (resultCursor != "0"); // 0 is returned for the cursor of the last iteration.
 
-                // const allSecondResultKeys = secondResultAllKeys.every(
-                //     (key) => key in numberMap,
-                // );
-                const allSecondResultKeys = Object.values(numberMap).every(
+                const allSecondResultKeys = Object.keys(numberMap).every(
                     (key) => key in secondResultAllKeys,
                 );
                 expect(allSecondResultKeys).toEqual(true);
 
-                // // const allSecondResultValues = secondResultAllValues.every(
-                // //     (key) => key in numberMap,
-                // // );
-                // const allSecondResultValues = Object.values(numberMap).every(
-                //     (value) => value in secondResultAllValues,
-                // );
-                // expect(allSecondResultValues).toEqual(true);
-
-                /**
-                 *
-                 * const allKeysIncluded = resultKeys.every(
-                    (key) => key in charMap,
+                const allSecondResultValues = Object.keys(numberMap).every(
+                    (value) => value in secondResultAllValues,
                 );
-                expect(allKeysIncluded).toEqual(true);
-
-                // const allValuesIncluded = resultValues.every((value) =>
-                //     Number(value) in Object.values(charMap),
-                // );
-                const allValuesIncluded = Object.values(charMap).every(
-                    (value) => value in resultValues,
-                );
-                expect(allValuesIncluded).toEqual(true);
-                 */
+                expect(allSecondResultValues).toEqual(true);
 
                 // Test match pattern
                 result = await client.hscan(key1, initialCursor, {

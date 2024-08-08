@@ -4087,13 +4087,7 @@ export function runBaseTests<Context>(config: {
                 expect(await client.type(key)).toEqual("hash");
                 expect(await client.del([key])).toEqual(1);
 
-                await client.customCommand([
-                    "XADD",
-                    key,
-                    "*",
-                    "field",
-                    "value",
-                ]);
+                await client.xadd(key, [["field", "value"]]);
                 expect(await client.type(key)).toEqual("stream");
                 expect(await client.del([key])).toEqual(1);
                 expect(await client.type(key)).toEqual("none");
@@ -4942,6 +4936,216 @@ export function runBaseTests<Context>(config: {
                 };
                 expect(result).toEqual(expected);
             }, ProtocolVersion.RESP2);
+        },
+        config.timeout,
+    );
+
+    it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
+        `xinfo stream test_%p`,
+        async (protocol) => {
+            await runTest(async (client: BaseClient) => {
+                const key = uuidv4();
+                const groupName = `group-${uuidv4()}`;
+                const consumerName = `consumer-${uuidv4()}`;
+                const streamId0_0 = "0-0";
+                const streamId1_0 = "1-0";
+                const streamId1_1 = "1-1";
+
+                // Setup: add stream entry, create consumer group and consumer, read from stream with consumer
+                expect(
+                    await client.xadd(
+                        key,
+                        [
+                            ["a", "b"],
+                            ["c", "d"],
+                        ],
+                        { id: streamId1_0 },
+                    ),
+                ).toEqual(streamId1_0);
+
+                expect(
+                    await client.xgroupCreate(key, groupName, streamId0_0),
+                ).toEqual("OK");
+
+                // TODO: uncomment when XREADGROUP is implemented
+                // const xreadgroupResult = await client.xreadgroup([[key, ">"]], groupName, consumerName);
+                await client.customCommand([
+                    "XREADGROUP",
+                    "GROUP",
+                    groupName,
+                    consumerName,
+                    "STREAMS",
+                    key,
+                    ">",
+                ]);
+
+                // test xinfoStream base (non-full) case:
+                const result = (await client.xinfoStream(key)) as {
+                    length: number;
+                    "radix-tree-keys": number;
+                    "radix-tree-nodes": number;
+                    "last-generated-id": string;
+                    "max-deleted-entry-id": string;
+                    "entries-added": number;
+                    "recorded-first-entry-id": string;
+                    "first-entry": (string | number | string[])[];
+                    "last-entry": (string | number | string[])[];
+                    groups: number;
+                };
+                console.log(result);
+
+                // verify result:
+                expect(result.length).toEqual(1);
+                const expectedFirstEntry = ["1-0", ["a", "b", "c", "d"]];
+                expect(result["first-entry"]).toEqual(expectedFirstEntry);
+                expect(result["last-entry"]).toEqual(expectedFirstEntry);
+                expect(result.groups).toEqual(1);
+
+                // Add one more entry
+                expect(
+                    await client.xadd(key, [["foo", "bar"]], {
+                        id: streamId1_1,
+                    }),
+                ).toEqual(streamId1_1);
+                const fullResult = (await client.xinfoStream(key, 1)) as {
+                    length: number;
+                    "radix-tree-keys": number;
+                    "radix-tree-nodes": number;
+                    "last-generated-id": string;
+                    "max-deleted-entry-id": string;
+                    "entries-added": number;
+                    "recorded-first-entry-id": string;
+                    entries: (string | number | string[])[][];
+                    groups: [
+                        {
+                            name: string;
+                            "last-delivered-id": string;
+                            "entries-read": number;
+                            lag: number;
+                            "pel-count": number;
+                            pending: (string | number)[][];
+                            consumers: [
+                                {
+                                    name: string;
+                                    "seen-time": number;
+                                    "active-time": number;
+                                    "pel-count": number;
+                                    pending: (string | number)[][];
+                                },
+                            ];
+                        },
+                    ];
+                };
+
+                // verify full result like:
+                // {
+                //   length: 2,
+                //   'radix-tree-keys': 1,
+                //   'radix-tree-nodes': 2,
+                //   'last-generated-id': '1-1',
+                //   'max-deleted-entry-id': '0-0',
+                //   'entries-added': 2,
+                //   'recorded-first-entry-id': '1-0',
+                //   entries: [ [ '1-0', ['a', 'b', ...] ] ],
+                //   groups: [ {
+                //     name: 'group',
+                //     'last-delivered-id': '1-0',
+                //     'entries-read': 1,
+                //     lag: 1,
+                //     'pel-count': 1,
+                //     pending: [ [ '1-0', 'consumer', 1722624726802, 1 ] ],
+                //     consumers: [ {
+                //         name: 'consumer',
+                //         'seen-time': 1722624726802,
+                //         'active-time': 1722624726802,
+                //         'pel-count': 1,
+                //         pending: [ [ '1-0', 'consumer', 1722624726802, 1 ] ],
+                //         }
+                //       ]
+                //     }
+                //   ]
+                // }
+                expect(fullResult.length).toEqual(2);
+                expect(fullResult["recorded-first-entry-id"]).toEqual(
+                    streamId1_0,
+                );
+
+                // Only the first entry will be returned since we passed count: 1
+                expect(fullResult.entries).toEqual([expectedFirstEntry]);
+
+                // compare groupName, consumerName, and pending messages from the full info result:
+                const fullResultGroups = fullResult.groups;
+                expect(fullResultGroups.length).toEqual(1);
+                expect(fullResultGroups[0]["name"]).toEqual(groupName);
+
+                const pendingResult = fullResultGroups[0]["pending"];
+                expect(pendingResult.length).toEqual(1);
+                expect(pendingResult[0][0]).toEqual(streamId1_0);
+                expect(pendingResult[0][1]).toEqual(consumerName);
+
+                const consumersResult = fullResultGroups[0]["consumers"];
+                expect(consumersResult.length).toEqual(1);
+                expect(consumersResult[0]["name"]).toEqual(consumerName);
+
+                const consumerPendingResult = fullResultGroups[0]["pending"];
+                expect(consumerPendingResult.length).toEqual(1);
+                expect(consumerPendingResult[0][0]).toEqual(streamId1_0);
+                expect(consumerPendingResult[0][1]).toEqual(consumerName);
+            }, protocol);
+        },
+        config.timeout,
+    );
+
+    it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
+        `xinfo stream edge cases and failures test_%p`,
+        async (protocol) => {
+            await runTest(async (client: BaseClient) => {
+                const key = `{key}-1-${uuidv4()}`;
+                const stringKey = `{key}-2-${uuidv4()}`;
+                const nonExistentKey = `{key}-3-${uuidv4()}`;
+                const streamId1_0 = "1-0";
+
+                // Setup: create empty stream
+                expect(
+                    await client.xadd(key, [["field", "value"]], {
+                        id: streamId1_0,
+                    }),
+                ).toEqual(streamId1_0);
+                expect(await client.xdel(key, [streamId1_0])).toEqual(1);
+
+                // XINFO STREAM called against empty stream
+                const result = await client.xinfoStream(key);
+                expect(result["length"]).toEqual(0);
+                expect(result["first-entry"]).toEqual(null);
+                expect(result["last-entry"]).toEqual(null);
+
+                // XINFO STREAM FULL called against empty stream. Negative count values are ignored.
+                const fullResult = await client.xinfoStream(key, -3);
+                expect(fullResult["length"]).toEqual(0);
+                expect(fullResult["entries"]).toEqual([]);
+                expect(fullResult["groups"]).toEqual([]);
+
+                // Calling XINFO STREAM with a non-existing key raises an error
+                await expect(
+                    client.xinfoStream(nonExistentKey),
+                ).rejects.toThrow();
+                await expect(
+                    client.xinfoStream(nonExistentKey, true),
+                ).rejects.toThrow();
+                await expect(
+                    client.xinfoStream(nonExistentKey, 2),
+                ).rejects.toThrow();
+
+                // Key exists, but it is not a stream
+                await client.set(stringKey, "boofar");
+                await expect(client.xinfoStream(stringKey)).rejects.toThrow();
+                await expect(
+                    client.xinfoStream(stringKey, true),
+                ).rejects.toThrow();
+                await expect(
+                    client.xinfoStream(stringKey, 2),
+                ).rejects.toThrow();
+            }, protocol);
         },
         config.timeout,
     );
@@ -7354,13 +7558,11 @@ export function runBaseTests<Context>(config: {
                 }
 
                 expect(
-                    await client.customCommand([
-                        "XGROUP",
-                        "CREATECONSUMER",
+                    await client.xgroupCreateConsumer(
                         key,
                         groupName1,
                         consumer2,
-                    ]),
+                    ),
                 ).toBeTruthy();
                 expect(
                     await client.customCommand([
@@ -7433,13 +7635,7 @@ export function runBaseTests<Context>(config: {
                     }),
                 ).toEqual("OK");
                 expect(
-                    await client.customCommand([
-                        "xgroup",
-                        "createconsumer",
-                        key,
-                        group,
-                        "consumer",
-                    ]),
+                    await client.xgroupCreateConsumer(key, group, "consumer"),
                 ).toEqual(true);
 
                 expect(
@@ -7646,6 +7842,115 @@ export function runBaseTests<Context>(config: {
                 expect(await client.set(nonListKey, "blmpop")).toBe("OK");
                 await expect(
                     client.blmpop([nonListKey], ListDirection.RIGHT, 0.1, 1),
+                ).rejects.toThrow(RequestError);
+            }, protocol);
+        },
+        config.timeout,
+    );
+
+    it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
+        `xgroupCreateConsumer and xgroupDelConsumer test_%p`,
+        async (protocol) => {
+            await runTest(async (client: BaseClient) => {
+                const key = uuidv4();
+                const nonExistentKey = uuidv4();
+                const stringKey = uuidv4();
+                const groupName = uuidv4();
+                const consumer = uuidv4();
+                const streamId0 = "0";
+
+                // create group and consumer for the group
+                expect(
+                    await client.xgroupCreate(key, groupName, streamId0, {
+                        mkStream: true,
+                    }),
+                ).toEqual("OK");
+                expect(
+                    await client.xgroupCreateConsumer(key, groupName, consumer),
+                ).toEqual(true);
+
+                // attempting to create/delete a consumer for a group that does not exist results in a NOGROUP request error
+                await expect(
+                    client.xgroupCreateConsumer(
+                        key,
+                        "nonExistentGroup",
+                        consumer,
+                    ),
+                ).rejects.toThrow(RequestError);
+                await expect(
+                    client.xgroupDelConsumer(key, "nonExistentGroup", consumer),
+                ).rejects.toThrow(RequestError);
+
+                // attempt to create consumer for group again
+                expect(
+                    await client.xgroupCreateConsumer(key, groupName, consumer),
+                ).toEqual(false);
+
+                // attempting to delete a consumer that has not been created yet returns 0
+                expect(
+                    await client.xgroupDelConsumer(
+                        key,
+                        groupName,
+                        "nonExistentConsumer",
+                    ),
+                ).toEqual(0);
+
+                // Add two stream entries
+                const streamid1: string | null = await client.xadd(key, [
+                    ["field1", "value1"],
+                ]);
+                expect(streamid1).not.toBeNull();
+                const streamid2 = await client.xadd(key, [
+                    ["field2", "value2"],
+                ]);
+                expect(streamid2).not.toBeNull();
+
+                // read the entire stream for the consumer and mark messages as pending
+                expect(
+                    await client.customCommand([
+                        "XREADGROUP",
+                        "GROUP",
+                        groupName,
+                        consumer,
+                        "STREAMS",
+                        key,
+                        ">",
+                    ]),
+                ).toEqual({
+                    [key]: {
+                        [streamid1 as string]: [["field1", "value1"]],
+                        [streamid2 as string]: [["field2", "value2"]],
+                    },
+                });
+
+                // delete one of the streams
+                expect(
+                    await client.xgroupDelConsumer(key, groupName, consumer),
+                ).toEqual(2);
+
+                // attempting to call XGROUP CREATECONSUMER or XGROUP DELCONSUMER with a non-existing key should raise an error
+                await expect(
+                    client.xgroupCreateConsumer(
+                        nonExistentKey,
+                        groupName,
+                        consumer,
+                    ),
+                ).rejects.toThrow(RequestError);
+                await expect(
+                    client.xgroupDelConsumer(
+                        nonExistentKey,
+                        groupName,
+                        consumer,
+                    ),
+                ).rejects.toThrow(RequestError);
+
+                // key exists, but it is not a stream
+                expect(await client.set(stringKey, "foo")).toEqual("OK");
+                await expect(
+                    client.xgroupCreateConsumer(stringKey, groupName, consumer),
+                ).rejects.toThrow(RequestError);
+                await expect(
+                    client.xgroupDelConsumer(stringKey, groupName, consumer),
                 ).rejects.toThrow(RequestError);
             }, protocol);
         },

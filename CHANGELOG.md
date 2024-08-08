@@ -53,8 +53,9 @@
 * Node: Added PFMERGE command ([#2053](https://github.com/valkey-io/valkey-glide/pull/2053))
 * Node: Added WATCH and UNWATCH commands ([#2076](https://github.com/valkey-io/valkey-glide/pull/2076))
 * Node: Added ZLEXCOUNT command ([#2022](https://github.com/valkey-io/valkey-glide/pull/2022))
-* Node: Added ZREMRANGEBYLEX command ([#2025]((https://github.com/valkey-io/valkey-glide/pull/2025))
+* Node: Added ZREMRANGEBYLEX command ([#2025](https://github.com/valkey-io/valkey-glide/pull/2025))
 * Node: Added SRANDMEMBER command ([#2067](https://github.com/valkey-io/valkey-glide/pull/2067))
+* Node: Added XINFO STREAM command ([#2083](https://github.com/valkey-io/valkey-glide/pull/2083))
 * Node: Added ZSCAN command ([#2061](https://github.com/valkey-io/valkey-glide/pull/2061))
 * Node: Added SETRANGE command ([#2066](https://github.com/valkey-io/valkey-glide/pull/2066))
 * Node: Added APPEND command ([#2095](https://github.com/valkey-io/valkey-glide/pull/2095))
@@ -65,6 +66,7 @@
 * Python: Added PUBSUB * commands ([#2043](https://github.com/valkey-io/valkey-glide/pull/2043))
 * Node: Added XGROUP CREATE & XGROUP DESTROY commands ([#2084](https://github.com/valkey-io/valkey-glide/pull/2084))
 * Node: Added BZPOPMAX & BZPOPMIN command ([#2077]((https://github.com/valkey-io/valkey-glide/pull/2077))
+* Node: Added XGROUP CREATECONSUMER & XGROUP DELCONSUMER commands ([#2088](https://github.com/valkey-io/valkey-glide/pull/2088))
 
 #### Breaking Changes
 * Node: (Refactor) Convert classes to types ([#2005](https://github.com/valkey-io/valkey-glide/pull/2005))

@@ -3,6 +3,7 @@
  */
 
 import {
+    BaseClient, // eslint-disable-line @typescript-eslint/no-unused-vars
     ReadFrom, // eslint-disable-line @typescript-eslint/no-unused-vars
 } from "./BaseClient";
 
@@ -42,6 +43,7 @@ import {
     RangeByIndex,
     RangeByLex,
     RangeByScore,
+    ReturnTypeXinfoStream, // eslint-disable-line @typescript-eslint/no-unused-vars
     ScoreBoundary,
     ScoreFilter,
     SearchOrigin,
@@ -195,11 +197,14 @@ import {
     createXClaim,
     createXDel,
     createXInfoConsumers,
+    createXInfoStream,
     createXLen,
     createXRead,
     createXTrim,
     createXGroupCreate,
     createXGroupDestroy,
+    createXGroupCreateConsumer,
+    createXGroupDelConsumer,
     createZAdd,
     createZCard,
     createZCount,
@@ -2239,6 +2244,21 @@ export class BaseTransaction<T extends BaseTransaction<T>> {
         return this.addAndReturn(createXTrim(key, options));
     }
 
+    /**
+     * Returns information about the stream stored at `key`.
+     *
+     * @param key - The key of the stream.
+     * @param fullOptions - If `true`, returns verbose information with a limit of the first 10 PEL entries.
+     * If `number` is specified, returns verbose information limiting the returned PEL entries.
+     * If `0` is specified, returns verbose information with no limit.
+     *
+     * Command Response - A {@link ReturnTypeXinfoStream} of detailed stream information for the given `key`.
+     *     See example of {@link BaseClient.xinfoStream} for more details.
+     */
+    public xinfoStream(key: string, fullOptions?: boolean | number): T {
+        return this.addAndReturn(createXInfoStream(key, fullOptions ?? false));
+    }
+
     /** Returns the server time.
      * See https://valkey.io/commands/time/ for details.
      *
@@ -2386,6 +2406,48 @@ export class BaseTransaction<T extends BaseTransaction<T>> {
      */
     public xgroupDestroy(key: string, groupName: string): T {
         return this.addAndReturn(createXGroupDestroy(key, groupName));
+    }
+
+    /**
+     * Creates a consumer named `consumerName` in the consumer group `groupName` for the stream stored at `key`.
+     *
+     * See https://valkey.io/commands/xgroup-createconsumer for more details.
+     *
+     * @param key - The key of the stream.
+     * @param groupName - The consumer group name.
+     * @param consumerName - The newly created consumer.
+     *
+     * Command Response - `true` if the consumer is created. Otherwise, returns `false`.
+     */
+    public xgroupCreateConsumer(
+        key: string,
+        groupName: string,
+        consumerName: string,
+    ): T {
+        return this.addAndReturn(
+            createXGroupCreateConsumer(key, groupName, consumerName),
+        );
+    }
+
+    /**
+     * Deletes a consumer named `consumerName` in the consumer group `groupName` for the stream stored at `key`.
+     *
+     * See https://valkey.io/commands/xgroup-delconsumer for more details.
+     *
+     * @param key - The key of the stream.
+     * @param groupName - The consumer group name.
+     * @param consumerName - The consumer to delete.
+     *
+     * Command Response - The number of pending messages the `consumer` had before it was deleted.
+     */
+    public xgroupDelConsumer(
+        key: string,
+        groupName: string,
+        consumerName: string,
+    ): T {
+        return this.addAndReturn(
+            createXGroupDelConsumer(key, groupName, consumerName),
+        );
     }
 
     /**

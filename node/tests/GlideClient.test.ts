@@ -1053,6 +1053,61 @@ describe("GlideClient", () => {
         TIMEOUT,
     );
 
+    it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
+        "xinfo stream transaction test_%p",
+        async (protocol) => {
+            const client = await GlideClient.createClient(
+                getClientConfigurationOption(cluster.getAddresses(), protocol),
+            );
+
+            const key = uuidv4();
+
+            const transaction = new Transaction();
+            transaction.xadd(key, [["field1", "value1"]], { id: "0-1" });
+            transaction.xinfoStream(key);
+            transaction.xinfoStream(key, true);
+            const result = await client.exec(transaction);
+            expect(result).not.toBeNull();
+
+            const versionLessThan7 =
+                cluster.checkIfServerVersionLessThan("7.0.0");
+
+            const expectedXinfoStreamResult = {
+                length: 1,
+                "radix-tree-keys": 1,
+                "radix-tree-nodes": 2,
+                "last-generated-id": "0-1",
+                groups: 0,
+                "first-entry": ["0-1", ["field1", "value1"]],
+                "last-entry": ["0-1", ["field1", "value1"]],
+                "max-deleted-entry-id": versionLessThan7 ? undefined : "0-0",
+                "entries-added": versionLessThan7 ? undefined : 1,
+                "recorded-first-entry-id": versionLessThan7 ? undefined : "0-1",
+            };
+
+            const expectedXinfoStreamFullResult = {
+                length: 1,
+                "radix-tree-keys": 1,
+                "radix-tree-nodes": 2,
+                "last-generated-id": "0-1",
+                entries: [["0-1", ["field1", "value1"]]],
+                groups: [],
+                "max-deleted-entry-id": versionLessThan7 ? undefined : "0-0",
+                "entries-added": versionLessThan7 ? undefined : 1,
+                "recorded-first-entry-id": versionLessThan7 ? undefined : "0-1",
+            };
+
+            if (result != null) {
+                expect(result[0]).toEqual("0-1"); // xadd
+                expect(result[1]).toEqual(expectedXinfoStreamResult);
+                expect(result[2]).toEqual(expectedXinfoStreamFullResult);
+            }
+
+            client.close();
+        },
+        TIMEOUT,
+    );
+
     runBaseTests<Context>({
         init: async (protocol, clientName?) => {
             const options = getClientConfigurationOption(

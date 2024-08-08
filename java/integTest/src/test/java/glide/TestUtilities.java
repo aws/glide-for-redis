@@ -30,10 +30,10 @@ import lombok.experimental.UtilityClass;
 @UtilityClass
 public class TestUtilities {
     /** Extract integer parameter value from INFO command output */
-    public static int getValueFromInfo(String data, String value) {
+    public static long getValueFromInfo(String data, String value) {
         for (var line : data.split("\r\n")) {
             if (line.contains(value)) {
-                return Integer.parseInt(line.split(":")[1]);
+                return Long.parseLong(line.split(":")[1]);
             }
         }
         fail();

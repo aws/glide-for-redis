@@ -2053,6 +2053,36 @@ export function createXTrim(
 /**
  * @internal
  */
+export function createXGroupCreateConsumer(
+    key: string,
+    groupName: string,
+    consumerName: string,
+): command_request.Command {
+    return createCommand(RequestType.XGroupCreateConsumer, [
+        key,
+        groupName,
+        consumerName,
+    ]);
+}
+
+/**
+ * @internal
+ */
+export function createXGroupDelConsumer(
+    key: string,
+    groupName: string,
+    consumerName: string,
+): command_request.Command {
+    return createCommand(RequestType.XGroupDelConsumer, [
+        key,
+        groupName,
+        consumerName,
+    ]);
+}
+
+/**
+ * @internal
+ */
 export function createTime(): command_request.Command {
     return createCommand(RequestType.Time, []);
 }
@@ -2350,6 +2380,41 @@ export function createXRead(
     addStreamsArgs(keys_and_ids, args);
 
     return createCommand(RequestType.XRead, args);
+}
+
+/**
+ * Represents a the return type for XInfo Stream in the response
+ */
+export type ReturnTypeXinfoStream = {
+    [key: string]:
+        | StreamEntries
+        | Record<string, StreamEntries | Record<string, StreamEntries>[]>[];
+};
+
+/**
+ * Represents an array of Stream Entires in the response
+ */
+export type StreamEntries = string | number | (string | number | string[])[][];
+
+/**
+ * @internal
+ */
+export function createXInfoStream(
+    key: string,
+    options: boolean | number,
+): command_request.Command {
+    const args: string[] = [key];
+
+    if (options != false) {
+        args.push("FULL");
+
+        if (typeof options === "number") {
+            args.push("COUNT");
+            args.push(options.toString());
+        }
+    }
+
+    return createCommand(RequestType.XInfoStream, args);
 }
 
 /**

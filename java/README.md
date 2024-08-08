@@ -130,6 +130,22 @@ Maven:
 </dependency>
 ```
 
+SBT:
+- **IMPORTANT** must include a `classifier`. Please use this dependency block and add it to the build.sbt file.
+```scala
+// osx-aarch_64
+libraryDependencies += "io.valkey" % "valkey-glide" % "1.+" classifier "osx-aarch_64"
+
+// osx-x86_64
+libraryDependencies += "io.valkey" % "valkey-glide" % "1.+" classifier "osx-x86_64"
+
+// linux-aarch_64
+libraryDependencies += "io.valkey" % "valkey-glide" % "1.+" classifier "linux-aarch_64"
+
+// linux-x86_64
+libraryDependencies += "io.valkey" % "valkey-glide" % "1.+" classifier "linux-x86_64"
+```
+
 ## Setting up the Java module
 
 To use Valkey GLIDE in a Java project with modules, include a module-info.java in your project.
@@ -244,6 +260,9 @@ public class Main {
     }
 }
 ```
+
+### Scala and Kotlin Examples
+See [our Scala and Kotlin examples](../examples/) to learn how to use Valkey GLIDE in Scala and Kotlin projects.
 
 ### Accessing tests
 For more examples, you can refer to the test folder [unit tests](./client/src/test/java/glide/api) and [integration tests](./integTest/src/test/java/glide).

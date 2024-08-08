@@ -40,6 +40,7 @@ import {
     RangeByIndex,
     RangeByLex,
     RangeByScore,
+    ReturnTypeXinfoStream,
     ScoreBoundary,
     ScoreFilter,
     SearchOrigin,
@@ -164,6 +165,9 @@ import {
     createXGroupCreate,
     createXGroupDestroy,
     createXInfoConsumers,
+    createXInfoStream,
+    createXGroupCreateConsumer,
+    createXGroupDelConsumer,
     createXLen,
     createXRead,
     createXTrim,
@@ -4070,6 +4074,128 @@ export class BaseClient {
         groupName: string,
     ): Promise<boolean> {
         return this.createWritePromise(createXGroupDestroy(key, groupName));
+    }
+
+    /**
+     * Returns information about the stream stored at `key`.
+     *
+     * @param key - The key of the stream.
+     * @param fullOptions - If `true`, returns verbose information with a limit of the first 10 PEL entries.
+     * If `number` is specified, returns verbose information limiting the returned PEL entries.
+     * If `0` is specified, returns verbose information with no limit.
+     * @returns A {@link ReturnTypeXinfoStream} of detailed stream information for the given `key`. See
+     *     the example for a sample response.
+     * @example
+     * ```typescript
+     * const infoResult = await client.xinfoStream("my_stream");
+     * console.log(infoResult);
+     * // Output: {
+     * //   length: 2,
+     * //   'radix-tree-keys': 1,
+     * //   'radix-tree-nodes': 2,
+     * //   'last-generated-id': '1719877599564-1',
+     * //   'max-deleted-entry-id': '0-0',
+     * //   'entries-added': 2,
+     * //   'recorded-first-entry-id': '1719877599564-0',
+     * //   'first-entry': [ '1719877599564-0', ['some_field", "some_value', ...] ],
+     * //   'last-entry': [ '1719877599564-0', ['some_field", "some_value', ...] ],
+     * //   groups: 1,
+     * // }
+     * ```
+     *
+     * @example
+     * ```typescript
+     * const infoResult = await client.xinfoStream("my_stream", true); // default limit of 10 entries
+     * const infoResult = await client.xinfoStream("my_stream", 15); // limit of 15 entries
+     * console.log(infoResult);
+     * // Output: {
+     * //   length: 2,
+     * //   'radix-tree-keys': 1,
+     * //   'radix-tree-nodes': 2,
+     * //   'last-generated-id': '1719877599564-1',
+     * //   'max-deleted-entry-id': '0-0',
+     * //   'entries-added': 2,
+     * //   'recorded-first-entry-id': '1719877599564-0',
+     * //   entries: [ [ '1719877599564-0', ['some_field", "some_value', ...] ] ],
+     * //   groups: [ {
+     * //     name: 'group',
+     * //     'last-delivered-id': '1719877599564-0',
+     * //     'entries-read': 1,
+     * //     lag: 1,
+     * //     'pel-count': 1,
+     * //     pending: [ [ '1719877599564-0', 'consumer', 1722624726802, 1 ] ],
+     * //     consumers: [ {
+     * //         name: 'consumer',
+     * //         'seen-time': 1722624726802,
+     * //         'active-time': 1722624726802,
+     * //         'pel-count': 1,
+     * //         pending: [ [ '1719877599564-0', 'consumer', 1722624726802, 1 ] ],
+     * //         }
+     * //       ]
+     * //     }
+     * //   ]
+     * // }
+     * ```
+     */
+    public async xinfoStream(
+        key: string,
+        fullOptions?: boolean | number,
+    ): Promise<ReturnTypeXinfoStream> {
+        return this.createWritePromise(
+            createXInfoStream(key, fullOptions ?? false),
+        );
+    }
+
+    /**
+     * Creates a consumer named `consumerName` in the consumer group `groupName` for the stream stored at `key`.
+     *
+     * See https://valkey.io/commands/xgroup-createconsumer for more details.
+     *
+     * @param key - The key of the stream.
+     * @param groupName - The consumer group name.
+     * @param consumerName - The newly created consumer.
+     * @returns `true` if the consumer is created. Otherwise, returns `false`.
+     *
+     * @example
+     * ```typescript
+     * // The consumer "myconsumer" was created in consumer group "mygroup" for the stream "mystream".
+     * console.log(await client.xgroupCreateConsumer("mystream", "mygroup", "myconsumer")); // Output is true
+     * ```
+     */
+    public async xgroupCreateConsumer(
+        key: string,
+        groupName: string,
+        consumerName: string,
+    ): Promise<boolean> {
+        return this.createWritePromise(
+            createXGroupCreateConsumer(key, groupName, consumerName),
+        );
+    }
+
+    /**
+     * Deletes a consumer named `consumerName` in the consumer group `groupName` for the stream stored at `key`.
+     *
+     * See https://valkey.io/commands/xgroup-delconsumer for more details.
+     *
+     * @param key - The key of the stream.
+     * @param groupName - The consumer group name.
+     * @param consumerName - The consumer to delete.
+     * @returns The number of pending messages the `consumer` had before it was deleted.
+     *
+     * * @example
+     * ```typescript
+     * // Consumer "myconsumer" was deleted, and had 5 pending messages unclaimed.
+     * console.log(await client.xgroupDelConsumer("mystream", "mygroup", "myconsumer")); // Output is 5
+     * ```
+     */
+    public async xgroupDelConsumer(
+        key: string,
+        groupName: string,
+        consumerName: string,
+    ): Promise<number> {
+        return this.createWritePromise(
+            createXGroupDelConsumer(key, groupName, consumerName),
+        );
     }
 
     private readonly MAP_READ_FROM_STRATEGY: Record<

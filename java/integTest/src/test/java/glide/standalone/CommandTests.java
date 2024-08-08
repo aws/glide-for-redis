@@ -278,13 +278,13 @@ public class CommandTests {
     @SneakyThrows
     public void config_reset_stat() {
         String data = regularClient.info(InfoOptions.builder().section(STATS).build()).get();
-        int value_before = getValueFromInfo(data, "total_net_input_bytes");
+        long value_before = getValueFromInfo(data, "total_net_input_bytes");
 
         var result = regularClient.configResetStat().get();
         assertEquals(OK, result);
 
         data = regularClient.info(InfoOptions.builder().section(STATS).build()).get();
-        int value_after = getValueFromInfo(data, "total_net_input_bytes");
+        long value_after = getValueFromInfo(data, "total_net_input_bytes");
         assertTrue(value_after < value_before);
     }
 

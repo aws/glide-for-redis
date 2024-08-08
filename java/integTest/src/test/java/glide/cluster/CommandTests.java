@@ -416,14 +416,14 @@ public class CommandTests {
     public void config_reset_stat() {
         var data = clusterClient.info(InfoOptions.builder().section(STATS).build()).get();
         String firstNodeInfo = getFirstEntryFromMultiValue(data);
-        int value_before = getValueFromInfo(firstNodeInfo, "total_net_input_bytes");
+        long value_before = getValueFromInfo(firstNodeInfo, "total_net_input_bytes");
 
         var result = clusterClient.configResetStat().get();
         assertEquals(OK, result);
 
         data = clusterClient.info(InfoOptions.builder().section(STATS).build()).get();
         firstNodeInfo = getFirstEntryFromMultiValue(data);
-        int value_after = getValueFromInfo(firstNodeInfo, "total_net_input_bytes");
+        long value_after = getValueFromInfo(firstNodeInfo, "total_net_input_bytes");
         assertTrue(value_after < value_before);
     }
 

@@ -409,6 +409,7 @@ class TestCommands:
     @pytest.mark.parametrize("cluster_mode", [True, False])
     @pytest.mark.parametrize("protocol", [ProtocolVersion.RESP2, ProtocolVersion.RESP3])
     async def test_info_server_replication(self, glide_client: TGlideClient):
+        print(await glide_client.info([InfoSection.SERVER]))
         info_res = get_first_result(await glide_client.info([InfoSection.SERVER]))
         info = info_res.decode()
         assert "# Server" in info

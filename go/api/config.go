@@ -27,27 +27,27 @@ func (addr *NodeAddress) toProtobuf() *protobuf.NodeAddress {
 	return &protobuf.NodeAddress{Host: addr.Host, Port: uint32(addr.Port)}
 }
 
-// RedisCredentials represents the credentials for connecting to a Redis server.
-type RedisCredentials struct {
-	// The username that will be used for authenticating connections to the Redis servers. If not supplied, "default"
+// ServerCredentials represents the credentials for connecting to servers.
+type ServerCredentials struct {
+	// The username that will be used for authenticating connections to the servers. If not supplied, "default"
 	// will be used.
 	username string
-	// The password that will be used for authenticating connections to the Redis servers.
+	// The password that will be used for authenticating connections to the servers.
 	password string
 }
 
-// NewRedisCredentials returns a [RedisCredentials] struct with the given username and password.
-func NewRedisCredentials(username string, password string) *RedisCredentials {
-	return &RedisCredentials{username, password}
+// NewServerCredentials returns a [ServerCredentials] struct with the given username and password.
+func NewServerCredentials(username string, password string) *ServerCredentials {
+	return &ServerCredentials{username, password}
 }
 
-// NewRedisCredentialsWithDefaultUsername returns a [RedisCredentials] struct with a default username of "default" and the
+// NewServerCredentialsWithDefaultUsername returns a [ServerCredentials] struct with a default username of "default" and the
 // given password.
-func NewRedisCredentialsWithDefaultUsername(password string) *RedisCredentials {
-	return &RedisCredentials{password: password}
+func NewServerCredentialsWithDefaultUsername(password string) *ServerCredentials {
+	return &ServerCredentials{password: password}
 }
 
-func (creds *RedisCredentials) toProtobuf() *protobuf.AuthenticationInfo {
+func (creds *ServerCredentials) toProtobuf() *protobuf.AuthenticationInfo {
 	return &protobuf.AuthenticationInfo{Username: creds.username, Password: creds.password}
 }
 
@@ -73,7 +73,7 @@ func mapReadFrom(readFrom ReadFrom) protobuf.ReadFrom {
 type baseClientConfiguration struct {
 	addresses      []NodeAddress
 	useTLS         bool
-	credentials    *RedisCredentials
+	credentials    *ServerCredentials
 	readFrom       ReadFrom
 	requestTimeout int
 	clientName     string
@@ -140,21 +140,20 @@ func (strategy *BackoffStrategy) toProtobuf() *protobuf.ConnectionRetryStrategy 
 	}
 }
 
-// RedisClientConfiguration represents the configuration settings for a Standalone Redis client. baseClientConfiguration is an
-// embedded struct that contains shared settings for standalone and cluster clients.
-type RedisClientConfiguration struct {
+// GlideClientConfiguration represents the configuration settings for a Standalone client.
+type GlideClientConfiguration struct {
 	baseClientConfiguration
 	reconnectStrategy *BackoffStrategy
 	databaseId        int
 }
 
-// NewRedisClientConfiguration returns a [RedisClientConfiguration] with default configuration settings. For further
-// configuration, use the [RedisClientConfiguration] With* methods.
-func NewRedisClientConfiguration() *RedisClientConfiguration {
-	return &RedisClientConfiguration{}
+// NewGlideClientConfiguration returns a [GlideClientConfiguration] with default configuration settings. For further
+// configuration, use the [GlideClientConfiguration] With* methods.
+func NewGlideClientConfiguration() *GlideClientConfiguration {
+	return &GlideClientConfiguration{}
 }
 
-func (config *RedisClientConfiguration) toProtobuf() *protobuf.ConnectionRequest {
+func (config *GlideClientConfiguration) toProtobuf() *protobuf.ConnectionRequest {
 	request := config.baseClientConfiguration.toProtobuf()
 	request.ClusterModeEnabled = false
 	if config.reconnectStrategy != nil {
@@ -171,14 +170,16 @@ func (config *RedisClientConfiguration) toProtobuf() *protobuf.ConnectionRequest
 // WithAddress adds an address for a known node in the cluster to this configuration's list of addresses. WithAddress can be
 // called multiple times to add multiple addresses to the list. If the server is in cluster mode the list can be partial, as
 // the client will attempt to map out the cluster and find all nodes. If the server is in standalone mode, only nodes whose
-// addresses were provided will be used by the client. For example:
+// addresses were provided will be used by the client.
 //
-//	config := NewRedisClientConfiguration().
+// For example:
+//
+//	config := NewGlideClientConfiguration().
 //	    WithAddress(&NodeAddress{
 //	        Host: "sample-address-0001.use1.cache.amazonaws.com", Port: 6379}).
 //	    WithAddress(&NodeAddress{
 //	        Host: "sample-address-0002.use1.cache.amazonaws.com", Port: 6379})
-func (config *RedisClientConfiguration) WithAddress(address *NodeAddress) *RedisClientConfiguration {
+func (config *GlideClientConfiguration) WithAddress(address *NodeAddress) *GlideClientConfiguration {
 	config.addresses = append(config.addresses, *address)
 	return config
 }
@@ -186,20 +187,20 @@ func (config *RedisClientConfiguration) WithAddress(address *NodeAddress) *Redis
 // WithUseTLS configures the TLS settings for this configuration. Set to true if communication with the cluster should use
 // Transport Level Security. This setting should match the TLS configuration of the server/cluster, otherwise the connection
 // attempt will fail.
-func (config *RedisClientConfiguration) WithUseTLS(useTLS bool) *RedisClientConfiguration {
+func (config *GlideClientConfiguration) WithUseTLS(useTLS bool) *GlideClientConfiguration {
 	config.useTLS = useTLS
 	return config
 }
 
 // WithCredentials sets the credentials for the authentication process. If none are set, the client will not authenticate
 // itself with the server.
-func (config *RedisClientConfiguration) WithCredentials(credentials *RedisCredentials) *RedisClientConfiguration {
+func (config *GlideClientConfiguration) WithCredentials(credentials *ServerCredentials) *GlideClientConfiguration {
 	config.credentials = credentials
 	return config
 }
 
 // WithReadFrom sets the client's [ReadFrom] strategy. If not set, [Primary] will be used.
-func (config *RedisClientConfiguration) WithReadFrom(readFrom ReadFrom) *RedisClientConfiguration {
+func (config *GlideClientConfiguration) WithReadFrom(readFrom ReadFrom) *GlideClientConfiguration {
 	config.readFrom = readFrom
 	return config
 }
@@ -208,47 +209,47 @@ func (config *RedisClientConfiguration) WithReadFrom(readFrom ReadFrom) *RedisCl
 // encompasses sending the request, awaiting for a response from the server, and any required reconnections or retries. If the
 // specified timeout is exceeded for a pending request, it will result in a timeout error. If not set, a default value will be
 // used.
-func (config *RedisClientConfiguration) WithRequestTimeout(requestTimeout int) *RedisClientConfiguration {
+func (config *GlideClientConfiguration) WithRequestTimeout(requestTimeout int) *GlideClientConfiguration {
 	config.requestTimeout = requestTimeout
 	return config
 }
 
 // WithClientName sets the client name to be used for the client. Will be used with CLIENT SETNAME command during connection
 // establishment.
-func (config *RedisClientConfiguration) WithClientName(clientName string) *RedisClientConfiguration {
+func (config *GlideClientConfiguration) WithClientName(clientName string) *GlideClientConfiguration {
 	config.clientName = clientName
 	return config
 }
 
 // WithReconnectStrategy sets the [BackoffStrategy] used to determine how and when to reconnect, in case of connection
 // failures. If not set, a default backoff strategy will be used.
-func (config *RedisClientConfiguration) WithReconnectStrategy(strategy *BackoffStrategy) *RedisClientConfiguration {
+func (config *GlideClientConfiguration) WithReconnectStrategy(strategy *BackoffStrategy) *GlideClientConfiguration {
 	config.reconnectStrategy = strategy
 	return config
 }
 
 // WithDatabaseId sets the index of the logical database to connect to.
-func (config *RedisClientConfiguration) WithDatabaseId(id int) *RedisClientConfiguration {
+func (config *GlideClientConfiguration) WithDatabaseId(id int) *GlideClientConfiguration {
 	config.databaseId = id
 	return config
 }
 
-// RedisClusterClientConfiguration represents the configuration settings for a Cluster Redis client.
+// GlideClusterClientConfiguration represents the configuration settings for a Cluster Glide client.
 // Note: Currently, the reconnection strategy in cluster mode is not configurable, and exponential backoff with fixed values is
 // used.
-type RedisClusterClientConfiguration struct {
+type GlideClusterClientConfiguration struct {
 	baseClientConfiguration
 }
 
-// NewRedisClusterClientConfiguration returns a [RedisClusterClientConfiguration] with default configuration settings. For
-// further configuration, use the [RedisClientConfiguration] With* methods.
-func NewRedisClusterClientConfiguration() *RedisClusterClientConfiguration {
-	return &RedisClusterClientConfiguration{
+// NewGlideClusterClientConfiguration returns a [GlideClusterClientConfiguration] with default configuration settings. For
+// further configuration, use the [GlideClientConfiguration] With* methods.
+func NewGlideClusterClientConfiguration() *GlideClusterClientConfiguration {
+	return &GlideClusterClientConfiguration{
 		baseClientConfiguration: baseClientConfiguration{},
 	}
 }
 
-func (config *RedisClusterClientConfiguration) toProtobuf() *protobuf.ConnectionRequest {
+func (config *GlideClusterClientConfiguration) toProtobuf() *protobuf.ConnectionRequest {
 	request := config.baseClientConfiguration.toProtobuf()
 	request.ClusterModeEnabled = true
 	return request
@@ -257,14 +258,16 @@ func (config *RedisClusterClientConfiguration) toProtobuf() *protobuf.Connection
 // WithAddress adds an address for a known node in the cluster to this configuration's list of addresses. WithAddress can be
 // called multiple times to add multiple addresses to the list. If the server is in cluster mode the list can be partial, as
 // the client will attempt to map out the cluster and find all nodes. If the server is in standalone mode, only nodes whose
-// addresses were provided will be used by the client. For example:
+// addresses were provided will be used by the client.
 //
-//	config := NewRedisClusterClientConfiguration().
+// For example:
+//
+//	config := NewGlideClusterClientConfiguration().
 //	    WithAddress(&NodeAddress{
 //	        Host: "sample-address-0001.use1.cache.amazonaws.com", Port: 6379}).
 //	    WithAddress(&NodeAddress{
 //	        Host: "sample-address-0002.use1.cache.amazonaws.com", Port: 6379})
-func (config *RedisClusterClientConfiguration) WithAddress(address *NodeAddress) *RedisClusterClientConfiguration {
+func (config *GlideClusterClientConfiguration) WithAddress(address *NodeAddress) *GlideClusterClientConfiguration {
 	config.addresses = append(config.addresses, *address)
 	return config
 }
@@ -272,22 +275,22 @@ func (config *RedisClusterClientConfiguration) WithAddress(address *NodeAddress)
 // WithUseTLS configures the TLS settings for this configuration. Set to true if communication with the cluster should use
 // Transport Level Security. This setting should match the TLS configuration of the server/cluster, otherwise the connection
 // attempt will fail.
-func (config *RedisClusterClientConfiguration) WithUseTLS(useTLS bool) *RedisClusterClientConfiguration {
+func (config *GlideClusterClientConfiguration) WithUseTLS(useTLS bool) *GlideClusterClientConfiguration {
 	config.useTLS = useTLS
 	return config
 }
 
 // WithCredentials sets the credentials for the authentication process. If none are set, the client will not authenticate
 // itself with the server.
-func (config *RedisClusterClientConfiguration) WithCredentials(
-	credentials *RedisCredentials,
-) *RedisClusterClientConfiguration {
+func (config *GlideClusterClientConfiguration) WithCredentials(
+	credentials *ServerCredentials,
+) *GlideClusterClientConfiguration {
 	config.credentials = credentials
 	return config
 }
 
 // WithReadFrom sets the client's [ReadFrom] strategy. If not set, [Primary] will be used.
-func (config *RedisClusterClientConfiguration) WithReadFrom(readFrom ReadFrom) *RedisClusterClientConfiguration {
+func (config *GlideClusterClientConfiguration) WithReadFrom(readFrom ReadFrom) *GlideClusterClientConfiguration {
 	config.readFrom = readFrom
 	return config
 }
@@ -296,14 +299,14 @@ func (config *RedisClusterClientConfiguration) WithReadFrom(readFrom ReadFrom) *
 // encompasses sending the request, awaiting for a response from the server, and any required reconnections or retries. If the
 // specified timeout is exceeded for a pending request, it will result in a timeout error. If not set, a default value will be
 // used.
-func (config *RedisClusterClientConfiguration) WithRequestTimeout(requestTimeout int) *RedisClusterClientConfiguration {
+func (config *GlideClusterClientConfiguration) WithRequestTimeout(requestTimeout int) *GlideClusterClientConfiguration {
 	config.requestTimeout = requestTimeout
 	return config
 }
 
 // WithClientName sets the client name to be used for the client. Will be used with CLIENT SETNAME command during connection
 // establishment.
-func (config *RedisClusterClientConfiguration) WithClientName(clientName string) *RedisClusterClientConfiguration {
+func (config *GlideClusterClientConfiguration) WithClientName(clientName string) *GlideClusterClientConfiguration {
 	config.clientName = clientName
 	return config
 }

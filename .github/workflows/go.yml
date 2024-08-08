@@ -106,7 +106,23 @@ jobs:
 
             - name: Run tests
               working-directory: ./go
-              run: make test
+              run: |
+                LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GITHUB_WORKSPACE/go/target/release/deps/
+                make test
+
+            - uses: ./.github/workflows/test-benchmark
+              with:
+                  language-flag: -go
+
+            - name: Upload logs and reports
+              if: always()
+              continue-on-error: true
+              uses: actions/upload-artifact@v4
+              with:
+                  name: reports-go-${{ matrix.go }}-redis-${{ matrix.redis }}-${{ matrix.os }}
+                  path: |
+                      utils/clusters/**
+                      benchmarks/results/**
 
     build-amazonlinux-latest:
         if: github.repository_owner == 'valkey-io'
@@ -158,6 +174,9 @@ jobs:
               working-directory: ./go
               run: make install-tools-go${{ matrix.go }}
 
+            - name: Set LD_LIBRARY_PATH
+              run: echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GITHUB_WORKSPACE/go/target/release/deps/" >> $GITHUB_ENV
+
             - name: Build client
               working-directory: ./go
               run: make build
@@ -168,7 +187,18 @@ jobs:
 
             - name: Run tests
               working-directory: ./go
-              run: make test
+              run: |
+                LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GITHUB_WORKSPACE/go/target/release/deps/
+                make test
+
+            - name: Upload cluster manager logs
+              if: always()
+              continue-on-error: true
+              uses: actions/upload-artifact@v4
+              with:
+                  name: cluster-manager-logs-${{ matrix.go }}-redis-6-amazonlinux
+                  path: |
+                      utils/clusters/**
 
     lint-rust:
         timeout-minutes: 15

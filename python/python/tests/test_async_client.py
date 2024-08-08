@@ -413,7 +413,10 @@ class TestCommands:
         info_res = get_first_result(await glide_client.info([InfoSection.SERVER]))
         info = info_res.decode()
         assert "# Server" in info
-        cluster_mode = parse_info_response(info_res)["redis_mode"]
+        if not await check_if_server_version_lt(glide_client, "7.9.0"):
+            cluster_mode = parse_info_response(info_res)["server_mode"]
+        else:
+            cluster_mode = parse_info_response(info_res)["redis_mode"]
         expected_cluster_mode = isinstance(glide_client, GlideClusterClient)
         assert cluster_mode == "cluster" if expected_cluster_mode else "standalone"
         info = get_first_result(

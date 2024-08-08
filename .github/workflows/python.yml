@@ -120,7 +120,7 @@ jobs:
               run: |
                   source .env/bin/activate
                   cd python/tests/
-                  pytest --asyncio-mode=auto --html=pytest_report.html --self-contained-html -k test_info_server_replication -s
+                  pytest --asyncio-mode=auto --html=pytest_report.html --self-contained-html -s
 
             - uses: ./.github/workflows/test-benchmark
               with:

@@ -8,7 +8,7 @@ import {
     valueFromSplitPointer,
 } from "glide-rs";
 import * as net from "net";
-import { Buffer, BufferWriter, Reader, Writer } from "protobufjs";
+import { Buffer, BufferWriter, Long, Reader, Writer } from "protobufjs";
 import {
     AggregationType,
     BaseScanOptions,
@@ -246,6 +246,44 @@ export type ReturnType =
     | ReturnTypeAttribute
     | ReturnType[];
 
+export type GlideString = string | Uint8Array;
+
+/**
+ * Enum representing the different types of decoders.
+ */
+export const enum Decoder {
+    /**
+     * Decodes the response into a buffer array.
+     */
+    Bytes,
+    /**
+     * Decodes the response into a string.
+     */
+    String,
+}
+
+/**
+ * Our purpose in creating PointerResponse type is to mark when response is of number/long pointer response type.
+ * Consequently, when the response is returned, we can check whether it is instanceof the PointerResponse type and pass it to the Rust core function with the proper parameters.
+ */
+class PointerResponse {
+    pointer: number | Long | null;
+    // As Javascript does not support 64-bit integers,
+    // we split the Rust u64 pointer into two u32 integers (high and low) and build it again when we call value_from_split_pointer, the Rust function.
+    high: number | undefined;
+    low: number | undefined;
+
+    constructor(
+        pointer: number | Long | null,
+        high?: number | undefined,
+        low?: number | undefined,
+    ) {
+        this.pointer = pointer;
+        this.high = high;
+        this.low = low;
+    }
+}
+
 /** Represents the credentials for connecting to a server. */
 export type RedisCredentials = {
     /**
@@ -326,6 +364,11 @@ export type BaseClientConfiguration = {
      * Client name to be used for the client. Will be used with CLIENT SETNAME command during connection establishment.
      */
     clientName?: string;
+    /**
+     * Default decoder when decoder is not set per command.
+     * If not set, 'Decoder.String' will be used.
+     */
+    defaultDecoder?: Decoder;
 };
 
 export type ScriptOptions = {
@@ -366,6 +409,11 @@ export type PubSubMsg = {
     channel: string;
     pattern?: string | null;
 };
+
+export type WritePromiseOptions = {
+    decoder?: Decoder;
+    route?: command_request.Routes;
+};
 export class BaseClient {
     private socket: net.Socket;
     private readonly promiseCallbackFunctions: [
@@ -378,6 +426,7 @@ export class BaseClient {
     private remainingReadData: Uint8Array | undefined;
     private readonly requestTimeout: number; // Timeout in milliseconds
     private isClosed = false;
+    private defaultDecoder = Decoder.String;
     private readonly pubsubFutures: [PromiseFunction, ErrorFunction][] = [];
     private pendingPushNotification: response.Response[] = [];
     private config: BaseClientConfiguration | undefined;
@@ -477,15 +526,21 @@ export class BaseClient {
             const errorType = getRequestErrorClass(message.requestError.type);
             reject(new errorType(message.requestError.message ?? undefined));
         } else if (message.respPointer != null) {
-            const pointer = message.respPointer;
+            let pointer;
 
-            if (typeof pointer === "number") {
-                // TODO: change according to https://github.com/valkey-io/valkey-glide/pull/2052
-                resolve(valueFromSplitPointer(0, pointer, true));
+            if (typeof message.respPointer === "number") {
+                // Response from type number
+                pointer = new PointerResponse(message.respPointer);
             } else {
-                // TODO: change according to https://github.com/valkey-io/valkey-glide/pull/2052
-                resolve(valueFromSplitPointer(pointer.high, pointer.low, true));
+                // Response from type long
+                pointer = new PointerResponse(
+                    message.respPointer,
+                    message.respPointer.high,
+                    message.respPointer.low,
+                );
             }
+
+            resolve(pointer);
         } else if (message.constantResponse === response.ConstantResponse.OK) {
             resolve("OK");
         } else {
@@ -539,6 +594,7 @@ export class BaseClient {
                 console.error(`Server closed: ${err}`);
                 this.close();
             });
+        this.defaultDecoder = options?.defaultDecoder ?? Decoder.String;
     }
 
     private getCallbackIndex(): number {
@@ -570,8 +626,11 @@ export class BaseClient {
             | command_request.Command
             | command_request.Command[]
             | command_request.ScriptInvocation,
-        route?: command_request.Routes,
+        options: WritePromiseOptions = {},
     ): Promise<T> {
+        const { decoder = this.defaultDecoder, route } = options;
+        const stringDecoder = decoder === Decoder.String ? true : false;
+
         if (this.isClosed) {
             throw new ClosingError(
                 "Unable to execute requests; the client is closed. Please create a new client.",
@@ -580,7 +639,28 @@ export class BaseClient {
 
         return new Promise((resolve, reject) => {
             const callbackIndex = this.getCallbackIndex();
-            this.promiseCallbackFunctions[callbackIndex] = [resolve, reject];
+            this.promiseCallbackFunctions[callbackIndex] = [
+                (resolveAns: T) => {
+                    if (resolveAns instanceof PointerResponse) {
+                        if (typeof resolveAns === "number") {
+                            resolveAns = valueFromSplitPointer(
+                                0,
+                                resolveAns,
+                                stringDecoder,
+                            ) as T;
+                        } else {
+                            resolveAns = valueFromSplitPointer(
+                                resolveAns.high!,
+                                resolveAns.low!,
+                                stringDecoder,
+                            ) as T;
+                        }
+                    }
+
+                    resolve(resolveAns);
+                },
+                reject,
+            ];
             this.writeOrBufferCommandRequest(callbackIndex, command, route);
         });
     }
@@ -707,7 +787,7 @@ export class BaseClient {
         });
     }
 
-    public tryGetPubSubMessage(): PubSubMsg | null {
+    public tryGetPubSubMessage(decoder?: Decoder): PubSubMsg | null {
         if (this.isClosed) {
             throw new ClosingError(
                 "Unable to execute requests; the client is closed. Please create a new client.",
@@ -731,13 +811,17 @@ export class BaseClient {
 
         while (this.pendingPushNotification.length > 0 && !msg) {
             const pushNotification = this.pendingPushNotification.shift()!;
-            msg = this.notificationToPubSubMessageSafe(pushNotification);
+            msg = this.notificationToPubSubMessageSafe(
+                pushNotification,
+                decoder,
+            );
         }
 
         return msg;
     }
     notificationToPubSubMessageSafe(
         pushNotification: response.Response,
+        decoder?: Decoder,
     ): PubSubMsg | null {
         let msg: PubSubMsg | null = null;
         const responsePointer = pushNotification.respPointer;
@@ -748,15 +832,13 @@ export class BaseClient {
                 nextPushNotificationValue = valueFromSplitPointer(
                     responsePointer.high,
                     responsePointer.low,
-                    // TODO: change according to https://github.com/valkey-io/valkey-glide/pull/2052
-                    true,
+                    decoder === Decoder.String,
                 ) as Record<string, unknown>;
             } else {
                 nextPushNotificationValue = valueFromSplitPointer(
                     0,
                     responsePointer,
-                    // TODO: change according to https://github.com/valkey-io/valkey-glide/pull/2052
-                    true,
+                    decoder === Decoder.String,
                 ) as Record<string, unknown>;
             }
 
@@ -828,6 +910,7 @@ export class BaseClient {
      * See https://valkey.io/commands/get/ for details.
      *
      * @param key - The key to retrieve from the database.
+     * @param decoder - Optional enum parameter for decoding the response.
      * @returns If `key` exists, returns the value of `key` as a string. Otherwise, return null.
      *
      * @example
@@ -835,10 +918,13 @@ export class BaseClient {
      * // Example usage of get method to retrieve the value of a key
      * const result = await client.get("key");
      * console.log(result); // Output: 'value'
+     * // Example usage of get method to retrieve the value of a key with Bytes decoder
+     * const result = await client.get("key", Decoder.Bytes);
+     * console.log(result); // Output: {"data": [118, 97, 108, 117, 101], "type": "Buffer"}
      * ```
      */
-    public get(key: string): Promise<string | null> {
-        return this.createWritePromise(createGet(key));
+    public get(key: string, decoder?: Decoder): Promise<string | null> {
+        return this.createWritePromise(createGet(key), { decoder: decoder });
     }
 
     /**

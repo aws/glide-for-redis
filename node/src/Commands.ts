@@ -6,16 +6,17 @@ import { createLeakedStringVec, MAX_REQUEST_ARGS_LEN } from "glide-rs";
 import Long from "long";
 
 /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
-import { BaseClient } from "src/BaseClient";
+import { BaseClient, Decoder } from "src/BaseClient";
 /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
 import { GlideClient } from "src/GlideClient";
 /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
 import { GlideClusterClient } from "src/GlideClusterClient";
+import { GlideString } from "./BaseClient";
 import { command_request } from "./ProtobufMessage";
 
 import RequestType = command_request.RequestType;
 
-function isLargeCommand(args: BulkString[]) {
+function isLargeCommand(args: GlideString[]) {
     let lenSum = 0;
 
     for (const arg of args) {
@@ -29,12 +30,10 @@ function isLargeCommand(args: BulkString[]) {
     return false;
 }
 
-type BulkString = string | Uint8Array;
-
 /**
  * Convert a string array into Uint8Array[]
  */
-function toBuffersArray(args: BulkString[]) {
+function toBuffersArray(args: GlideString[]) {
     const argsBytes: Uint8Array[] = [];
 
     for (const arg of args) {
@@ -68,7 +67,7 @@ export function parseInfoResponse(response: string): Record<string, string> {
 
 function createCommand(
     requestType: command_request.RequestType,
-    args: BulkString[],
+    args: GlideString[],
 ): command_request.Command {
     const singleCommand = command_request.Command.create({
         requestType,
@@ -171,8 +170,8 @@ export type SetOptions = {
  * @internal
  */
 export function createSet(
-    key: BulkString,
-    value: BulkString,
+    key: GlideString,
+    value: GlideString,
     options?: SetOptions,
 ): command_request.Command {
     const args = [key, value];
@@ -2614,6 +2613,12 @@ export type LolwutOptions = {
      *  For version `6`, those are number of columns and number of lines.
      */
     parameters?: number[];
+    /**
+     * An optional argument specifies the type of decoding.
+     *  Use Decoder.String to get the response as a String.
+     *  Use Decoder.Bytes to get the response in a buffer.
+     */
+    decoder?: Decoder;
 };
 
 /**

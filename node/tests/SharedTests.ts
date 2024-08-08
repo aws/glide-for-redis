@@ -22,6 +22,7 @@ import {
     ClosingError,
     ClusterTransaction,
     ConditionalChange,
+    Decoder,
     ExpireOptions,
     FlushMode,
     GeoUnit,
@@ -1251,6 +1252,33 @@ export function runBaseTests<Context>(config: {
                 expect(await client.hget(key, "nonExistingField")).toEqual(
                     null,
                 );
+            }, protocol);
+        },
+        config.timeout,
+    );
+
+    it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
+        `encoder test_%p`,
+        async (protocol) => {
+            await runTest(async (client: BaseClient) => {
+                const key = uuidv4();
+                const value = uuidv4();
+                const valueEncoded = Buffer.from(value);
+
+                expect(await client.set(key, value)).toEqual("OK");
+                expect(await client.get(key)).toEqual(value);
+                expect(await client.get(key, Decoder.Bytes)).toEqual(
+                    valueEncoded,
+                );
+                expect(await client.get(key, Decoder.String)).toEqual(value);
+
+                // Setting the encoded value. Should behave as the previous test since the default is String decoding.
+                expect(await client.set(key, valueEncoded)).toEqual("OK");
+                expect(await client.get(key)).toEqual(value);
+                expect(await client.get(key, Decoder.Bytes)).toEqual(
+                    valueEncoded,
+                );
+                expect(await client.get(key, Decoder.String)).toEqual(value);
             }, protocol);
         },
         config.timeout,

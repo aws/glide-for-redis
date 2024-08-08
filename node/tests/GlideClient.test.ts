@@ -13,6 +13,7 @@ import {
 import { BufferReader, BufferWriter } from "protobufjs";
 import { v4 as uuidv4 } from "uuid";
 import {
+    Decoder,
     GlideClient,
     ListDirection,
     ProtocolVersion,
@@ -27,10 +28,10 @@ import {
     checkFunctionListResponse,
     checkFunctionStatsResponse,
     convertStringArrayToBuffer,
+    encodedTransactionTest,
     flushAndCloseClient,
     generateLuaLibCode,
     getClientConfigurationOption,
-    intoString,
     parseCommandLineArgs,
     parseEndpoints,
     transactionTest,
@@ -120,13 +121,9 @@ describe("GlideClient", () => {
                 getClientConfigurationOption(cluster.getAddresses(), protocol),
             );
             const result = await client.info();
-            expect(intoString(result)).toEqual(
-                expect.stringContaining("# Server"),
-            );
-            expect(intoString(result)).toEqual(
-                expect.stringContaining("# Replication"),
-            );
-            expect(intoString(result)).toEqual(
+            expect(result).toEqual(expect.stringContaining("# Server"));
+            expect(result).toEqual(expect.stringContaining("# Replication"));
+            expect(result).toEqual(
                 expect.not.stringContaining("# Latencystats"),
             );
         },
@@ -202,6 +199,29 @@ describe("GlideClient", () => {
     );
 
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
+        "bytes decoder client test %p",
+        async (protocol) => {
+            const clientConfig = getClientConfigurationOption(
+                cluster.getAddresses(),
+                protocol,
+            );
+            clientConfig.defaultDecoder = Decoder.Bytes;
+            client = await GlideClient.createClient(clientConfig);
+            expect(await client.select(0)).toEqual("OK");
+
+            const key = uuidv4();
+            const value = uuidv4();
+            const valueEncoded = Buffer.from(value);
+            const result = await client.set(key, value);
+            expect(result).toEqual("OK");
+
+            expect(await client.get(key)).toEqual(valueEncoded);
+            expect(await client.get(key, Decoder.String)).toEqual(value);
+            expect(await client.get(key, Decoder.Bytes)).toEqual(valueEncoded);
+        },
+    );
+
+    it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `can send transactions_%p`,
         async (protocol) => {
             client = await GlideClient.createClient(
@@ -214,6 +234,22 @@ describe("GlideClient", () => {
             );
             transaction.select(0);
             const result = await client.exec(transaction);
+            expectedRes.push(["select(0)", "OK"]);
+
+            validateTransactionResponse(result, expectedRes);
+        },
+    );
+
+    it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
+        `can get Bytes decoded transactions_%p`,
+        async (protocol) => {
+            client = await GlideClient.createClient(
+                getClientConfigurationOption(cluster.getAddresses(), protocol),
+            );
+            const transaction = new Transaction();
+            const expectedRes = await encodedTransactionTest(transaction);
+            transaction.select(0);
+            const result = await client.exec(transaction, Decoder.Bytes);
             expectedRes.push(["select(0)", "OK"]);
 
             validateTransactionResponse(result, expectedRes);
@@ -364,32 +400,22 @@ describe("GlideClient", () => {
             );
 
             const result = await client.lolwut();
-            expect(intoString(result)).toEqual(
-                expect.stringContaining("Redis ver. "),
-            );
+            expect(result).toEqual(expect.stringContaining("Redis ver. "));
 
             const result2 = await client.lolwut({ parameters: [] });
-            expect(intoString(result2)).toEqual(
-                expect.stringContaining("Redis ver. "),
-            );
+            expect(result2).toEqual(expect.stringContaining("Redis ver. "));
 
             const result3 = await client.lolwut({ parameters: [50, 20] });
-            expect(intoString(result3)).toEqual(
-                expect.stringContaining("Redis ver. "),
-            );
+            expect(result3).toEqual(expect.stringContaining("Redis ver. "));
 
             const result4 = await client.lolwut({ version: 6 });
-            expect(intoString(result4)).toEqual(
-                expect.stringContaining("Redis ver. "),
-            );
+            expect(result4).toEqual(expect.stringContaining("Redis ver. "));
 
             const result5 = await client.lolwut({
                 version: 5,
                 parameters: [30, 4, 4],
             });
-            expect(intoString(result5)).toEqual(
-                expect.stringContaining("Redis ver. "),
-            );
+            expect(result5).toEqual(expect.stringContaining("Redis ver. "));
 
             // transaction tests
             const transaction = new Transaction();
@@ -401,7 +427,7 @@ describe("GlideClient", () => {
 
             if (results) {
                 for (const element of results) {
-                    expect(intoString(element)).toEqual(
+                    expect(element).toEqual(
                         expect.stringContaining("Redis ver. "),
                     );
                 }

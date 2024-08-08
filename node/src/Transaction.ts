@@ -232,8 +232,8 @@ import {
     createZScan,
     createZScore,
     createGeoSearchStore,
-    GetExOptions,
     GeoSearchStoreResultOptions,
+    TimeUnit,
 } from "./Commands";
 import { command_request } from "./ProtobufMessage";
 
@@ -306,7 +306,10 @@ export class BaseTransaction<T extends BaseTransaction<T>> {
      *
      * Command Response - If `key` exists, returns the value of `key` as a `string`. Otherwise, return `null`.
      */
-    public getex(key: string, options?: GetExOptions): T {
+    public getex(
+        key: string,
+        options?: "persist" | { unit: TimeUnit; duration: number },
+    ): T {
         return this.addAndReturn(createGetEx(key, options));
     }
 

@@ -7,6 +7,7 @@ import { exec } from "child_process";
 import parseArgs from "minimist";
 import { gte } from "semver";
 import { v4 as uuidv4 } from "uuid";
+import { TimeUnit } from "../src/Commands";
 import {
     BaseClient,
     BaseClientConfiguration,
@@ -544,7 +545,7 @@ export async function transactionTest(
     if (gte(version, "6.2.0")) {
         baseTransaction.getex(key1);
         responseData.push(["getex(key1)", "bar"]);
-        baseTransaction.getex(key1, { expiry: { type: "seconds", count: 1 } });
+        baseTransaction.getex(key1, { unit: TimeUnit.seconds, duration: 1 });
         responseData.push([
             'getex(key1, {expiry: { type: "seconds", count: 1 }})',
             "bar",

@@ -199,7 +199,7 @@ import {
     createZScore,
     StreamClaimOptions,
     createXClaim,
-    GetExOptions,
+    TimeUnit,
 } from "./Commands";
 import {
     ClosingError,
@@ -857,7 +857,10 @@ export class BaseClient {
      * console.log(result); // Output: 'value'
      * ```
      */
-    public getex(key: string, options?: GetExOptions): Promise<string | null> {
+    public getex(
+        key: string,
+        options?: "persist" | { unit: TimeUnit; duration: number },
+    ): Promise<string | null> {
         return this.createWritePromise(createGetEx(key, options));
     }
 

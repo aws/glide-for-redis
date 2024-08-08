@@ -45,6 +45,7 @@ import {
 } from "../";
 import { RedisCluster } from "../../utils/TestUtils";
 import { SingleNodeRoute } from "../build-ts/src/GlideClusterClient";
+import { TimeUnit } from "../src/Commands";
 import {
     Client,
     GetAndSetRandomValue,
@@ -7869,13 +7870,12 @@ export function runBaseTests<Context>(config: {
 
                 expect(
                     await client.getex(key1, {
-                        expiry: { type: "seconds", count: 15 },
+                        unit: TimeUnit.seconds,
+                        duration: 15,
                     }),
                 ).toEqual(value);
                 expect(await client.ttl(key1)).toBeGreaterThan(0);
-                expect(await client.getex(key1, { expiry: "persist" })).toEqual(
-                    value,
-                );
+                expect(await client.getex(key1, "persist")).toEqual(value);
                 expect(await client.ttl(key1)).toBe(-1);
 
                 // non existent key
@@ -7884,7 +7884,8 @@ export function runBaseTests<Context>(config: {
                 // invalid time measurement
                 await expect(
                     client.getex(key1, {
-                        expiry: { type: "seconds", count: -10 },
+                        unit: TimeUnit.seconds,
+                        duration: -10,
                     }),
                 ).rejects.toThrow(RequestError);
 

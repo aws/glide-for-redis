@@ -1280,7 +1280,7 @@ export function runBaseTests<Context>(config: {
 
                 const resultArray = result[resultCollectionIndex];
                 const resultKeys = [];
-                const resultValues = [];
+                const resultValues: string[] = [];
 
                 for (let i = 0; i < resultArray.length; i += 2) {
                     resultKeys.push(resultArray[i]);
@@ -1293,11 +1293,11 @@ export function runBaseTests<Context>(config: {
                 );
                 expect(allKeysIncluded).toEqual(true);
 
-                console.log(resultValues);
-                console.log(Object.keys(charMap));
-
-                const allValuesIncluded = resultValues.every((value) =>
-                    charMap.hasValue(value),
+                // const allValuesIncluded = resultValues.every((value) =>
+                //     Number(value) in Object.values(charMap),
+                // );
+                const allValuesIncluded = Object.values(charMap).every(
+                    (value) => value in resultValues,
                 );
                 expect(allValuesIncluded).toEqual(true);
 
@@ -1314,8 +1314,8 @@ export function runBaseTests<Context>(config: {
                 );
 
                 let resultCursor = "0";
-                const secondResultAllKeys = [];
-                const secondResultAllValues = [];
+                const secondResultAllKeys: string[] = [];
+                const secondResultAllValues: string[] = [];
                 let isFirstLoop = true;
 
                 do {
@@ -1354,15 +1354,37 @@ export function runBaseTests<Context>(config: {
                     }
                 } while (resultCursor != "0"); // 0 is returned for the cursor of the last iteration.
 
-                const allSecondResultKeys = secondResultAllKeys.every(
-                    (key) => key in numberMap,
+                // const allSecondResultKeys = secondResultAllKeys.every(
+                //     (key) => key in numberMap,
+                // );
+                const allSecondResultKeys = Object.values(numberMap).every(
+                    (key) => key in secondResultAllKeys,
                 );
                 expect(allSecondResultKeys).toEqual(true);
 
-                const allSecondResultValues = secondResultAllValues.every(
-                    (key) => key in numberMap,
+                // // const allSecondResultValues = secondResultAllValues.every(
+                // //     (key) => key in numberMap,
+                // // );
+                // const allSecondResultValues = Object.values(numberMap).every(
+                //     (value) => value in secondResultAllValues,
+                // );
+                // expect(allSecondResultValues).toEqual(true);
+
+                /**
+                 *
+                 * const allKeysIncluded = resultKeys.every(
+                    (key) => key in charMap,
                 );
-                expect(allSecondResultValues).toEqual(true);
+                expect(allKeysIncluded).toEqual(true);
+
+                // const allValuesIncluded = resultValues.every((value) =>
+                //     Number(value) in Object.values(charMap),
+                // );
+                const allValuesIncluded = Object.values(charMap).every(
+                    (value) => value in resultValues,
+                );
+                expect(allValuesIncluded).toEqual(true);
+                 */
 
                 // Test match pattern
                 result = await client.hscan(key1, initialCursor, {

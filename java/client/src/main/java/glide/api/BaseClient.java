@@ -83,6 +83,9 @@ import static command_request.CommandRequestOuterClass.RequestType.Persist;
 import static command_request.CommandRequestOuterClass.RequestType.PfAdd;
 import static command_request.CommandRequestOuterClass.RequestType.PfCount;
 import static command_request.CommandRequestOuterClass.RequestType.PfMerge;
+import static command_request.CommandRequestOuterClass.RequestType.PubSubChannels;
+import static command_request.CommandRequestOuterClass.RequestType.PubSubNumPat;
+import static command_request.CommandRequestOuterClass.RequestType.PubSubNumSub;
 import static command_request.CommandRequestOuterClass.RequestType.Publish;
 import static command_request.CommandRequestOuterClass.RequestType.RPop;
 import static command_request.CommandRequestOuterClass.RequestType.RPush;
@@ -4493,6 +4496,54 @@ public abstract class BaseClient
                     handleLongResponse(response);
                     return OK;
                 });
+    }
+
+    @Override
+    public CompletableFuture<String[]> pubsubChannels() {
+        return commandManager.submitNewCommand(
+                PubSubChannels,
+                new String[0],
+                response -> castArray(handleArrayResponse(response), String.class));
+    }
+
+    @Override
+    public CompletableFuture<GlideString[]> pubsubChannelsBinary() {
+        return commandManager.submitNewCommand(
+                PubSubChannels,
+                new GlideString[0],
+                response -> castArray(handleArrayResponseBinary(response), GlideString.class));
+    }
+
+    @Override
+    public CompletableFuture<String[]> pubsubChannels(@NonNull String pattern) {
+        return commandManager.submitNewCommand(
+                PubSubChannels,
+                new String[] {pattern},
+                response -> castArray(handleArrayResponse(response), String.class));
+    }
+
+    @Override
+    public CompletableFuture<GlideString[]> pubsubChannels(@NonNull GlideString pattern) {
+        return commandManager.submitNewCommand(
+                PubSubChannels,
+                new GlideString[] {pattern},
+                response -> castArray(handleArrayResponseBinary(response), GlideString.class));
+    }
+
+    @Override
+    public CompletableFuture<Long> pubsubNumPat() {
+        return commandManager.submitNewCommand(PubSubNumPat, new String[0], this::handleLongResponse);
+    }
+
+    @Override
+    public CompletableFuture<Map<String, Long>> pubsubNumSub(@NonNull String[] channels) {
+        return commandManager.submitNewCommand(PubSubNumSub, channels, this::handleMapResponse);
+    }
+
+    @Override
+    public CompletableFuture<Map<GlideString, Long>> pubsubNumSub(@NonNull GlideString[] channels) {
+        return commandManager.submitNewCommand(
+                PubSubNumSub, channels, this::handleBinaryStringMapResponse);
     }
 
     @Override

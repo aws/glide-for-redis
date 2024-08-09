@@ -107,6 +107,9 @@ import static command_request.CommandRequestOuterClass.RequestType.PfAdd;
 import static command_request.CommandRequestOuterClass.RequestType.PfCount;
 import static command_request.CommandRequestOuterClass.RequestType.PfMerge;
 import static command_request.CommandRequestOuterClass.RequestType.Ping;
+import static command_request.CommandRequestOuterClass.RequestType.PubSubChannels;
+import static command_request.CommandRequestOuterClass.RequestType.PubSubNumPat;
+import static command_request.CommandRequestOuterClass.RequestType.PubSubNumSub;
 import static command_request.CommandRequestOuterClass.RequestType.Publish;
 import static command_request.CommandRequestOuterClass.RequestType.RPop;
 import static command_request.CommandRequestOuterClass.RequestType.RPush;
@@ -13492,6 +13495,170 @@ public class GlideClientTest {
         // verify
         assertEquals(testResponse, response);
         assertEquals(OK, payload);
+    }
+
+    @SneakyThrows
+    @Test
+    public void pubsubChannels_returns_success() {
+        // setup
+        String[] arguments = new String[0];
+        String[] value = new String[] {"ch1", "ch2"};
+
+        CompletableFuture<String[]> testResponse = new CompletableFuture<>();
+        testResponse.complete(value);
+
+        // match on protobuf request
+        when(commandManager.<String[]>submitNewCommand(eq(PubSubChannels), eq(arguments), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<String[]> response = service.pubsubChannels();
+        String[] payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(value, payload);
+    }
+
+    @SneakyThrows
+    @Test
+    public void pubsubChannelsBinary_returns_success() {
+        // setup
+        GlideString[] arguments = new GlideString[0];
+        GlideString[] value = new GlideString[] {gs("ch1"), gs("ch2")};
+
+        CompletableFuture<GlideString[]> testResponse = new CompletableFuture<>();
+        testResponse.complete(value);
+
+        // match on protobuf request
+        when(commandManager.<GlideString[]>submitNewCommand(eq(PubSubChannels), eq(arguments), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<GlideString[]> response = service.pubsubChannelsBinary();
+        GlideString[] payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(value, payload);
+    }
+
+    @SneakyThrows
+    @Test
+    public void pubsubChannels_with_pattern_returns_success() {
+        // setup
+        String pattern = "ch*";
+        String[] arguments = new String[] {pattern};
+        String[] value = new String[] {"ch1", "ch2"};
+
+        CompletableFuture<String[]> testResponse = new CompletableFuture<>();
+        testResponse.complete(value);
+
+        // match on protobuf request
+        when(commandManager.<String[]>submitNewCommand(eq(PubSubChannels), eq(arguments), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<String[]> response = service.pubsubChannels(pattern);
+        String[] payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(value, payload);
+    }
+
+    @SneakyThrows
+    @Test
+    public void pubsubChannelsBinary_with_pattern_returns_success() {
+        // setup
+        GlideString pattern = gs("ch*");
+        GlideString[] arguments = new GlideString[] {pattern};
+        GlideString[] value = new GlideString[] {gs("ch1"), gs("ch2")};
+
+        CompletableFuture<GlideString[]> testResponse = new CompletableFuture<>();
+        testResponse.complete(value);
+
+        // match on protobuf request
+        when(commandManager.<GlideString[]>submitNewCommand(eq(PubSubChannels), eq(arguments), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<GlideString[]> response = service.pubsubChannels(pattern);
+        GlideString[] payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(value, payload);
+    }
+
+    @SneakyThrows
+    @Test
+    public void pubsubNumPat_returns_success() {
+        // setup
+        String[] arguments = new String[0];
+        Long value = 42L;
+
+        CompletableFuture<Long> testResponse = new CompletableFuture<>();
+        testResponse.complete(value);
+
+        // match on protobuf request
+        when(commandManager.<Long>submitNewCommand(eq(PubSubNumPat), eq(arguments), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<Long> response = service.pubsubNumPat();
+        Long payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(value, payload);
+    }
+
+    @SneakyThrows
+    @Test
+    public void pubsubNumSub_returns_success() {
+        // setup
+        String[] arguments = new String[] {"ch1", "ch2"};
+        Map<String, Long> value = Map.of();
+
+        CompletableFuture<Map<String, Long>> testResponse = new CompletableFuture<>();
+        testResponse.complete(value);
+
+        // match on protobuf request
+        when(commandManager.<Map<String, Long>>submitNewCommand(eq(PubSubNumSub), eq(arguments), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<Map<String, Long>> response = service.pubsubNumSub(arguments);
+        Map<String, Long> payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(value, payload);
+    }
+
+    @SneakyThrows
+    @Test
+    public void pubsubNumSubBinary_returns_success() {
+        // setup
+        GlideString[] arguments = new GlideString[] {gs("ch1"), gs("ch2")};
+        Map<GlideString, Long> value = Map.of();
+
+        CompletableFuture<Map<GlideString, Long>> testResponse = new CompletableFuture<>();
+        testResponse.complete(value);
+
+        // match on protobuf request
+        when(commandManager.<Map<GlideString, Long>>submitNewCommand(
+                        eq(PubSubNumSub), eq(arguments), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<Map<GlideString, Long>> response = service.pubsubNumSub(arguments);
+        Map<GlideString, Long> payload = response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(value, payload);
     }
 
     @SneakyThrows

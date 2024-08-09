@@ -96,6 +96,16 @@ public class GlideClient extends BaseClient
         return commandManager.submitNewCommand(CustomCommand, args, this::handleObjectOrNullResponse);
     }
 
+    // @Override
+    public CompletableFuture<Object> customCommand(@NonNull GlideString[] args) {
+        return commandManager.submitNewCommand(
+                CustomCommand,
+                args,
+                response -> {
+                    return handleBinaryObjectOrNullResponse(response);
+                });
+    }
+
     @Override
     public CompletableFuture<Object[]> exec(@NonNull Transaction transaction) {
         if (transaction.isBinaryOutput()) {

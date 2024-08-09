@@ -105,6 +105,9 @@ import static command_request.CommandRequestOuterClass.RequestType.PfAdd;
 import static command_request.CommandRequestOuterClass.RequestType.PfCount;
 import static command_request.CommandRequestOuterClass.RequestType.PfMerge;
 import static command_request.CommandRequestOuterClass.RequestType.Ping;
+import static command_request.CommandRequestOuterClass.RequestType.PubSubChannels;
+import static command_request.CommandRequestOuterClass.RequestType.PubSubNumPat;
+import static command_request.CommandRequestOuterClass.RequestType.PubSubNumSub;
 import static command_request.CommandRequestOuterClass.RequestType.Publish;
 import static command_request.CommandRequestOuterClass.RequestType.RPop;
 import static command_request.CommandRequestOuterClass.RequestType.RPush;
@@ -6292,6 +6295,75 @@ public abstract class BaseTransaction<T extends BaseTransaction<T>> {
         checkTypeOrThrow(channel);
         protobufTransaction.addCommands(
                 buildCommand(Publish, newArgsBuilder().add(channel).add(message)));
+        return getThis();
+    }
+
+    /**
+     * Lists the currently active channels.
+     *
+     * @apiNote When in cluster mode, the command is routed to all nodes, and aggregates the response
+     *     into a single array.
+     * @see <a href="https://valkey.io/commands/pubsub-channels/">valkey.io</a> for details.
+     * @return Command response - An <code>Array</code> of all active channels.
+     */
+    public T pubsubChannels() {
+        protobufTransaction.addCommands(buildCommand(PubSubChannels));
+        return getThis();
+    }
+
+    /**
+     * Lists the currently active channels.
+     *
+     * @implNote {@link ArgType} is limited to {@link String} or {@link GlideString}, any other type
+     *     will throw {@link IllegalArgumentException}.
+     * @apiNote When in cluster mode, the command is routed to all nodes, and aggregates the response
+     *     into a single array.
+     * @see <a href="https://valkey.io/commands/pubsub-channels/">valkey.io</a> for details.
+     * @param pattern A glob-style pattern to match active channels.
+     * @return Command response - An <code>Array</code> of currently active channels matching the
+     *     given pattern.
+     */
+    public <ArgType> T pubsubChannels(@NonNull ArgType pattern) {
+        checkTypeOrThrow(pattern);
+        protobufTransaction.addCommands(buildCommand(PubSubChannels, newArgsBuilder().add(pattern)));
+        return getThis();
+    }
+
+    /**
+     * Returns the number of unique patterns that are subscribed to by clients.
+     *
+     * @apiNote
+     *     <ul>
+     *       <li>When in cluster mode, the command is routed to all nodes, and aggregates the response
+     *           into a single array.
+     *       <li>This is the total number of unique patterns all the clients are subscribed to, not
+     *           the count of clients subscribed to patterns.
+     *     </ul>
+     *
+     * @see <a href="https://valkey.io/commands/pubsub-numpat/">valkey.io</a> for details.
+     * @return Command response - The number of unique patterns.
+     */
+    public T pubsubNumPat() {
+        protobufTransaction.addCommands(buildCommand(PubSubNumPat));
+        return getThis();
+    }
+
+    /**
+     * Returns the number of subscribers (exclusive of clients subscribed to patterns) for the
+     * specified channels.
+     *
+     * @implNote {@link ArgType} is limited to {@link String} or {@link GlideString}, any other type
+     *     will throw {@link IllegalArgumentException}.
+     * @apiNote When in cluster mode, the command is routed to all nodes, and aggregates the response
+     *     into a single map.
+     * @see <a href="https://valkey.io/commands/pubsub-numsub/">valkey.io</a> for details.
+     * @param channels The list of channels to query for the number of subscribers.
+     * @return Command response - A <code>Map</code> where keys are the channel names and values are
+     *     the numbers of subscribers.
+     */
+    public <ArgType> T pubsubNumSub(@NonNull ArgType[] channels) {
+        checkTypeOrThrow(channels);
+        protobufTransaction.addCommands(buildCommand(PubSubNumSub, newArgsBuilder().add(channels)));
         return getThis();
     }
 

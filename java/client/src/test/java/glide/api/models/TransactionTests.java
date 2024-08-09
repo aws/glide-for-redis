@@ -104,6 +104,9 @@ import static command_request.CommandRequestOuterClass.RequestType.PfAdd;
 import static command_request.CommandRequestOuterClass.RequestType.PfCount;
 import static command_request.CommandRequestOuterClass.RequestType.PfMerge;
 import static command_request.CommandRequestOuterClass.RequestType.Ping;
+import static command_request.CommandRequestOuterClass.RequestType.PubSubChannels;
+import static command_request.CommandRequestOuterClass.RequestType.PubSubNumPat;
+import static command_request.CommandRequestOuterClass.RequestType.PubSubNumSub;
 import static command_request.CommandRequestOuterClass.RequestType.Publish;
 import static command_request.CommandRequestOuterClass.RequestType.RPop;
 import static command_request.CommandRequestOuterClass.RequestType.RPush;
@@ -1277,6 +1280,18 @@ public class TransactionTests {
 
         transaction.publish("msg", "ch1");
         results.add(Pair.of(Publish, buildArgs("ch1", "msg")));
+
+        transaction.pubsubChannels();
+        results.add(Pair.of(PubSubChannels, buildArgs()));
+
+        transaction.pubsubChannels("pattern");
+        results.add(Pair.of(PubSubChannels, buildArgs("pattern")));
+
+        transaction.pubsubNumPat();
+        results.add(Pair.of(PubSubNumPat, buildArgs()));
+
+        transaction.pubsubNumSub(new String[] {"ch1", "ch2"});
+        results.add(Pair.of(PubSubNumSub, buildArgs("ch1", "ch2")));
 
         transaction.lcsIdx("key1", "key2");
         results.add(Pair.of(LCS, buildArgs("key1", "key2", IDX_COMMAND_STRING)));

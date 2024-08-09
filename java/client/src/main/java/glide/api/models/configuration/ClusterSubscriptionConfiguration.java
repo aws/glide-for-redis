@@ -1,6 +1,8 @@
 /** Copyright Valkey GLIDE Project Contributors - SPDX Identifier: Apache-2.0 */
 package glide.api.models.configuration;
 
+import static glide.api.models.GlideString.gs;
+
 import glide.api.GlideClusterClient;
 import glide.api.models.GlideString;
 import java.util.HashMap;
@@ -88,6 +90,17 @@ public final class ClusterSubscriptionConfiguration extends BaseSubscriptionConf
         public ClusterSubscriptionConfigurationBuilder subscription(
                 PubSubClusterChannelMode mode, GlideString channelOrPattern) {
             addSubscription(subscriptions, mode, channelOrPattern);
+            return this;
+        }
+
+        /**
+         * Add a subscription to a channel or to multiple channels if {@link
+         * PubSubClusterChannelMode#PATTERN} is used.<br>
+         * See {@link ClusterSubscriptionConfiguration#subscriptions}.
+         */
+        public ClusterSubscriptionConfigurationBuilder subscription(
+                PubSubClusterChannelMode mode, String channelOrPattern) {
+            addSubscription(subscriptions, mode, gs(channelOrPattern));
             return this;
         }
 

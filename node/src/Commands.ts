@@ -3489,3 +3489,56 @@ export function createBZPopMin(
 ): command_request.Command {
     return createCommand(RequestType.BZPopMin, [...keys, timeout.toString()]);
 }
+
+/**
+ * Optional arguments to getex command.
+ */
+export enum TimeUnit {
+    /* Set the specified expire time, in seconds. Equivalent to
+     * `EX` in the VALKEY API.
+     */
+    seconds = "EX",
+    /**
+     * Set the specified expire time, in milliseconds. Equivalent
+     * to `PX` in the VALKEY API.
+     */
+    milliseconds = "PX",
+    /**
+     * Set the specified Unix time at which the key will expire,
+     * in seconds. Equivalent to `EXAT` in the VALKEY API.
+     */
+    unixSeconds = "EXAT",
+    /**
+     * Set the specified Unix time at which the key will expire,
+     * in milliseconds. Equivalent to `PXAT` in the VALKEY API.
+     */
+    unixMilliseconds = "PXAT",
+}
+
+/**
+ * @internal
+ */
+export function createGetEx(
+    key: BulkString,
+    options?: "persist" | { unit: TimeUnit; duration: number },
+): command_request.Command {
+    const args = [key];
+
+    if (options) {
+        if (options !== "persist" && !Number.isInteger(options.duration)) {
+            throw new Error(
+                `Received expiry '${JSON.stringify(
+                    options.duration,
+                )}'. Count must be an integer`,
+            );
+        }
+
+        if (options === "persist") {
+            args.push("PERSIST");
+        } else {
+            args.push(options.unit, options.duration.toString());
+        }
+    }
+
+    return createCommand(RequestType.GetEx, args);
+}

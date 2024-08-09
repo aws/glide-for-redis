@@ -99,6 +99,7 @@ import {
     createGeoHash,
     createGeoPos,
     createGeoSearch,
+    createGeoSearchStore,
     createGet,
     createGetBit,
     createGetDel,
@@ -230,8 +231,9 @@ import {
     createZRevRankWithScore,
     createZScan,
     createZScore,
-    createGeoSearchStore,
+    createXPending,
     GeoSearchStoreResultOptions,
+    StreamPendingOptions,
 } from "./Commands";
 import { command_request } from "./ProtobufMessage";
 
@@ -2280,6 +2282,9 @@ export class BaseTransaction<T extends BaseTransaction<T>> {
     }
 
     /**
+     * Returns stream message summary information for pending messages matching a given range of IDs.
+     *
+     * See https://valkey.io/commands/xpending/ for more details.
      * Returns the list of all consumers and their attributes for the given consumer group of the
      * stream stored at `key`.
      *
@@ -2287,6 +2292,39 @@ export class BaseTransaction<T extends BaseTransaction<T>> {
      *
      * @param key - The key of the stream.
      * @param group - The consumer group name.
+     *
+     * Command Response - An `array` that includes the summary of the pending messages.
+     * See example of {@link BaseClient.xpending|xpending} for more details.
+     */
+    public xpending(key: string, group: string): T {
+        return this.addAndReturn(createXPending(key, group));
+    }
+
+    /**
+     * Returns stream message summary information for pending messages matching a given range of IDs.
+     *
+     * See https://valkey.io/commands/xpending/ for more details.
+     *
+     * @param key - The key of the stream.
+     * @param group - The consumer group name.
+     * @param options - Additional options to filter entries, see {@link StreamPendingOptions}.
+     *
+     * Command Response - A 2D-`array` of 4-tuples containing extended message information.
+     * See example of {@link BaseClient.xpendingWithOptions|xpendingWithOptions} for more details.
+     */
+    public xpendingWithOptions(
+        key: string,
+        group: string,
+        options: StreamPendingOptions,
+    ): T {
+        return this.addAndReturn(createXPending(key, group, options));
+    }
+
+    /**
+     * Returns the list of all consumers and their attributes for the given consumer group of the
+     * stream stored at `key`.
+     *
+     * See https://valkey.io/commands/xinfo-consumers/ for more details.
      *
      * Command Response - An `Array` of `Records`, where each mapping contains the attributes
      *     of a consumer for the given consumer group of the stream at `key`.

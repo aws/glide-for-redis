@@ -978,6 +978,20 @@ export async function transactionTest(
         'xreadgroup(groupName1, "consumer1", key9, >)',
         { [key9]: { "0-2": [["field", "value2"]] } },
     ]);
+    baseTransaction.xpending(key9, groupName1);
+    responseData.push([
+        "xpending(key9, groupName1)",
+        [1, "0-2", "0-2", [["consumer1", "1"]]],
+    ]);
+    baseTransaction.xpendingWithOptions(key9, groupName1, {
+        start: InfScoreBoundary.NegativeInfinity,
+        end: InfScoreBoundary.PositiveInfinity,
+        count: 10,
+    });
+    responseData.push([
+        "xpending(key9, groupName1, -, +, 10)",
+        [["0-2", "consumer1", 0, 1]],
+    ]);
     baseTransaction.xclaim(key9, groupName1, "consumer1", 0, ["0-2"]);
     responseData.push([
         'xclaim(key9, groupName1, "consumer1", 0, ["0-2"])',

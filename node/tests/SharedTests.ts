@@ -7430,6 +7430,106 @@ export function runBaseTests<Context>(config: {
     );
 
     it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
+        `xpending test_%p`,
+        async (protocol) => {
+            await runTest(async (client: BaseClient) => {
+                const key = uuidv4();
+                const group = uuidv4();
+
+                expect(
+                    await client.xgroupCreate(key, group, "0", {
+                        mkStream: true,
+                    }),
+                ).toEqual("OK");
+                expect(
+                    await client.customCommand([
+                        "xgroup",
+                        "createconsumer",
+                        key,
+                        group,
+                        "consumer",
+                    ]),
+                ).toEqual(true);
+
+                expect(
+                    await client.xadd(
+                        key,
+                        [
+                            ["entry1_field1", "entry1_value1"],
+                            ["entry1_field2", "entry1_value2"],
+                        ],
+                        { id: "0-1" },
+                    ),
+                ).toEqual("0-1");
+                expect(
+                    await client.xadd(
+                        key,
+                        [["entry2_field1", "entry2_value1"]],
+                        { id: "0-2" },
+                    ),
+                ).toEqual("0-2");
+
+                expect(
+                    await client.customCommand([
+                        "xreadgroup",
+                        "group",
+                        group,
+                        "consumer",
+                        "STREAMS",
+                        key,
+                        ">",
+                    ]),
+                ).toEqual({
+                    [key]: {
+                        "0-1": [
+                            ["entry1_field1", "entry1_value1"],
+                            ["entry1_field2", "entry1_value2"],
+                        ],
+                        "0-2": [["entry2_field1", "entry2_value1"]],
+                    },
+                });
+
+                // wait to get some minIdleTime
+                await new Promise((resolve) => setTimeout(resolve, 500));
+
+                expect(await client.xpending(key, group)).toEqual([
+                    2,
+                    "0-1",
+                    "0-2",
+                    [["consumer", "2"]],
+                ]);
+
+                const result = await client.xpendingWithOptions(key, group, {
+                    start: InfScoreBoundary.NegativeInfinity,
+                    end: InfScoreBoundary.PositiveInfinity,
+                    count: 1,
+                    minIdleTime: 42,
+                });
+                result[0][2] = 0; // overwrite msec counter to avoid test flakyness
+                expect(result).toEqual([["0-1", "consumer", 0, 1]]);
+
+                // not existing consumer
+                expect(
+                    await client.xpendingWithOptions(key, group, {
+                        start: { value: "0-1", isInclusive: true },
+                        end: { value: "0-2", isInclusive: false },
+                        count: 12,
+                        consumer: "_",
+                    }),
+                ).toEqual([]);
+
+                // key exists, but it is not a stream
+                const stringKey = uuidv4();
+                expect(await client.set(stringKey, "foo")).toEqual("OK");
+                await expect(client.xpending(stringKey, "_")).rejects.toThrow(
+                    RequestError,
+                );
+            }, protocol);
+        },
+        config.timeout,
+    );
+
+    it.each([ProtocolVersion.RESP2, ProtocolVersion.RESP3])(
         `xclaim test_%p`,
         async (protocol) => {
             await runTest(async (client: BaseClient) => {

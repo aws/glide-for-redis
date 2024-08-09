@@ -90,6 +90,7 @@ import {
     createHIncrByFloat,
     createHLen,
     createHMGet,
+    createHScan,
     createHRandField,
     createHSet,
     createHSetNX,
@@ -1357,6 +1358,51 @@ export class BaseClient {
      */
     public hget(key: string, field: string): Promise<string | null> {
         return this.createWritePromise(createHGet(key, field));
+    }
+
+    /**
+     * Iterates incrementally over a hash.
+     *
+     * See https://valkey.io/commands/hscan for more details.
+     *
+     * @param key - The key of the set.
+     * @param cursor - The cursor that points to the next iteration of results. A value of `"0"` indicates the start of the search.
+     * @param options - The {@link BaseScanOptions}.
+     * @returns An array of the `cursor` and the subset of the hash held by `key`.
+     * The first element is always the `cursor` for the next iteration of results. `"0"` will be the `cursor`
+     * returned on the last iteration of the hash. The second element is always an array of the subset of the
+     * hash held in `key`. The array in the second element is always a flattened series of string pairs,
+     * where the value is at even indices and the value is at odd indices.
+     *
+     * @example
+     * ```typescript
+     * // Assume "key" contains a hash with multiple members
+     * let newCursor = "0";
+     * let result = [];
+     * do {
+     *      result = await client.hscan(key1, newCursor, {
+     *          match: "*",
+     *          count: 3,
+     *      });
+     *      newCursor = result[0];
+     *      console.log("Cursor: ", newCursor);
+     *      console.log("Members: ", result[1]);
+     * } while (newCursor !== "0");
+     * // The output of the code above is something similar to:
+     * // Cursor:  31
+     * // Members:  ['field 79', 'value 79', 'field 20', 'value 20', 'field 115', 'value 115']
+     * // Cursor:  39
+     * // Members:  ['field 63', 'value 63', 'field 293', 'value 293', 'field 162', 'value 162']
+     * // Cursor:  0
+     * // Members:  ['value 55', '55', 'value 24', '24', 'value 90', '90', 'value 113', '113']
+     * ```
+     */
+    public async hscan(
+        key: string,
+        cursor: string,
+        options?: BaseScanOptions,
+    ): Promise<[string, string[]]> {
+        return this.createWritePromise(createHScan(key, cursor, options));
     }
 
     /** Sets the specified fields to their respective values in the hash stored at `key`.

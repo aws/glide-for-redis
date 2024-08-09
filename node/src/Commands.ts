@@ -436,6 +436,29 @@ export function createHGet(
 /**
  * @internal
  */
+export function createHScan(
+    key: string,
+    cursor: string,
+    options?: BaseScanOptions,
+): command_request.Command {
+    const args: string[] = [key, cursor];
+
+    if (options) {
+        if (options.match) {
+            args.push("MATCH", options.match);
+        }
+
+        if (options.count !== undefined) {
+            args.push("COUNT", options.count.toString());
+        }
+    }
+
+    return createCommand(RequestType.HScan, args);
+}
+
+/**
+ * @internal
+ */
 export function createHSet(
     key: string,
     fieldValueMap: Record<string, string>,
@@ -3369,15 +3392,15 @@ export function createZScan(
     cursor: string,
     options?: BaseScanOptions,
 ): command_request.Command {
-    let args: string[] = [key, cursor];
+    const args: string[] = [key, cursor];
 
     if (options) {
         if (options.match) {
-            args = args.concat("MATCH", options.match);
+            args.push("MATCH", options.match);
         }
 
         if (options.count !== undefined) {
-            args = args.concat("COUNT", options.count.toString());
+            args.push("COUNT", options.count.toString());
         }
     }
 

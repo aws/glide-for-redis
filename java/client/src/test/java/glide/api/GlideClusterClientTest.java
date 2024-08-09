@@ -122,6 +122,42 @@ public class GlideClusterClientTest {
 
     @Test
     @SneakyThrows
+    public void custom_command_binary_returns_single_value() {
+        var commandManager = new TestCommandManager(null);
+
+        try (var client = new TestClient(commandManager, "TEST")) {
+            var value = client.customCommand(new GlideString[0]).get();
+            assertEquals("TEST", value.getSingleValue());
+        }
+    }
+
+    @Test
+    @SneakyThrows
+    public void custom_command_binary_returns_multi_value() {
+        var commandManager = new TestCommandManager(null);
+
+        var data = Map.of("key1", "value1", "key2", "value2");
+        try (var client = new TestClient(commandManager, data)) {
+            var value = client.customCommand(new GlideString[0]).get();
+            assertEquals(data, value.getMultiValue());
+        }
+    }
+
+    @Test
+    @SneakyThrows
+    public void custom_command_binary_returns_multi_binary_value() {
+        var commandManager = new TestCommandManager(null);
+
+        var data = Map.of(gs("key1"), "value1", gs("key2"), "value2");
+        var dataNormalized = Map.of("key1", "value1", "key2", "value2");
+        try (var client = new TestClient(commandManager, data)) {
+            var value = client.customCommand(new GlideString[0]).get();
+            assertEquals(dataNormalized, value.getMultiValue());
+        }
+    }
+
+    @Test
+    @SneakyThrows
     // test checks that even a map returned as a single value when single node route is used
     public void custom_command_with_single_node_route_returns_single_value() {
         var commandManager = new TestCommandManager(null);
@@ -154,6 +190,45 @@ public class GlideClusterClientTest {
 
         try (var client = new TestClient(commandManager, "OK")) {
             var value = client.customCommand(TEST_ARGS, ALL_NODES).get();
+            assertEquals("OK", value.getSingleValue());
+        }
+    }
+
+    @Test
+    @SneakyThrows
+    // test checks that even a map returned as a single value when single node route is used
+    public void custom_command_binary_with_single_node_route_returns_single_value() {
+        var commandManager = new TestCommandManager(null);
+
+        var data = Map.of("key1", "value1", "key2", "value2");
+        try (var client = new TestClient(commandManager, data)) {
+            var value = client.customCommand(new GlideString[0], RANDOM).get();
+            assertEquals(data, value.getSingleValue());
+        }
+    }
+
+    @Test
+    @SneakyThrows
+    public void custom_command_binary_with_multi_node_route_returns_multi_value() {
+        var commandManager = new TestCommandManager(null);
+
+        var data = Map.of(gs("key1"), "value1", gs("key2"), "value2");
+        var dataNormalized = Map.of("key1", "value1", "key2", "value2");
+        try (var client = new TestClient(commandManager, data)) {
+            var value = client.customCommand(new GlideString[0], ALL_NODES).get();
+            assertEquals(dataNormalized, value.getMultiValue());
+        }
+    }
+
+    @Test
+    @SneakyThrows
+    public void custom_command_binary_returns_single_value_on_constant_response() {
+        var commandManager =
+                new TestCommandManager(
+                        Response.newBuilder().setConstantResponse(ConstantResponse.OK).build());
+
+        try (var client = new TestClient(commandManager, "OK")) {
+            var value = client.customCommand(new GlideString[0], ALL_NODES).get();
             assertEquals("OK", value.getSingleValue());
         }
     }

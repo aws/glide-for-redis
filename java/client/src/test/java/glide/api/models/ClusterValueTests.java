@@ -42,6 +42,20 @@ public class ClusterValueTests {
     }
 
     @Test
+    public void handle_empty_map() {
+        var value = ClusterValue.of(Map.of());
+        assertAll(
+                () -> assertTrue(value.hasMultiData()),
+                () -> assertFalse(value.hasSingleData()),
+                () -> assertNotNull(value.getMultiValue()),
+                () -> assertEquals(Map.of(), value.getMultiValue()),
+                () ->
+                        assertEquals(
+                                "No single value stored",
+                                assertThrows(Throwable.class, value::getSingleValue).getMessage()));
+    }
+
+    @Test
     public void handle_multi_data() {
         var data = Map.of("node1", Map.of("config1", "param1", "config2", "param2"), "node2", Map.of());
         var value = ClusterValue.of(data);
@@ -50,6 +64,32 @@ public class ClusterValueTests {
                 () -> assertFalse(value.hasSingleData()),
                 () -> assertNotNull(value.getMultiValue()),
                 () -> assertEquals(data, value.getMultiValue()),
+                () ->
+                        assertEquals(
+                                "No single value stored",
+                                assertThrows(Throwable.class, value::getSingleValue).getMessage()));
+    }
+
+    @Test
+    public void handle_multi_binary_data() {
+        var data =
+                Map.of(
+                        gs("node1"),
+                        Map.of(gs("config1"), gs("param1"), gs("config2"), gs("param2")),
+                        gs("node2"),
+                        Map.of());
+        var dataNormalized =
+                Map.of(
+                        "node1",
+                        Map.of(gs("config1"), gs("param1"), gs("config2"), gs("param2")),
+                        "node2",
+                        Map.of());
+        var value = ClusterValue.of(data);
+        assertAll(
+                () -> assertTrue(value.hasMultiData()),
+                () -> assertFalse(value.hasSingleData()),
+                () -> assertNotNull(value.getMultiValue()),
+                () -> assertEquals(dataNormalized, value.getMultiValue()),
                 () ->
                         assertEquals(
                                 "No single value stored",
@@ -87,8 +127,8 @@ public class ClusterValueTests {
                 () -> assertNotNull(value.getMultiValue()),
                 // ofMultiValueBinary converts the key to a String, but the values are not converted
                 () -> assertTrue(value.getMultiValue().containsKey("config1")),
-                () -> assertTrue(value.getMultiValue().get("config1").equals(gs("param1"))),
+                () -> assertEquals(gs("param1"), value.getMultiValue().get("config1")),
                 () -> assertTrue(value.getMultiValue().containsKey("config2")),
-                () -> assertTrue(value.getMultiValue().get("config2").equals(gs("param2"))));
+                () -> assertEquals(gs("param2"), value.getMultiValue().get("config2")));
     }
 }

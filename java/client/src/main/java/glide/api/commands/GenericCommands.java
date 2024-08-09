@@ -29,13 +29,32 @@ public interface GenericCommands {
      * @return The returning value depends on the executed command.
      * @example
      *     <pre>{@code
-     * Object response = (String) client.customCommand(new String[] {"ping", "GLIDE"}).get();
-     * assert ((String) response).equals("GLIDE");
+     * Object response = client.customCommand(new String[] {"ping", "GLIDE"}).get();
+     * assert response.equals("GLIDE");
      * // Get a list of all pub/sub clients:
      * Object result = client.customCommand(new String[]{ "CLIENT", "LIST", "TYPE", "PUBSUB" }).get();
      * }</pre>
      */
     CompletableFuture<Object> customCommand(String[] args);
+
+    /**
+     * Executes a single command, without checking inputs. Every part of the command, including
+     * subcommands, should be added as a separate value in <code>args</code>.
+     *
+     * @apiNote See <a
+     *     href="https://github.com/valkey-io/valkey-glide/wiki/General-Concepts#custom-command">Valkey
+     *     GLIDE Wiki</a> for details on the restrictions and limitations of the custom command API.
+     * @param args Arguments for the custom command.
+     * @return The returning value depends on the executed command.
+     * @example
+     *     <pre>{@code
+     * Object response = client.customCommand(new GlideString[] {gs("ping"), gs("GLIDE")}).get();
+     * assert response.equals(gs("GLIDE"));
+     * // Get a list of all pub/sub clients:
+     * Object result = client.customCommand(new GlideString[] { gs("CLIENT"), gs("LIST"), gs("TYPE"), gs("PUBSUB") }).get();
+     * }</pre>
+     */
+    CompletableFuture<Object> customCommand(GlideString[] args);
 
     /**
      * Executes a transaction by processing the queued commands.

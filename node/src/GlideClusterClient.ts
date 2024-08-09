@@ -351,7 +351,10 @@ export class GlideClusterClient extends BaseClient {
      * console.log(result); // Output: Returns a list of all pub/sub clients
      * ```
      */
-    public customCommand(args: string[], route?: Routes): Promise<ReturnType> {
+    public customCommand(
+        args: string[],
+        route?: Routes,
+    ): Promise<ClusterResponse<ReturnType>> {
         const command = createCustomCommand(args);
         return super.createWritePromise(command, toProtobufRoute(route));
     }

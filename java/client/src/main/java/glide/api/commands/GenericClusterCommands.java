@@ -22,9 +22,8 @@ public interface GenericClusterCommands {
 
     /**
      * Executes a single command, without checking inputs. Every part of the command, including
-     * subcommands, should be added as a separate value in <code>args</code>.
-     *
-     * <p>The command will be routed to all primaries.
+     * subcommands, should be added as a separate value in <code>args</code>.<br>
+     * The command will be routed automatically based on the passed command's default request policy.
      *
      * @apiNote See <a
      *     href="https://github.com/valkey-io/valkey-glide/wiki/General-Concepts#custom-command">Valkey
@@ -34,16 +33,32 @@ public interface GenericClusterCommands {
      * @example
      *     <pre>{@code
      * ClusterValue<Object> data = client.customCommand(new String[] {"ping"}).get();
-     * assert ((String) data.getSingleValue()).equals("PONG");
+     * assert data.getSingleValue().equals("PONG");
      * }</pre>
      */
     CompletableFuture<ClusterValue<Object>> customCommand(String[] args);
 
     /**
      * Executes a single command, without checking inputs. Every part of the command, including
-     * subcommands, should be added as a separate value in <code>args</code>.
+     * subcommands, should be added as a separate value in <code>args</code>.<br>
+     * The command will be routed automatically based on the passed command's default request policy.
      *
-     * <p>Client will route the command to the nodes defined by <code>route</code>.
+     * @apiNote See <a
+     *     href="https://github.com/valkey-io/valkey-glide/wiki/General-Concepts#custom-command">Valkey
+     *     GLIDE Wiki</a> for details on the restrictions and limitations of the custom command API.
+     * @param args Arguments for the custom command including the command name.
+     * @return The returning value depends on the executed command.
+     * @example
+     *     <pre>{@code
+     * ClusterValue<Object> data = client.customCommand(new GlideString[] {gs("ping")}).get();
+     * assert data.getSingleValue().equals(gs("PONG"));
+     * }</pre>
+     */
+    CompletableFuture<ClusterValue<Object>> customCommand(GlideString[] args);
+
+    /**
+     * Executes a single command, without checking inputs. Every part of the command, including
+     * subcommands, should be added as a separate value in <code>args</code>.
      *
      * @apiNote See <a
      *     href="https://github.com/valkey-io/valkey-glide/wiki/General-Concepts#custom-command">Valkey
@@ -56,11 +71,32 @@ public interface GenericClusterCommands {
      *     <pre>{@code
      * ClusterValue<Object> result = clusterClient.customCommand(new String[]{ "CONFIG", "GET", "maxmemory"}, ALL_NODES).get();
      * Map<String, Object> payload = result.getMultiValue();
-     * assert ((String) payload.get("node1")).equals("1GB");
-     * assert ((String) payload.get("node2")).equals("100MB");
+     * assert payload.get("node1").equals("1GB");
+     * assert payload.get("node2").equals("100MB");
      * }</pre>
      */
     CompletableFuture<ClusterValue<Object>> customCommand(String[] args, Route route);
+
+    /**
+     * Executes a single command, without checking inputs. Every part of the command, including
+     * subcommands, should be added as a separate value in <code>args</code>.
+     *
+     * @apiNote See <a
+     *     href="https://github.com/valkey-io/valkey-glide/wiki/General-Concepts#custom-command">Valkey
+     *     GLIDE Wiki</a> for details on the restrictions and limitations of the custom command API.
+     * @param args Arguments for the custom command including the command name
+     * @param route Specifies the routing configuration for the command. The client will route the
+     *     command to the nodes defined by <code>route</code>.
+     * @return The returning value depends on the executed command and route.
+     * @example
+     *     <pre>{@code
+     * ClusterValue<Object> result = clusterClient.customCommand(new GlideString[] { gs("CONFIG"), gs("GET"), gs("maxmemory") }, ALL_NODES).get();
+     * Map<String, Object> payload = result.getMultiValue();
+     * assert payload.get(gs("node1")).equals(gs("1GB"));
+     * assert payload.get(gs("node2")).equals(gs("100MB"));
+     * }</pre>
+     */
+    CompletableFuture<ClusterValue<Object>> customCommand(GlideString[] args, Route route);
 
     /**
      * Executes a transaction by processing the queued commands.

@@ -176,9 +176,39 @@ public class CommandTests {
 
     @Test
     @SneakyThrows
+    public void custom_command_info_binary() {
+        ClusterValue<Object> data = clusterClient.customCommand(new GlideString[] {gs("info")}).get();
+        assertTrue(data.hasMultiData());
+        for (Object info : data.getMultiValue().values()) {
+            assertTrue(info.toString().contains("# Stats"));
+        }
+    }
+
+    @Test
+    @SneakyThrows
     public void custom_command_ping() {
         ClusterValue<Object> data = clusterClient.customCommand(new String[] {"ping"}).get();
         assertEquals("PONG", data.getSingleValue());
+    }
+
+    @Test
+    @SneakyThrows
+    public void custom_command_ping_binary() {
+        ClusterValue<Object> data = clusterClient.customCommand(new GlideString[] {gs("ping")}).get();
+        assertEquals(gs("PONG"), data.getSingleValue());
+    }
+
+    @Test
+    @SneakyThrows
+    public void custom_command_binary_with_route() {
+        ClusterValue<Object> data =
+                clusterClient.customCommand(new GlideString[] {gs("info")}, ALL_NODES).get();
+        for (Object info : data.getMultiValue().values()) {
+            assertTrue(info.toString().contains("# Stats"));
+        }
+
+        data = clusterClient.customCommand(new GlideString[] {gs("info")}, RANDOM).get();
+        assertTrue(data.getSingleValue().toString().contains("# Stats"));
     }
 
     @Test

@@ -107,20 +107,45 @@ public class GlideClusterClient extends BaseClient
     }
 
     @Override
+    public CompletableFuture<ClusterValue<Object>> customCommand(@NonNull GlideString[] args) {
+        // TODO if a command returns a map as a single value, ClusterValue misleads user
+        return commandManager.submitNewCommand(
+                CustomCommand,
+                args,
+                response -> ClusterValue.of(handleBinaryObjectOrNullResponse(response)));
+    }
+
+    @Override
     public CompletableFuture<ClusterValue<Object>> customCommand(
             @NonNull String[] args, @NonNull Route route) {
         return commandManager.submitNewCommand(
-                CustomCommand, args, route, response -> handleCustomCommandResponse(route, response));
+                CustomCommand,
+                args,
+                route,
+                response -> handleCustomCommandResponse(route, response, false));
     }
 
-    protected ClusterValue<Object> handleCustomCommandResponse(Route route, Response response) {
+    @Override
+    public CompletableFuture<ClusterValue<Object>> customCommand(
+            @NonNull GlideString[] args, @NonNull Route route) {
+        return commandManager.submitNewCommand(
+                CustomCommand, args, route, response -> handleCustomCommandResponse(route, response, true));
+    }
+
+    protected ClusterValue<Object> handleCustomCommandResponse(
+            Route route, Response response, boolean isBinaryData) {
         if (route instanceof SingleNodeRoute) {
-            return ClusterValue.ofSingleValue(handleObjectOrNullResponse(response));
+            return ClusterValue.ofSingleValue(
+                    isBinaryData
+                            ? handleBinaryObjectOrNullResponse(response)
+                            : handleObjectOrNullResponse(response));
         }
         if (response.hasConstantResponse()) {
             return ClusterValue.ofSingleValue(handleStringResponse(response));
         }
-        return ClusterValue.ofMultiValue(handleMapResponse(response));
+        return isBinaryData
+                ? ClusterValue.ofMultiValueBinary(handleBinaryStringMapResponse(response))
+                : ClusterValue.ofMultiValue(handleMapResponse(response));
     }
 
     @Override

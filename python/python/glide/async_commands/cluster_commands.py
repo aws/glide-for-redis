@@ -31,7 +31,7 @@ from ..glide import ClusterScanCursor
 class ClusterCommands(CoreCommands):
     async def custom_command(
         self, command_args: List[TEncodable], route: Optional[Route] = None
-    ) -> TResult:
+    ) -> TClusterResponse[TResult]:
         """
         Executes a single command, without checking inputs.
         See the [Valkey GLIDE Wiki](https://github.com/valkey-io/valkey-glide/wiki/General-Concepts#custom-command)
@@ -47,10 +47,11 @@ class ClusterCommands(CoreCommands):
             case the client will route the command to the nodes defined by `route`. Defaults to None.
 
         Returns:
-            TResult: The returning value depends on the executed command and the route.
+            TClusterResponse[TResult]: The returning value depends on the executed command and the route.
         """
-        return await self._execute_command(
-            RequestType.CustomCommand, command_args, route
+        return cast(
+            TClusterResponse[TResult],
+            await self._execute_command(RequestType.CustomCommand, command_args, route),
         )
 
     async def info(

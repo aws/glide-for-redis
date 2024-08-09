@@ -46,13 +46,19 @@ public class ClusterValue<T> {
     /** A constructor for the value with type auto-detection. */
     @SuppressWarnings("unchecked")
     public static <T> ClusterValue<T> of(Object data) {
-        var res = new ClusterValue<T>();
         if (data instanceof Map) {
-            res.multiValue = (Map<String, T>) data;
+            var map = (Map<?, T>) data;
+            if (map.isEmpty()) {
+                return ofMultiValue((Map<String, T>) data);
+            }
+            if (map.keySet().toArray()[0] instanceof String) {
+                return ofMultiValue((Map<String, T>) data);
+            } else { // GlideString
+                return ofMultiValueBinary((Map<GlideString, T>) data);
+            }
         } else {
-            res.singleValue = (T) data;
+            return ofSingleValue((T) data);
         }
-        return res;
     }
 
     /** A constructor for the value. */
@@ -73,10 +79,9 @@ public class ClusterValue<T> {
     public static <T> ClusterValue<T> ofMultiValueBinary(Map<GlideString, T> data) {
         var res = new ClusterValue<T>();
         // the map node address can be converted to a string
-        Map<String, T> multiValue =
+        res.multiValue =
                 data.entrySet().stream()
                         .collect(Collectors.toMap(e -> e.getKey().getString(), Map.Entry::getValue));
-        res.multiValue = multiValue;
         return res;
     }
 

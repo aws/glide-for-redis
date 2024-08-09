@@ -107,6 +107,13 @@ public class CommandTests {
 
     @Test
     @SneakyThrows
+    public void custom_command_info_binary() {
+        Object data = regularClient.customCommand(new GlideString[] {gs("info")}).get();
+        assertTrue(data.toString().contains("# Stats"));
+    }
+
+    @Test
+    @SneakyThrows
     public void custom_command_del_returns_a_number() {
         String key = "custom_command_del_returns_a_number";
         regularClient.set(key, INITIAL_VALUE).get();

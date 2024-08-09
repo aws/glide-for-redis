@@ -421,6 +421,30 @@ public class GlideClientTest {
 
     @SneakyThrows
     @Test
+    public void customCommand_binary_returns_success() {
+        // setup
+        GlideString key = gs("testKey");
+        Object value = "testValue";
+        GlideString cmd = gs("GETSTRING");
+        GlideString[] arguments = new GlideString[] {cmd, key};
+        CompletableFuture<Object> testResponse = new CompletableFuture<>();
+        testResponse.complete(value);
+
+        // match on protobuf request
+        when(commandManager.submitNewCommand(eq(CustomCommand), eq(arguments), any()))
+                .thenReturn(testResponse);
+
+        // exercise
+        CompletableFuture<Object> response = service.customCommand(arguments);
+        String payload = (String) response.get();
+
+        // verify
+        assertEquals(testResponse, response);
+        assertEquals(value, payload);
+    }
+
+    @SneakyThrows
+    @Test
     public void exec() {
         // setup
         Object[] value = new Object[] {"PONG", "PONG"};

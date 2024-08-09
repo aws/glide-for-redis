@@ -38,6 +38,7 @@ import {
     Script,
     SignedEncoding,
     SortOrder,
+    TimeUnit,
     Transaction,
     UnsignedEncoding,
     UpdateByScore,
@@ -45,7 +46,6 @@ import {
 } from "../";
 import { RedisCluster } from "../../utils/TestUtils";
 import { SingleNodeRoute } from "../build-ts/src/GlideClusterClient";
-import { TimeUnit } from "../src/Commands";
 import {
     Client,
     GetAndSetRandomValue,

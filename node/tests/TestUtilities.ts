@@ -7,7 +7,6 @@ import { exec } from "child_process";
 import parseArgs from "minimist";
 import { gte } from "semver";
 import { v4 as uuidv4 } from "uuid";
-import { TimeUnit } from "../src/Commands";
 import {
     BaseClient,
     BaseClientConfiguration,
@@ -34,6 +33,7 @@ import {
     ScoreFilter,
     SignedEncoding,
     SortOrder,
+    TimeUnit,
     Transaction,
     UnsignedEncoding,
 } from "..";

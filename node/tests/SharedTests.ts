@@ -1296,7 +1296,7 @@ export function runBaseTests<Context>(config: {
                 expect(result[resultCursorIndex]).toEqual(initialCursor);
                 expect(result[resultCollectionIndex]).toEqual(["a", "0"]);
 
-                // Set up testing data with the numberMap set to be used for the next set test keys and test results. 
+                // Set up testing data with the numberMap set to be used for the next set test keys and test results.
                 expect(await client.hset(key1, numberMap)).toEqual(
                     Object.keys(numberMap).length,
                 );

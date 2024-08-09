@@ -412,7 +412,10 @@ class TestCommands:
         info_res = get_first_result(await glide_client.info([InfoSection.SERVER]))
         info = info_res.decode()
         assert "# Server" in info
-        cluster_mode = parse_info_response(info_res)["redis_mode"]
+        if not await check_if_server_version_lt(glide_client, "7.9.0"):
+            cluster_mode = parse_info_response(info_res)["server_mode"]
+        else:
+            cluster_mode = parse_info_response(info_res)["redis_mode"]
         expected_cluster_mode = isinstance(glide_client, GlideClusterClient)
         assert cluster_mode == "cluster" if expected_cluster_mode else "standalone"
         info = get_first_result(
@@ -9823,9 +9826,13 @@ class TestClusterRoutes:
         assert result[result_collection_index] == []
 
         # Negative cursor
-        result = await glide_client.sscan(key1, "-1")
-        assert result[result_cursor_index] == initial_cursor.encode()
-        assert result[result_collection_index] == []
+        if await check_if_server_version_lt(glide_client, "7.9.0"):
+            result = await glide_client.sscan(key1, "-1")
+            assert result[result_cursor_index] == initial_cursor.encode()
+            assert result[result_collection_index] == []
+        else:
+            with pytest.raises(RequestError):
+                await glide_client.sscan(key2, "-1")
 
         # Result contains the whole set
         assert await glide_client.sadd(key1, char_members) == len(char_members)
@@ -9933,9 +9940,13 @@ class TestClusterRoutes:
         assert result[result_collection_index] == []
 
         # Negative cursor
-        result = await glide_client.zscan(key1, "-1")
-        assert result[result_cursor_index] == initial_cursor.encode()
-        assert result[result_collection_index] == []
+        if await check_if_server_version_lt(glide_client, "7.9.0"):
+            result = await glide_client.zscan(key1, "-1")
+            assert result[result_cursor_index] == initial_cursor.encode()
+            assert result[result_collection_index] == []
+        else:
+            with pytest.raises(RequestError):
+                await glide_client.zscan(key2, "-1")
 
         # Result contains the whole set
         assert await glide_client.zadd(key1, char_map) == len(char_map)
@@ -10046,9 +10057,13 @@ class TestClusterRoutes:
         assert result[result_collection_index] == []
 
         # Negative cursor
-        result = await glide_client.hscan(key1, "-1")
-        assert result[result_cursor_index] == initial_cursor.encode()
-        assert result[result_collection_index] == []
+        if await check_if_server_version_lt(glide_client, "7.9.0"):
+            result = await glide_client.hscan(key1, "-1")
+            assert result[result_cursor_index] == initial_cursor.encode()
+            assert result[result_collection_index] == []
+        else:
+            with pytest.raises(RequestError):
+                await glide_client.hscan(key2, "-1")
 
         # Result contains the whole set
         assert await glide_client.hset(key1, char_map) == len(char_map)

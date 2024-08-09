@@ -850,7 +850,7 @@ export class BaseClient {
      * @param key - The key to retrieve from the database.
      * @param options - (Optional) set expiriation to the given key.
      *                  "persist" will retain the time to live associated with the key. Equivalent to `PERSIST` in the VALKEY API.
-     *                  Otherwise, a {@link TimeUnit} and duration should be specified, that will set the specified expire time.
+     *                  Otherwise, a {@link TimeUnit} and duration of the expire time should be specified.
      * @returns If `key` exists, returns the value of `key` as a `string`. Otherwise, return `null`.
      *
      * @example

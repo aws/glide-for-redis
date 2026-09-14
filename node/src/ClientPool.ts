@@ -40,6 +40,7 @@ import {
     poolRelease,
     poolMetrics,
     poolDestroy,
+    removeAddressResolver,
 } from "../build-ts/native";
 
 /** Re-export the pool client type (full command set). */
@@ -62,6 +63,11 @@ export interface PoolConfig {
      * Set to 0 to disable abandon detection. Default: 300000 (5 minutes).
      */
     abandonTimeoutMs?: number;
+    /**
+     * Time after which an idle connection is evicted (ms).
+     * Default: 30000 (30 seconds).
+     */
+    idleTimeoutMs?: number;
     /** Whether to create cluster clients. Default: false. */
     clusterMode?: boolean;
 }
@@ -88,17 +94,20 @@ export class ClientPool {
     private readonly acquireTimeoutMs: number;
     private readonly isCluster: boolean;
     private readonly clientConfig: BaseClientConfiguration;
+    private readonly resolverKey: string | undefined;
 
     private constructor(
         poolId: number,
         acquireTimeoutMs: number,
         isCluster: boolean,
         clientConfig: BaseClientConfiguration,
+        resolverKey: string | undefined,
     ) {
         this.poolId = poolId;
         this.acquireTimeoutMs = acquireTimeoutMs;
         this.isCluster = isCluster;
         this.clientConfig = clientConfig;
+        this.resolverKey = resolverKey;
     }
 
     /**
@@ -131,7 +140,9 @@ export class ClientPool {
 
         // Serialise the connection config into protobuf bytes using the
         // appropriate typed client without opening a network connection.
-        const connectionRequestBytes = isCluster
+        // serializeConfig also registers any addressResolver and returns the
+        // key so we can clean up if pool creation fails.
+        const { bytes: connectionRequestBytes, resolverKey } = isCluster
             ? GlideClusterClient.serializeConfig(
                   clientConfig as GlideClusterClientConfiguration,
               )
@@ -142,7 +153,7 @@ export class ClientPool {
         const poolConfigNapi = {
             maxSize,
             minIdle,
-            idleTimeoutMs: 30_000,
+            idleTimeoutMs: poolConfig?.idleTimeoutMs ?? 30_000,
             requestTimeoutMs:
                 (clientConfig as { requestTimeout?: number }).requestTimeout ??
                 5_000,
@@ -150,13 +161,23 @@ export class ClientPool {
         };
 
         // createPool returns Promise<pool_id>.  Rejects if first connection fails.
-        const poolId = await createPool(connectionRequestBytes, poolConfigNapi);
+        let poolId: number;
+        try {
+            poolId = await createPool(connectionRequestBytes, poolConfigNapi);
+        } catch (e) {
+            // Clean up the address resolver registration if pool creation failed.
+            if (resolverKey) {
+                removeAddressResolver(resolverKey);
+            }
+            throw e;
+        }
 
         return new ClientPool(
             poolId,
             acquireTimeoutS * 1000,
             isCluster,
             clientConfig,
+            resolverKey,
         );
     }
 
@@ -174,7 +195,15 @@ export class ClientPool {
         const clientId = poolTryAcquire(this.poolId);
 
         if (clientId >= 0) {
-            return this.buildClientForId(clientId);
+            try {
+                return await this.buildClientForId(clientId);
+            } catch (e) {
+                // Handle build failed — release the slot so pool capacity is recovered.
+                await poolRelease(this.poolId, clientId).catch(() => {
+                    /* best effort */
+                });
+                throw e;
+            }
         }
 
         // Pool full / no idle — wait with timeout.
@@ -182,7 +211,15 @@ export class ClientPool {
         const result = await poolAcquireBlocking(this.poolId, timeoutMs);
 
         if (result >= 0) {
-            return this.buildClientForId(result);
+            try {
+                return await this.buildClientForId(result);
+            } catch (e) {
+                // Handle build failed — release the slot so pool capacity is recovered.
+                await poolRelease(this.poolId, result).catch(() => {
+                    /* best effort */
+                });
+                throw e;
+            }
         }
 
         if (result === -1) {
@@ -269,6 +306,12 @@ export class ClientPool {
         if (!this.closed) {
             this.closed = true;
             poolDestroy(this.poolId);
+            // Clean up the address resolver registration if one was used.
+            // Pool paths use get() (not remove()), so the entry persists until
+            // the pool is closed and we explicitly remove it here.
+            if (this.resolverKey) {
+                removeAddressResolver(this.resolverKey);
+            }
         }
     }
 

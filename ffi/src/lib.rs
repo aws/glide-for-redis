@@ -3639,18 +3639,19 @@ unsafe fn execute_command(
             // Guard arms immediately on task entry — flag was already set true before request.
             // This ensures the flag is cleared on every exit path including task abort.
             // UnmarkOnDrop(None) is a no-op for the non-blocking case.
+            #[cfg(feature = "pool-support")]
             let _unmark_guard = blocking_flag
                 .as_ref()
                 .map(|(_, _, arc)| UnmarkOnDrop(Some(arc.clone())));
+            // No pool support — blocking flag guard not needed (blocking_flag is always None).
             let result = client.send_command(&mut cmd, routing_info).await;
-            // Unmark blocking after command completes and refresh the activity
-            // timestamp so the abandon monitor does not reclaim this client
-            // immediately after a long blocking command (e.g. BLPOP).
+            // Refresh activity BEFORE clearing the blocking flag so the abandon
+            // monitor never observes is_blocking=false with a stale borrowed_at.
             // The _unmark_guard provides a safety net; store(false) is idempotent.
             #[cfg(feature = "pool-support")]
             if let Some((pool_id, client_id, arc)) = blocking_flag {
-                arc.store(false, std::sync::atomic::Ordering::Release);
                 glide_core::pool::refresh_client_activity(pool_id, client_id);
+                arc.store(false, std::sync::atomic::Ordering::Release);
             }
             result
         },

@@ -305,10 +305,18 @@ impl ClientPool {
             );
         }
 
-        // Registry cleanup (BLOCKING_FLAG_REGISTRY and CLIENT_TO_POOL) is handled
-        // by the callers (jni_pool.rs glidePoolDestroy, ffi pool_ffi.rs glide_pool_destroy,
-        // node pool.rs pool_destroy) before invoking destroy(). Duplicating it here
-        // would cause harmless but redundant double-removes from both DashMaps.
+        // Defensive fallback: callers SHOULD call unregister_blocking_flag /
+        // unregister_pool_client for every client before calling destroy(), but if a
+        // future binding forgets we still clean up rather than silently leaking entries.
+        // DashMap::remove is idempotent, so double-removes are harmless.
+        for entry in self.idle.iter() {
+            unregister_blocking_flag(entry.client_id);
+            unregister_pool_client(entry.client_id);
+        }
+        for entry in self.in_use.iter() {
+            unregister_blocking_flag(*entry.key());
+            unregister_pool_client(*entry.key());
+        }
 
         self.state.store(POOL_CLOSED, Ordering::Release);
         self.idle.clear();
@@ -494,10 +502,9 @@ pub fn is_pool_client(client_id: u64) -> bool {
     get_client_to_pool().contains_key(&client_id)
 }
 
-/// Return the pool_id this client is registered to, or `None` if not registered.
-/// Used by language-binding-level monitors (e.g. Node N-API) that need to filter
-/// clients by pool without holding the pool mutex.
-pub fn get_client_pool_id(client_id: u64) -> Option<u64> {
+/// Returns the pool_id for the given `client_id`, or `None` if not registered.
+/// Convenience helper for bindings that need to look up pool configuration by client.
+pub fn get_pool_id_for_client(client_id: u64) -> Option<u64> {
     get_client_to_pool().get(&client_id).map(|e| *e.value())
 }
 
@@ -1452,6 +1459,7 @@ mod abandon_monitor_tests {
     /// `Arc<AtomicBool>` shared with `PooledClient.is_blocking`, so the binding
     /// can set it lock-free before spawn.
     #[test]
+    #[serial_test::serial]
     fn abandon_monitor_skips_blocking_clients() {
         // ── 1. Runtime ─────────────────────────────────────────────────────────
         let rt = tokio::runtime::Builder::new_multi_thread()
@@ -1553,6 +1561,7 @@ mod abandon_monitor_tests {
     /// This confirms the monitor is actually running and that the first test is
     /// meaningful — it cannot pass simply because the monitor never fires.
     #[test]
+    #[serial_test::serial]
     fn abandon_monitor_evicts_non_blocking_abandoned_clients() {
         // ── 1. Runtime ─────────────────────────────────────────────────────────
         let rt = tokio::runtime::Builder::new_multi_thread()

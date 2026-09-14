@@ -3160,6 +3160,72 @@ impl Client {
     }
 }
 
+/// Creates a no-connection (lazy) [`Client`] suitable for unit tests that need a
+/// `GlideClient` value but do not issue any real network commands.
+///
+/// The client uses `lazy_connect = true` so no TCP connection is attempted at
+/// construction time.  It **must not** be used to send actual Valkey commands.
+#[cfg(test)]
+pub fn create_test_glide_client() -> Client {
+    use crate::client::types::{NodeAddress, OTelMetadata};
+    use crate::pubsub::create_pubsub_synchronizer;
+    use std::sync::atomic::AtomicIsize;
+    use std::sync::atomic::AtomicU32;
+    use tokio::sync::RwLock;
+
+    let config = ConnectionRequest {
+        database_id: 0,
+        cluster_mode_enabled: false,
+        addresses: vec![NodeAddress {
+            host: "127.0.0.1".to_string(),
+            port: 6379,
+        }],
+        lazy_connect: true,
+        ..Default::default()
+    };
+
+    let lazy_client = LazyClient {
+        config,
+        push_sender: None,
+    };
+
+    // A throwaway runtime just to create the pubsub synchronizer.
+    let rt = tokio::runtime::Runtime::new().expect("tokio runtime for test client");
+    let pubsub_synchronizer = rt.block_on(create_pubsub_synchronizer(
+        None,
+        None,
+        false,
+        std::sync::Weak::new(),
+        None,
+        Duration::from_millis(250),
+    ));
+
+    Client {
+        shared: Arc::new(ClientShared {
+            internal_client: Arc::new(RwLock::new(ClientWrapper::Lazy(Box::new(lazy_client)))),
+            request_timeout: Duration::from_millis(250),
+            inflight_requests_allowed: Arc::new(AtomicIsize::new(1000)),
+            inflight_requests_limit: 1000,
+            inflight_log_interval: 100,
+            compression_manager: None,
+            pubsub_synchronizer,
+            client_side_cache: None,
+            latency_tracker: Arc::new(crate::timeout_watchdog::LatencyTracker::new(64)),
+            circuit_breaker: None,
+            current_database: Arc::new(AtomicU32::new(0)),
+            is_cluster: false,
+        }),
+        iam_token_manager: None,
+        otel_metadata: Arc::new(OTelMetadata {
+            address: NodeAddress {
+                host: "127.0.0.1".to_string(),
+                port: 6379,
+            },
+            db_namespace: "0".to_string(),
+        }),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::time::Duration;
@@ -4134,71 +4200,5 @@ mod tests {
             non_iam_client.iam_token_manager().is_none(),
             "iam_token_manager() should return None when IAM is not configured"
         );
-    }
-}
-
-/// Creates a no-connection (lazy) [`Client`] suitable for unit tests that need a
-/// `GlideClient` value but do not issue any real network commands.
-///
-/// The client uses `lazy_connect = true` so no TCP connection is attempted at
-/// construction time.  It **must not** be used to send actual Valkey commands.
-#[cfg(test)]
-pub fn create_test_glide_client() -> Client {
-    use crate::client::types::{NodeAddress, OTelMetadata};
-    use crate::pubsub::create_pubsub_synchronizer;
-    use std::sync::atomic::AtomicIsize;
-    use std::sync::atomic::AtomicU32;
-    use tokio::sync::RwLock;
-
-    let config = ConnectionRequest {
-        database_id: 0,
-        cluster_mode_enabled: false,
-        addresses: vec![NodeAddress {
-            host: "127.0.0.1".to_string(),
-            port: 6379,
-        }],
-        lazy_connect: true,
-        ..Default::default()
-    };
-
-    let lazy_client = LazyClient {
-        config,
-        push_sender: None,
-    };
-
-    // A throwaway runtime just to create the pubsub synchronizer.
-    let rt = tokio::runtime::Runtime::new().expect("tokio runtime for test client");
-    let pubsub_synchronizer = rt.block_on(create_pubsub_synchronizer(
-        None,
-        None,
-        false,
-        std::sync::Weak::new(),
-        None,
-        Duration::from_millis(250),
-    ));
-
-    Client {
-        shared: Arc::new(ClientShared {
-            internal_client: Arc::new(RwLock::new(ClientWrapper::Lazy(Box::new(lazy_client)))),
-            request_timeout: Duration::from_millis(250),
-            inflight_requests_allowed: Arc::new(AtomicIsize::new(1000)),
-            inflight_requests_limit: 1000,
-            inflight_log_interval: 100,
-            compression_manager: None,
-            pubsub_synchronizer,
-            client_side_cache: None,
-            latency_tracker: Arc::new(crate::timeout_watchdog::LatencyTracker::new(64)),
-            circuit_breaker: None,
-            current_database: Arc::new(AtomicU32::new(0)),
-            is_cluster: false,
-        }),
-        iam_token_manager: None,
-        otel_metadata: Arc::new(OTelMetadata {
-            address: NodeAddress {
-                host: "127.0.0.1".to_string(),
-                port: 6379,
-            },
-            db_namespace: "0".to_string(),
-        }),
     }
 }

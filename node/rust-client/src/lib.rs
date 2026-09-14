@@ -290,6 +290,18 @@ fn release_worker_pool() {
     }
 }
 
+/// RAII guard that clears the pool blocking flag when dropped.
+/// Ensures the flag is always unset on every exit path from a `spawn_local` task,
+/// including early returns, panics, and task cancellation.
+struct UnmarkOnDrop(Option<std::sync::Arc<std::sync::atomic::AtomicBool>>);
+impl Drop for UnmarkOnDrop {
+    fn drop(&mut self) {
+        if let Some(arc) = self.0.take() {
+            arc.store(false, Ordering::Release);
+        }
+    }
+}
+
 /// Message sent from NAPI thread to pinned worker thread for command execution.
 /// Kept minimal to reduce per-command overhead - no Arc cloning per message.
 enum WorkerMessage {
@@ -854,16 +866,14 @@ pub(crate) async fn create_handle_for_client(
             client_id,
         };
 
-        // Send the handle to the awaiting caller; if the receiver has gone away
-        // (caller dropped the future) we continue running the message loop anyway
-        // so that the client is not orphaned.
-        let _ = handle_tx.send(handle);
-
         // Store worker-local references to avoid Arc::clone per command.
         // These are cloned ONCE here and reused for all commands.
         let worker_inflight = inflight_counter;
 
         // Spawn a local task to listen for push notifications (pub/sub).
+        // NOTE: push listener is spawned BEFORE sending the handle so that
+        // cluster-mode push notifications cannot arrive in the window between
+        // the caller receiving the handle and the listener being scheduled.
         task::spawn_local(async move {
             while let Some(push_info) = push_receiver.recv().await {
                 let push_value = Value::Push {
@@ -888,6 +898,11 @@ pub(crate) async fn create_handle_for_client(
                 }
             }
         });
+
+        // Send the handle to the awaiting caller; if the receiver has gone away
+        // (caller dropped the future) we continue running the message loop anyway
+        // so that the client is not orphaned.
+        let _ = handle_tx.send(handle);
 
         // Process messages from the channel.
         // Each message spawns a local task for concurrent execution within this thread.
@@ -934,6 +949,11 @@ fn run_worker_message(
             let wake = wake_tsfn_worker.clone();
 
             task::spawn_local(async move {
+                // RAII guard: clears the blocking flag on all exit paths
+                // (normal completion, early return, and task cancellation/drop).
+                let _unmark_guard = pool_blocking_ids
+                    .and_then(glide_core::pool::get_blocking_flag)
+                    .map(|arc| UnmarkOnDrop(Some(arc)));
                 if let Some(ref span) = cmd.span() {
                     set_db_attributes(span, &cmd, &client_clone);
                 }
@@ -963,6 +983,11 @@ fn run_worker_message(
             let wake = wake_tsfn_worker.clone();
 
             task::spawn_local(async move {
+                // RAII guard: clears the blocking flag on all exit paths
+                // (normal completion, early return, and task cancellation/drop).
+                let _unmark_guard = pool_ids
+                    .and_then(glide_core::pool::get_blocking_flag)
+                    .map(|arc| UnmarkOnDrop(Some(arc)));
                 let command_span = batch_msg.command_span.clone();
                 let result = execute_batch(
                     &mut client_clone,
@@ -997,6 +1022,11 @@ fn run_worker_message(
             let wake = wake_tsfn_worker.clone();
 
             task::spawn_local(async move {
+                // RAII guard: clears the blocking flag on all exit paths
+                // (normal completion, early return, and task cancellation/drop).
+                let _unmark_guard = pool_ids
+                    .and_then(glide_core::pool::get_blocking_flag)
+                    .map(|arc| UnmarkOnDrop(Some(arc)));
                 let keys: Vec<&[u8]> = script_msg.keys.iter().map(|k| k.as_ref()).collect();
                 let args: Vec<&[u8]> = script_msg.args.iter().map(|a| a.as_ref()).collect();
                 let result = client_clone
@@ -1225,9 +1255,6 @@ pub fn create_direct_client<'a>(
             client_id,
         };
 
-        // Resolve the promise with the handle
-        deferred.resolve(|_| Ok(handle));
-
         // Store worker-local references to avoid Arc::clone per command.
         // These are cloned ONCE here and reused for all commands.
         let worker_inflight = inflight_counter;
@@ -1235,6 +1262,10 @@ pub fn create_direct_client<'a>(
         // Spawn a local task to listen for push notifications (pub/sub).
         // Use a weak wake handle to avoid extending callback lifetime after close().
         // Push messages arrive from glide-core via the push_receiver channel.
+        // NOTE: push listener is spawned BEFORE resolving the promise so that
+        // cluster-mode push notifications (e.g. subscription confirmations)
+        // cannot arrive in the window between promise resolution and listener
+        // scheduling.
         task::spawn_local(async move {
             while let Some(push_info) = push_receiver.recv().await {
                 let push_value = Value::Push {
@@ -1259,6 +1290,10 @@ pub fn create_direct_client<'a>(
                 }
             }
         });
+
+        // Resolve the promise with the handle — push listener is now scheduled,
+        // so no push notifications can be missed after this point.
+        deferred.resolve(|_| Ok(handle));
 
         // Process messages from the channel.
         // Each message spawns a local task for concurrent execution within this thread.
@@ -1485,7 +1520,7 @@ impl GlideClientHandle {
     /// the scope registry so that the next `pool_build_handle` call can find it
     /// and spin up a new worker for the next borrower.
     ///
-    /// For standalone (non-pool) clients, call [`close`] instead.
+    /// For standalone (non-pool) clients, call `close()` instead.
     #[napi]
     pub fn close_for_pool_release(&mut self) -> Result<()> {
         // Mark buffer closed first — prevents callbacks after this point.
@@ -1494,10 +1529,9 @@ impl GlideClientHandle {
         // Do NOT unregister from scope registry: the Client must stay registered
         // so that the next pool_build_handle() call can find it.
 
-        // Unregister from glide-core's CLIENT_TO_POOL map.
-        // release_client_async only needs client_id to locate the in_use entry,
-        // so this is safe to call before pool_release.
-        glide_core::pool::unregister_pool_client(self.client_id);
+        // Do NOT call unregister_pool_client here: release_client_async (called
+        // by pool_release after this) already calls unregister_pool_client, so
+        // calling it here would result in a double-unregister.
 
         // Free any leaked Value pointers.
         self.response_buffer.free_leaked_values();

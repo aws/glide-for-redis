@@ -1592,8 +1592,19 @@ pub extern "system" fn Java_glide_internal_GlideNativeBridge_executeBatchAsync(
                         })
                         .unwrap_or(false)
                 } else {
+                    // Build the full Cmd with arguments so that XREAD BLOCK and
+                    // XREADGROUP BLOCK are detected correctly — they are only
+                    // identifiable by the presence of the BLOCK keyword in the
+                    // args, not by command name alone.
                     rt.get_command()
-                        .map(|cmd| glide_core::client::is_blocking_command(&cmd))
+                        .map(|mut cmd| {
+                            if let Some(args) = all_args.get(i) {
+                                for arg in args {
+                                    cmd.arg(arg.as_slice());
+                                }
+                            }
+                            glide_core::client::is_blocking_command(&cmd)
+                        })
                         .unwrap_or(false)
                 }
             });
@@ -1919,7 +1930,12 @@ pub extern "system" fn Java_glide_internal_GlideNativeBridge_executeCommandAsync
                         )
                     })
                     .unwrap_or(false)
-            } else if let Some(cmd) = rt.get_command() {
+            } else if let Some(mut cmd) = rt.get_command() {
+                // Append args so blocking-command detection works for arg-gated
+                // commands like XREAD BLOCK and XREADGROUP BLOCK.
+                for arg in &args_data {
+                    cmd.arg(arg.as_slice());
+                }
                 glide_core::client::is_blocking_command(&cmd)
             } else {
                 false

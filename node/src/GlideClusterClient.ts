@@ -815,12 +815,20 @@ export class GlideClusterClient extends BaseClient {
         options: GlideClusterClientConfiguration,
     ): Promise<GlideClusterClient> {
         const { poolBuildHandle } = await import("../build-ts/native");
-        const temp = new GlideClusterClient(options);
-        const wakeCallback = (
-            temp as unknown as { handleResponsesAvailable: () => void }
-        ).handleResponsesAvailable;
-        const handle = await poolBuildHandle(clientId, wakeCallback);
-        return GlideClusterClient.createFromHandle(handle, options);
+        // Create the client instance whose handleResponsesAvailable will be stored
+        // as the Rust TSFN wake callback. The same instance must be the one that
+        // receives the handle — arrow functions bind `this` at construction, so
+        // the callback and the client handle MUST live on the same object.
+        const client = new GlideClusterClient(options);
+        const handle = await poolBuildHandle(
+            clientId,
+            (client as unknown as { handleResponsesAvailable: () => void })
+                .handleResponsesAvailable,
+        );
+        // Inject the handle into the SAME instance whose callback was registered.
+        (client as unknown as { clientHandle: typeof handle }).clientHandle =
+            handle;
+        return client;
     }
 
     /**
@@ -828,9 +836,10 @@ export class GlideClusterClient extends BaseClient {
      * Serialise a {@link GlideClusterClientConfiguration} into the protobuf
      * bytes used by the pool Rust APIs.  Does not open a network connection.
      */
-    public static serializeConfig(
-        options: GlideClusterClientConfiguration,
-    ): Uint8Array {
+    public static serializeConfig(options: GlideClusterClientConfiguration): {
+        bytes: Uint8Array;
+        resolverKey: string | undefined;
+    } {
         return super.serializeConnectionRequest(
             options,
             (opts?: BaseClientConfiguration) =>

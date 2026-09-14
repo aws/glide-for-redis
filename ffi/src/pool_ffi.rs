@@ -11,6 +11,27 @@ use glide_core::pool::{self, ClientPool, ClientState, POOL_RUNNING, PoolConfig, 
 use glide_core::scope;
 use std::sync::atomic::Ordering as AtomicOrdering;
 
+/// Drop an adapter [`Arc`] that was previously leaked via `mem::forget` inside
+/// `create_pool_client`. Must be called before any early return that occurs after
+/// `create_pool_client` succeeds but **before** `adapter_ptr` is stored in
+/// `get_pool_clients()` — at that point `glide_pool_destroy` cannot find it and
+/// it would leak forever.
+///
+/// # Safety
+/// `$ptr` must have been produced by `Arc::into_raw` (as done inside
+/// `create_pool_client`). Reconstructing the `Arc` and immediately dropping it
+/// is the only correct way to release the allocation.
+macro_rules! drop_orphaned_adapter {
+    ($ptr:expr) => {
+        // SAFETY: $ptr was produced by Arc::into_raw (via mem::forget) in
+        // create_pool_client. Reconstructing and dropping it here is the
+        // only safe way to release the allocation.
+        unsafe {
+            drop(std::sync::Arc::from_raw($ptr as *const ClientAdapter));
+        }
+    };
+}
+
 /// Whether the diagnostic timeout watchdog should be armed for a scoped command.
 ///
 /// The watchdog arms at the flat client request timeout and aborts the command
@@ -236,9 +257,7 @@ pub unsafe extern "C" fn glide_pool_create(
                                 // create_pool_client transferred ownership into a raw pointer
                                 // via mem::forget; glide_pool_destroy cannot find this orphaned
                                 // pointer because it was never stored in get_pool_clients().
-                                unsafe {
-                                    drop(Arc::from_raw(adapter_ptr as *const ClientAdapter));
-                                }
+                                drop_orphaned_adapter!(adapter_ptr);
                                 return;
                             }
                             // Use pre_cid (allocated before lock) to match POOL_ADAPTER_MAP entry;
@@ -340,9 +359,7 @@ pub extern "C" fn glide_pool_try_acquire(pool_id: u64) -> i64 {
                                     // create_pool_client transferred ownership into a raw pointer
                                     // via mem::forget; glide_pool_destroy cannot find this orphaned
                                     // pointer because it was never stored in get_pool_clients().
-                                    unsafe {
-                                        drop(Arc::from_raw(adapter_ptr as *const ClientAdapter));
-                                    }
+                                    drop_orphaned_adapter!(adapter_ptr);
                                     return;
                                 }
                                 // Use pre_cid (allocated before lock) to match POOL_ADAPTER_MAP entry;
@@ -465,11 +482,7 @@ pub extern "C" fn glide_pool_acquire_blocking(pool_id: u64, timeout_ms: u64) -> 
                                         // create_pool_client transferred ownership into a raw pointer
                                         // via mem::forget; glide_pool_destroy cannot find this orphaned
                                         // pointer because it was never stored in get_pool_clients().
-                                        unsafe {
-                                            drop(Arc::from_raw(
-                                                adapter_ptr as *const ClientAdapter,
-                                            ));
-                                        }
+                                        drop_orphaned_adapter!(adapter_ptr);
                                         return;
                                     }
                                     // Use pre_cid (allocated before lock) to match POOL_ADAPTER_MAP entry;

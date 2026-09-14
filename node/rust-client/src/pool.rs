@@ -47,10 +47,12 @@ fn get_pool_runtime() -> &'static tokio::runtime::Runtime {
 /// Returns true if the mark was applied (client is registered).
 pub fn mark_blocking(client_id: u64, blocking: bool) -> bool {
     if let Some(arc) = glide_core::pool::get_blocking_flag(client_id) {
-        arc.store(blocking, Ordering::Release);
         if !blocking {
+            // Refresh activity BEFORE clearing the flag so the abandon monitor
+            // never observes is_blocking=false with a stale borrowed_at timestamp.
             glide_core::pool::refresh_activity_by_client(client_id);
         }
+        arc.store(blocking, Ordering::Release);
         true
     } else {
         false
@@ -184,9 +186,12 @@ pub fn create_pool<'a>(
 
             let mut internal_req: ConnectionRequest = connection_request.into();
 
-            // Apply address resolver if configured (mirrors create_direct_client).
+            // Pool connections share the resolver — use get() not remove() so
+            // subsequent pool connections (warmup, on-demand, reconnects) also
+            // have the resolver.  The resolver is cleaned up in ClientPool.close()
+            // on the TypeScript side.
             if let Some(key) = resolver_key
-                && let Some(resolver) = glide_core::address_resolver_registry::remove(&key)
+                && let Some(resolver) = glide_core::address_resolver_registry::get(&key)
             {
                 internal_req.address_resolver = Some(resolver);
             }
@@ -253,7 +258,7 @@ pub fn create_pool<'a>(
     Ok(promise)
 }
 
-/// Build a [`GlideClientHandle`] for a pool-acquired client identified by `client_id`.
+/// Build a `GlideClientHandle` for a pool-acquired client identified by `client_id`.
 ///
 /// Called by TS after `pool_try_acquire` or `pool_acquire_blocking` returns a
 /// non-negative `client_id`.  Looks up the [`Client`] in the scope registry
@@ -278,7 +283,6 @@ pub fn pool_build_handle<'a>(
         Arc::new(wake_callback.build_threadsafe_function().build()?);
 
     let client_id_u64 = client_id as u64;
-    let inflight_requests_limit = glide_core::client::DEFAULT_MAX_INFLIGHT_REQUESTS as isize;
 
     get_pool_runtime().spawn(async move {
         // Retrieve the Client from the scope registry.
@@ -291,6 +295,28 @@ pub fn pool_build_handle<'a>(
                 ));
                 return;
             }
+        };
+
+        // Resolve the inflight_requests_limit from the pool config stored for
+        // this client.  Falls back to the global default if not found so
+        // pool_build_handle is always safe to call even without pool context.
+        let inflight_requests_limit = if let Some(pool_id) =
+            glide_core::pool::get_pool_id_for_client(client_id_u64)
+        {
+            if let Some(pool_arc) = glide_core::pool::get_pool(pool_id) {
+                let pool_guard = pool_arc.lock().await;
+                let req = ProtobufConnectionRequest::parse_from_bytes(
+                    &pool_guard.config.connection_request,
+                );
+                match req {
+                    Ok(r) if r.inflight_requests_limit > 0 => r.inflight_requests_limit as isize,
+                    _ => glide_core::client::DEFAULT_MAX_INFLIGHT_REQUESTS as isize,
+                }
+            } else {
+                glide_core::client::DEFAULT_MAX_INFLIGHT_REQUESTS as isize
+            }
+        } else {
+            glide_core::client::DEFAULT_MAX_INFLIGHT_REQUESTS as isize
         };
 
         // Create a dummy push channel.  Pool clients don't use pub/sub, so
@@ -334,9 +360,12 @@ async fn create_raw_pool_client(conn_bytes: &[u8]) -> std::result::Result<Client
 
     let mut internal_req: ConnectionRequest = connection_request.into();
 
-    // Apply address resolver if configured (mirrors create_direct_client).
+    // Pool connections share the resolver — use get() not remove() so
+    // subsequent pool connections (warmup, on-demand, reconnects) also
+    // have the resolver.  The resolver is cleaned up in ClientPool.close()
+    // on the TypeScript side.
     if let Some(key) = resolver_key
-        && let Some(resolver) = glide_core::address_resolver_registry::remove(&key)
+        && let Some(resolver) = glide_core::address_resolver_registry::get(&key)
     {
         internal_req.address_resolver = Some(resolver);
     }

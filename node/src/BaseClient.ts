@@ -10169,14 +10169,25 @@ export class BaseClient {
     public static serializeConnectionRequest(
         options: BaseClientConfiguration,
         constructor: (options?: BaseClientConfiguration) => BaseClient,
-    ): Uint8Array {
+    ): { bytes: Uint8Array; resolverKey: string | undefined } {
         const instance = constructor(options);
         const request = instance.createClientRequest(options);
-        return Buffer.from(
+
+        let resolverKey: string | undefined;
+        if (options.addressResolver) {
+            // Register the resolver so Rust can find it by key when creating
+            // pool connections. The key must be embedded in the serialised
+            // request so every new pool connection can locate the callback.
+            resolverKey = registerAddressResolver(options.addressResolver);
+            request.addressResolverKey = resolverKey;
+        }
+
+        const bytes = Buffer.from(
             connection_request.ConnectionRequest.encode(
                 connection_request.ConnectionRequest.create(request),
             ).finish(),
         );
+        return { bytes, resolverKey };
     }
 
     /**

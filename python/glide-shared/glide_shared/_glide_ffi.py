@@ -363,6 +363,19 @@ class _GlideFFI:
             uint64_t create_batch_otel_span();
             uint64_t create_named_otel_span(const char* span_name);
             uint64_t create_otel_span_with_parent(int request_type, uint64_t parent_span_ptr);
+            uint64_t create_named_otel_span_with_trace_context(
+                const char* span_name,
+                const char* trace_id,
+                const char* span_id,
+                uint8_t trace_flags,
+                const char* trace_state
+            );
+            uint64_t create_batch_otel_span_with_trace_context(
+                const char* trace_id,
+                const char* span_id,
+                uint8_t trace_flags,
+                const char* trace_state
+            );
             void drop_otel_span(uint64_t span_ptr);
             const char* init_open_telemetry(const OpenTelemetryConfig* open_telemetry_config);
 

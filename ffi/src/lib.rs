@@ -4938,6 +4938,48 @@ unsafe fn required_c_str<'a>(ptr: *const c_char, field_name: &str) -> Result<&'a
         .map_err(|err| format!("{field_name} is not valid UTF-8: {err}"))
 }
 
+/// Validates a span name C string and returns it as a UTF-8 string slice.
+///
+/// # Safety
+/// * If `span_name` is not null, it must point to a valid, null-terminated C string.
+/// * The pointed-to memory must remain valid for the returned string slice lifetime.
+unsafe fn validate_span_name<'a>(span_name: *const c_char, context: &str) -> Option<&'a str> {
+    let name_str = match unsafe { required_c_str(span_name, "span_name") } {
+        Ok(value) => value,
+        Err(err) => {
+            logger_core::log_error("ffi_otel", format!("{context}: {err}"));
+            return None;
+        }
+    };
+
+    // Validate string length (reasonable limit to prevent abuse)
+    // Note: Empty names are allowed as per test expectations
+    if name_str.len() > 256 {
+        logger_core::log_error(
+            "ffi_otel",
+            format!(
+                "{context}: span_name too long ({} bytes), max 256",
+                name_str.len()
+            ),
+        );
+        return None;
+    }
+
+    // Validate string content (basic sanity check for control characters)
+    if name_str
+        .chars()
+        .any(|c| c.is_control() && c != '\t' && c != '\n' && c != '\r')
+    {
+        logger_core::log_error(
+            "ffi_otel",
+            format!("{context}: span_name contains invalid control characters"),
+        );
+        return None;
+    }
+
+    Some(name_str)
+}
+
 fn span_to_ffi_pointer(span: GlideSpan) -> u64 {
     let arc = Arc::new(span);
     let ptr = Arc::into_raw(arc);
@@ -5104,53 +5146,10 @@ pub unsafe extern "C" fn create_batch_otel_span_with_parent(parent_span_ptr: u64
 /// * The caller is responsible for eventually calling drop_otel_span with the returned pointer
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn create_named_otel_span(span_name: *const c_char) -> u64 {
-    // Validate input pointer
-    if span_name.is_null() {
-        logger_core::log_error(
-            "ffi_otel",
-            "create_named_otel_span: span_name pointer is null",
-        );
-        return 0;
-    }
-
-    // Convert C string to Rust string with safe error handling
-    let c_str = unsafe { CStr::from_ptr(span_name) };
-
-    let name_str = match c_str.to_str() {
-        Ok(s) => s,
-        Err(e) => {
-            logger_core::log_error(
-                "ffi_otel",
-                format!("create_named_otel_span: span_name is not valid UTF-8: {e}",),
-            );
-            return 0;
-        }
+    let name_str = match unsafe { validate_span_name(span_name, "create_named_otel_span") } {
+        Some(name) => name,
+        None => return 0,
     };
-
-    // Validate string length (reasonable limit to prevent abuse)
-    // Note: Empty names are allowed as per test expectations
-    if name_str.len() > 256 {
-        logger_core::log_error(
-            "ffi_otel",
-            format!(
-                "create_named_otel_span: span_name too long ({} chars), max 256",
-                name_str.len()
-            ),
-        );
-        return 0;
-    }
-
-    // Validate string content (basic sanity check for control characters)
-    if name_str
-        .chars()
-        .any(|c| c.is_control() && c != '\t' && c != '\n' && c != '\r')
-    {
-        logger_core::log_error(
-            "ffi_otel",
-            "create_named_otel_span: span_name contains invalid control characters",
-        );
-        return 0;
-    }
 
     // Create the named span using existing new_span method
     let span = GlideOpenTelemetry::new_span(name_str);
@@ -5282,6 +5281,44 @@ pub unsafe extern "C" fn create_otel_span_with_trace_context(
             trace_flags,
             trace_state,
             "create_otel_span_with_trace_context",
+        )
+    }
+}
+
+/// Creates an OpenTelemetry span with a custom name as a child of a remote span context.
+/// Invalid remote context falls back to creating an independent span.
+/// Returns 0 if `span_name` is rejected.
+///
+/// This is the remote context counterpart of [`create_named_otel_span`], for callers that
+/// name spans themselves rather than deriving the name from a [`RequestType`].
+///
+/// # Safety
+/// * `span_name`, `trace_id`, `span_id`, and `trace_state` may be null.
+/// * Any non-null string pointer must point to a valid, null-terminated UTF-8 C string.
+/// * The caller is responsible for eventually calling [`drop_otel_span`] with the returned pointer.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn create_named_otel_span_with_trace_context(
+    span_name: *const c_char,
+    trace_id: *const c_char,
+    span_id: *const c_char,
+    trace_flags: u8,
+    trace_state: *const c_char,
+) -> u64 {
+    let name_str =
+        match unsafe { validate_span_name(span_name, "create_named_otel_span_with_trace_context") }
+        {
+            Some(name) => name,
+            None => return 0,
+        };
+
+    unsafe {
+        create_span_with_remote_context(
+            name_str,
+            trace_id,
+            span_id,
+            trace_flags,
+            trace_state,
+            "create_named_otel_span_with_trace_context",
         )
     }
 }

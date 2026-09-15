@@ -4,7 +4,7 @@ dynamic = ["version"]
 description = "Valkey GLIDE Async client. Supports Valkey and Redis OSS."
 requires-python = ">=3.9"
 dependencies = [
-    # Note: If you add a dependency here, make sure to also add it to glide-async/requirements.txt
+    # Note: If you add a base dependency here, make sure to also add it to glide-async/requirements.txt
     # Once issue https://github.com/aboutcode-org/python-inspector/issues/197 is resolved, the requirements.txt file can be removed.
     # Note: valkey-glide-shared is bundled inside the wheel (not a pip dependency)
     # because it contains platform-specific .so files built alongside this package.
@@ -14,6 +14,7 @@ dependencies = [
     "sniffio",
     "typing-extensions>=4.8.0; python_version < '3.11'",
 ]
+
 classifiers = [
     "Topic :: Database",
     "Topic :: Utilities",
@@ -24,6 +25,9 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
+
+[project.optional-dependencies]
+otel = ["opentelemetry-api>=1.6.0"]
 
 [build-system]
 requires = ["maturin==0.14.17"]

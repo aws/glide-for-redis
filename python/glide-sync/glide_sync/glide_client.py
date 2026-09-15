@@ -25,6 +25,7 @@ from glide_shared.exceptions import (
     RequestError,
     get_request_error_class,
 )
+from glide_shared.opentelemetry import _create_batch_span, _create_command_span
 from glide_shared.protobuf.command_request_pb2 import RequestType
 from glide_shared.routes import (
     AllNodes,
@@ -491,17 +492,19 @@ class BaseClient(CoreCommands):
         if response_buffers is not None:
             self._validate_response_buffers(response_buffers)
 
-        # Create span if OpenTelemetry is configured and sampling indicates we should trace
+        # Sample before reading the caller's context. A sampled command span uses
+        # the active OTel span as its parent when one is available.
         from .opentelemetry import OpenTelemetry
 
         span = 0
         span_name_cstr = None
-        if OpenTelemetry.should_sample():
-            from glide_shared.protobuf.command_request_pb2 import RequestType
-
+        if OpenTelemetry.is_tracing_enabled() and OpenTelemetry.should_sample():
+            parent_ctx = OpenTelemetry._get_parent_span_context()
             command_name = RequestType.Name(request_type)
             span_name_cstr = self._ffi.new("char[]", command_name.encode())
-            span = self._lib.create_named_otel_span(span_name_cstr)
+            span = _create_command_span(
+                self._ffi, self._lib, span_name_cstr, parent_ctx
+            )
 
         try:
             # Convert the arguments to C-compatible pointers
@@ -645,8 +648,9 @@ class BaseClient(CoreCommands):
         from .opentelemetry import OpenTelemetry
 
         span = 0
-        if OpenTelemetry.should_sample():
-            span = self._lib.create_batch_otel_span()
+        if OpenTelemetry.is_tracing_enabled() and OpenTelemetry.should_sample():
+            parent_ctx = OpenTelemetry._get_parent_span_context()
+            span = _create_batch_span(self._ffi, self._lib, parent_ctx)
 
         try:
             # Note: batch_refs and option_refs must remain in scope
@@ -874,8 +878,11 @@ class BaseClient(CoreCommands):
         from .opentelemetry import OpenTelemetry
 
         span = 0
-        if OpenTelemetry.should_sample():
-            span = self._lib.create_named_otel_span(_EVALSHA_SPAN_NAME)
+        if OpenTelemetry.is_tracing_enabled() and OpenTelemetry.should_sample():
+            parent_ctx = OpenTelemetry._get_parent_span_context()
+            span = _create_command_span(
+                self._ffi, self._lib, _EVALSHA_SPAN_NAME, parent_ctx
+            )
 
         try:
             result = self._lib.invoke_script(

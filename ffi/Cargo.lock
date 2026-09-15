@@ -1055,6 +1055,8 @@ dependencies = [
  "lazy_static",
  "libc",
  "logger_core",
+ "opentelemetry",
+ "opentelemetry_sdk",
  "percent-encoding",
  "protobuf",
  "redis",

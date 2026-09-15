@@ -31,6 +31,8 @@ uuid = { version = "1", features = ["v4", "fast-rng"] }
 rstest = "^0.26"
 serial_test = "4"
 lazy_static = "1"
+opentelemetry = "0.32"
+opentelemetry_sdk = { version = "0.32", features = ["testing"] }
 
 [profile.release]
 opt-level = 3         # Optimize for performance

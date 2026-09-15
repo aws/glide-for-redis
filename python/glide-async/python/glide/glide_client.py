@@ -67,6 +67,7 @@ from glide_shared.ffi_helpers import (
     to_c_route_ptr_and_len,
     to_c_strings,
 )
+from glide_shared.opentelemetry import _create_batch_span, _create_command_span
 from glide_shared.routes import Route
 
 from .async_commands.cluster_commands import ClusterCommands
@@ -844,41 +845,45 @@ class BaseClient(CoreCommands):
 
         c_args, c_lengths, buffers = self._to_c_strings(args)
 
-        # OTel span creation only when initialized (rare)
+        # Sample before reading the caller's context. A sampled command span uses
+        # the active OTel span as its parent when one is available.
         span = 0
-        if OpenTelemetry._instance is not None and OpenTelemetry.should_sample():
+        if OpenTelemetry.is_tracing_enabled() and OpenTelemetry.should_sample():
+            parent_ctx = OpenTelemetry._get_parent_span_context()
             span_name_cstr = self._ffi.new(
                 "char[]", RequestType.Name(request_type).encode()
             )
-            span = self._lib.create_named_otel_span(span_name_cstr)
-
-        if route is None:
-            self._lib.command(
-                self._core_client,
-                callback_id,
-                request_type,
-                len(args),
-                c_args,
-                c_lengths,
-                self._ffi.NULL,
-                0,
-                span,
-            )
-        else:
-            route_ptr, route_len, route_bytes = self._to_c_route_ptr_and_len(route)
-            self._lib.command(
-                self._core_client,
-                callback_id,
-                request_type,
-                len(args),
-                c_args,
-                c_lengths,
-                route_ptr,
-                route_len,
-                span,
+            span = _create_command_span(
+                self._ffi, self._lib, span_name_cstr, parent_ctx
             )
 
         try:
+            if route is None:
+                self._lib.command(
+                    self._core_client,
+                    callback_id,
+                    request_type,
+                    len(args),
+                    c_args,
+                    c_lengths,
+                    self._ffi.NULL,
+                    0,
+                    span,
+                )
+            else:
+                route_ptr, route_len, route_bytes = self._to_c_route_ptr_and_len(route)
+                self._lib.command(
+                    self._core_client,
+                    callback_id,
+                    request_type,
+                    len(args),
+                    c_args,
+                    c_lengths,
+                    route_ptr,
+                    route_len,
+                    span,
+                )
+
             return await fut
         finally:
             if span:
@@ -906,31 +911,32 @@ class BaseClient(CoreCommands):
         self._register_future(callback_id, fut)
 
         span = 0
-        if OpenTelemetry.should_sample():
-            span = self._lib.create_batch_otel_span()
-
-        batch_info, batch_refs = convert_commands_to_c_batch_info(
-            self._ffi, commands, is_atomic
-        )
-        batch_options, opts_refs = create_c_batch_options(
-            self._ffi,
-            route,
-            retry_server_error=retry_server_error,
-            retry_connection_error=retry_connection_error,
-            timeout=timeout,
-        )
-        _refs = batch_refs + opts_refs  # noqa: F841  prevent GC
-
-        self._lib.batch(
-            self._core_client,
-            callback_id,
-            batch_info,
-            raise_on_error,
-            batch_options,
-            span,
-        )
+        if OpenTelemetry.is_tracing_enabled() and OpenTelemetry.should_sample():
+            parent_ctx = OpenTelemetry._get_parent_span_context()
+            span = _create_batch_span(self._ffi, self._lib, parent_ctx)
 
         try:
+            batch_info, batch_refs = convert_commands_to_c_batch_info(
+                self._ffi, commands, is_atomic
+            )
+            batch_options, opts_refs = create_c_batch_options(
+                self._ffi,
+                route,
+                retry_server_error=retry_server_error,
+                retry_connection_error=retry_connection_error,
+                timeout=timeout,
+            )
+            _refs = batch_refs + opts_refs  # noqa: F841  prevent GC
+
+            self._lib.batch(
+                self._core_client,
+                callback_id,
+                batch_info,
+                raise_on_error,
+                batch_options,
+                span,
+            )
+
             return await fut
         finally:
             if span != 0:
@@ -970,8 +976,11 @@ class BaseClient(CoreCommands):
         # OTel span creation only when initialized (rare). The core attaches the
         # EVALSHA DB semantic convention attributes to the span via invoke_script.
         span = 0
-        if OpenTelemetry.should_sample():
-            span = self._lib.create_named_otel_span(_EVALSHA_SPAN_NAME)
+        if OpenTelemetry.is_tracing_enabled() and OpenTelemetry.should_sample():
+            parent_ctx = OpenTelemetry._get_parent_span_context()
+            span = _create_command_span(
+                self._ffi, self._lib, _EVALSHA_SPAN_NAME, parent_ctx
+            )
 
         try:
             self._lib.invoke_script(

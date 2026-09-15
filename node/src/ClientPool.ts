@@ -3,12 +3,17 @@
  *
  * Client-Instance Pool for Node.js.
  *
- * Pool clients are real GlideClient/GlideClusterClient instances with the full
- * command API. Commands flow through the standard N-API sendCommand() path
- * (same as standalone clients) with complete type fidelity.
+ * All pool state (idle/active/waiters) is managed by `glide-core::ClientPool`
+ * via the N-API functions `createPool`, `poolTryAcquire`, `poolAcquireBlocking`,
+ * `poolRelease`, `poolMetrics`, and `poolDestroy`.  The TypeScript layer only:
+ *   1. Serialises the connection request and pool config for Rust.
+ *   2. Calls `poolBuildHandle` (JIT) to wrap an acquired `client_id` into a
+ *      full `GlideClientHandle` with a dedicated worker thread.
+ *   3. Wraps the handle in a `GlideClient` / `GlideClusterClient` for callers.
  *
- * State reset (DISCARD + UNWATCH + SELECT) runs on the actual GlideClient
- * connection during release, ensuring the next borrower gets a clean state.
+ * Pool clients are created without a pub/sub push channel (pub/sub is not
+ * supported on pooled connections).  State reset (DISCARD + UNWATCH + SELECT)
+ * on release is performed by `release_client_async` inside Rust.
  *
  * Scope commands (WATCH/MULTI/EXEC via IsolatedScope) go through the Rust
  * glide-core::scope module for per-connection state tracking and slot pinning.
@@ -29,12 +34,13 @@ import type { GlideClientConfiguration } from "./GlideClient";
 import { GlideClusterClient } from "./GlideClusterClient";
 import type { GlideClusterClientConfiguration } from "./GlideClusterClient";
 import {
-    poolAllocateId,
-    poolDrainDiscarded,
-    poolRegisterClient,
-    poolStartMonitor,
-    poolStopMonitor,
-    poolUnregisterClient,
+    createPool,
+    poolTryAcquire,
+    poolAcquireBlocking,
+    poolRelease,
+    poolMetrics,
+    poolDestroy,
+    removeAddressResolver,
 } from "../build-ts/native";
 
 /** Re-export the pool client type (full command set). */
@@ -57,7 +63,12 @@ export interface PoolConfig {
      * Set to 0 to disable abandon detection. Default: 300000 (5 minutes).
      */
     abandonTimeoutMs?: number;
-    /** Whether to create cluster clients. Default: auto-detected from config. */
+    /**
+     * Time after which an idle connection is evicted (ms).
+     * Default: 30000 (30 seconds).
+     */
+    idleTimeoutMs?: number;
+    /** Whether to create cluster clients. Default: false. */
     clusterMode?: boolean;
 }
 
@@ -70,65 +81,41 @@ export interface ClientPoolMetrics {
     total: number;
 }
 
-interface PoolEntry {
-    client: BaseClient;
-    id: number;
-}
-
-interface Waiter {
-    resolve: (entry: PoolEntry) => void;
-    reject: (err: Error) => void;
-    timer: ReturnType<typeof setTimeout>;
-}
-
 /**
  * Client-instance pool managing real GlideClient / GlideClusterClient instances.
  *
- * Commands go through the standard N-API sendCommand() path — same as
- * standalone clients — with complete type fidelity (Buffer, number, arrays, maps).
+ * All pool state (idle list, active set, waiters) is managed by
+ * `glide-core::ClientPool`.  TypeScript only wraps acquired client IDs as
+ * `GlideClient` handles.
  */
 export class ClientPool {
-    private idle: PoolEntry[] = []; // LIFO stack
-    private active = new Map<number, PoolEntry>();
     private closed = false;
-    private nextId = 1;
-    private resetting = 0;
-    private readonly maxSize: number;
-    private readonly minIdle: number;
-    private readonly acquireTimeoutMs: number;
-    private readonly abandonTimeoutMs: number;
     private readonly poolId: number;
+    private readonly acquireTimeoutMs: number;
     private readonly isCluster: boolean;
     private readonly clientConfig: BaseClientConfiguration;
-    private waiters: Waiter[] = [];
+    private readonly resolverKey: string | undefined;
 
     private constructor(
-        maxSize: number,
-        minIdle: number,
+        poolId: number,
         acquireTimeoutMs: number,
-        abandonTimeoutMs: number,
         isCluster: boolean,
         clientConfig: BaseClientConfiguration,
+        resolverKey: string | undefined,
     ) {
-        this.maxSize = maxSize;
-        this.minIdle = minIdle;
+        this.poolId = poolId;
         this.acquireTimeoutMs = acquireTimeoutMs;
-        this.abandonTimeoutMs = abandonTimeoutMs;
         this.isCluster = isCluster;
         this.clientConfig = clientConfig;
-
-        // Allocate pool ID from Rust (process-global, safe across worker_threads)
-        this.poolId = poolAllocateId();
-
-        // Start Rust-level abandon monitor (handles blocking detection, activity
-        // tracking, and discard — no JS Proxy or setInterval needed)
-        poolStartMonitor(this.poolId, abandonTimeoutMs);
+        this.resolverKey = resolverKey;
     }
 
     /**
      * Create a new client-instance pool.
      *
-     * Warms up `minIdle` real GlideClient instances in the background.
+     * Warms up `minIdle` real connections in the background (via Rust).
+     * The returned Promise resolves after the first connection succeeds
+     * (connectivity validation) and rejects on first-connection failure.
      */
     static async create(
         clientConfig: BaseClientConfiguration,
@@ -137,8 +124,10 @@ export class ClientPool {
         const maxSize = poolConfig?.maxSize ?? 10;
         const minIdle = poolConfig?.minIdle ?? 1;
         const acquireTimeoutS = poolConfig?.acquireTimeoutS ?? 5;
+        const abandonTimeoutMs = poolConfig?.abandonTimeoutMs ?? 300_000;
+        const isCluster = poolConfig?.clusterMode ?? false;
 
-        // Reject pubsub subscriptions
+        // Reject pubsub subscriptions.
         const cfg = clientConfig as
             GlideClientConfiguration | GlideClusterClientConfiguration;
 
@@ -149,38 +138,47 @@ export class ClientPool {
             );
         }
 
-        // Cluster mode: must be explicitly specified (no auto-detection).
-        // Default is standalone (GlideClient). Pass clusterMode: true for GlideClusterClient.
-        const isCluster = poolConfig?.clusterMode ?? false;
+        // Serialise the connection config into protobuf bytes using the
+        // appropriate typed client without opening a network connection.
+        // serializeConfig also registers any addressResolver and returns the
+        // key so we can clean up if pool creation fails.
+        const { bytes: connectionRequestBytes, resolverKey } = isCluster
+            ? GlideClusterClient.serializeConfig(
+                  clientConfig as GlideClusterClientConfiguration,
+              )
+            : GlideClient.serializeConfig(
+                  clientConfig as GlideClientConfiguration,
+              );
 
-        const pool = new ClientPool(
+        const poolConfigNapi = {
             maxSize,
             minIdle,
-            acquireTimeoutS * 1000,
-            poolConfig?.abandonTimeoutMs ?? 300_000,
-            isCluster,
-            clientConfig,
-        );
+            idleTimeoutMs: poolConfig?.idleTimeoutMs ?? 30_000,
+            requestTimeoutMs:
+                (clientConfig as { requestTimeout?: number }).requestTimeout ??
+                5_000,
+            abandonTimeoutMs,
+        };
 
-        // Warm up: create the first client synchronously.
-        // This validates connectivity — if the config is wrong (bad address,
-        // wrong cluster mode), the error propagates to the caller immediately
-        // instead of being discovered at acquire() time.
+        // createPool returns Promise<pool_id>.  Rejects if first connection fails.
+        let poolId: number;
         try {
-            await pool.createAndAddClient();
+            poolId = await createPool(connectionRequestBytes, poolConfigNapi);
         } catch (e) {
-            pool.close(); // Stop monitor and clean up
+            // Clean up the address resolver registration if pool creation failed.
+            if (resolverKey) {
+                removeAddressResolver(resolverKey);
+            }
             throw e;
         }
 
-        // Remaining warmup is best-effort background
-        for (let i = 1; i < minIdle; i++) {
-            pool.createAndAddClient().catch(() => {
-                /* background warmup — first client already validated connectivity */
-            });
-        }
-
-        return pool;
+        return new ClientPool(
+            poolId,
+            acquireTimeoutS * 1000,
+            isCluster,
+            clientConfig,
+            resolverKey,
+        );
     }
 
     /**
@@ -193,113 +191,73 @@ export class ClientPool {
             throw new Error("Pool is closed");
         }
 
-        // Drain any clients discarded by the Rust abandon monitor
-        const discarded = poolDrainDiscarded(this.poolId);
+        // Try non-blocking acquire first.
+        const clientId = poolTryAcquire(this.poolId);
 
-        for (const clientId of discarded) {
-            for (const [id, entry] of this.active) {
-                if (entry.client.getClientId() === clientId) {
-                    this.active.delete(id);
-                    entry.client.close();
-                    break;
-                }
+        if (clientId >= 0) {
+            try {
+                return await this.buildClientForId(clientId);
+            } catch (e) {
+                // Handle build failed — release the slot so pool capacity is recovered.
+                await poolRelease(this.poolId, clientId).catch(() => {
+                    /* best effort */
+                });
+                throw e;
             }
         }
 
-        // Fast path: LIFO pop from idle stack
-        const entry = this.idle.pop();
-
-        if (entry) {
-            this.active.set(entry.id, entry);
-            poolRegisterClient(this.poolId, entry.client.getClientId());
-            return entry.client;
-        }
-
-        // If below max size, create a new client
-        if (
-            this.idle.length + this.active.size + this.resetting <
-            this.maxSize
-        ) {
-            const newEntry = await this.createEntry();
-            this.active.set(newEntry.id, newEntry);
-            poolRegisterClient(this.poolId, newEntry.client.getClientId());
-            return newEntry.client;
-        }
-
-        // At max size — wait for a release
+        // Pool full / no idle — wait with timeout.
         const timeoutMs = timeout ? timeout * 1000 : this.acquireTimeoutMs;
+        const result = await poolAcquireBlocking(this.poolId, timeoutMs);
 
-        return new Promise<BaseClient>((resolve, reject) => {
-            const timer = setTimeout(() => {
-                const idx = this.waiters.findIndex((w) => w.reject === reject);
+        if (result >= 0) {
+            try {
+                return await this.buildClientForId(result);
+            } catch (e) {
+                // Handle build failed — release the slot so pool capacity is recovered.
+                await poolRelease(this.poolId, result).catch(() => {
+                    /* best effort */
+                });
+                throw e;
+            }
+        }
 
-                if (idx >= 0) this.waiters.splice(idx, 1);
-                reject(
-                    new Error(
-                        `Pool exhausted: could not acquire client within ${timeoutMs / 1000}s`,
-                    ),
-                );
-            }, timeoutMs);
+        if (result === -1) {
+            throw new Error(
+                `Pool exhausted: could not acquire client within ${timeoutMs / 1000}s`,
+            );
+        }
 
-            this.waiters.push({
-                resolve: (entry: PoolEntry) => {
-                    clearTimeout(timer);
-                    this.active.set(entry.id, entry);
-                    poolRegisterClient(this.poolId, entry.client.getClientId());
-                    resolve(entry.client);
-                },
-                reject,
-                timer,
-            });
-        });
+        // result === -2: pool was destroyed
+        throw new Error("Pool is closed");
     }
 
     /**
      * Release a client back to the pool.
      *
-     * Resets connection state (DISCARD + UNWATCH + SELECT) on the actual
-     * GlideClient connection before making it idle again.
+     * State reset (DISCARD + UNWATCH + SELECT) is performed in Rust before
+     * returning the connection to idle.  The handle is stopped without
+     * unregistering the client from the scope registry (so the next acquire
+     * can reuse the same underlying connection).
      */
     async release(client: BaseClient): Promise<void> {
-        // Find entry by client reference
-        let entry: PoolEntry | undefined;
+        const clientId = client.getClientId();
+        if (clientId < 0) return;
 
-        for (const [id, e] of this.active) {
-            if (e.client === client) {
-                entry = e;
-                this.active.delete(id);
-                break;
+        // Stop the handle's worker thread without removing from scope registry.
+        // This is pool-safe: the underlying Client remains registered so that
+        // the next pool_build_handle() call can find and reuse it.
+        (
+            client as unknown as {
+                clientHandle: { closeForPoolRelease?: () => void } | null;
             }
-        }
+        ).clientHandle?.closeForPoolRelease?.();
 
-        if (!entry) return;
+        // Null out the handle to prevent use-after-release.
+        (client as unknown as { clientHandle: null }).clientHandle = null;
 
-        // Unregister from Rust-level pool tracking
-        poolUnregisterClient(entry.client.getClientId());
-
-        // State reset on the actual connection (track as resetting for capacity)
-        this.resetting++;
-
-        try {
-            await this.resetClientState(entry.client);
-        } finally {
-            this.resetting--;
-        }
-
-        if (this.closed) {
-            entry.client.close();
-            return;
-        }
-
-        // If waiters are queued, hand directly to next waiter (FIFO fairness)
-        if (this.waiters.length > 0) {
-            const waiter = this.waiters.shift()!;
-            waiter.resolve(entry);
-            return;
-        }
-
-        // Return to idle stack (LIFO for connection reuse locality)
-        this.idle.push(entry);
+        // Rust state reset + return to idle.
+        await poolRelease(this.poolId, clientId);
     }
 
     /**
@@ -322,58 +280,38 @@ export class ClientPool {
 
     /** Get pool metrics. */
     getMetrics(): ClientPoolMetrics {
-        return {
-            idle: this.idle.length,
-            active: this.active.size,
-            total: this.idle.length + this.active.size,
-        };
+        if (this.closed) return { idle: 0, active: 0, total: 0 };
+        const m = poolMetrics(this.poolId);
+        return { idle: m.idle, active: m.active, total: m.total };
     }
 
     get idleCount(): number {
-        return this.idle.length;
+        return this.getMetrics().idle;
     }
 
     get activeCount(): number {
-        return this.active.size;
+        return this.getMetrics().active;
     }
 
     get totalCount(): number {
-        return this.idle.length + this.active.size;
+        return this.getMetrics().total;
     }
 
     get isClosed(): boolean {
         return this.closed;
     }
 
-    /** Close the pool and all managed clients. */
+    /** Close the pool and destroy all managed connections. */
     close(): void {
         if (!this.closed) {
             this.closed = true;
-
-            // Stop Rust-level abandon monitor
-            poolStopMonitor(this.poolId);
-
-            // Reject all waiters
-            for (const waiter of this.waiters) {
-                clearTimeout(waiter.timer);
-                waiter.reject(new Error("Pool is closed"));
+            poolDestroy(this.poolId);
+            // Clean up the address resolver registration if one was used.
+            // Pool paths use get() (not remove()), so the entry persists until
+            // the pool is closed and we explicitly remove it here.
+            if (this.resolverKey) {
+                removeAddressResolver(this.resolverKey);
             }
-
-            this.waiters = [];
-
-            // Unregister and close all active clients
-            for (const entry of this.active.values()) {
-                poolUnregisterClient(entry.client.getClientId());
-                entry.client.close();
-            }
-
-            // Close all idle clients
-            for (const entry of this.idle) {
-                entry.client.close();
-            }
-
-            this.idle = [];
-            this.active.clear();
         }
     }
 
@@ -381,56 +319,22 @@ export class ClientPool {
     // INTERNAL
     // ═══════════════════════════════════════════════════════════════════════════
 
-    private async createEntry(): Promise<PoolEntry> {
-        const client = this.isCluster
-            ? await GlideClusterClient.createClient(
+    /**
+     * Build a GlideClient / GlideClusterClient for an acquired pool client_id.
+     *
+     * Calls `poolBuildHandle` to spin up a new worker thread wrapping the
+     * already-connected pool client, then returns a fully operational
+     * GlideClient / GlideClusterClient instance.
+     */
+    private async buildClientForId(clientId: number): Promise<BaseClient> {
+        return this.isCluster
+            ? GlideClusterClient.fromPoolClientId(
+                  clientId,
                   this.clientConfig as GlideClusterClientConfiguration,
               )
-            : await GlideClient.createClient(
+            : GlideClient.fromPoolClientId(
+                  clientId,
                   this.clientConfig as GlideClientConfiguration,
               );
-
-        return { client, id: this.nextId++ };
-    }
-
-    private async createAndAddClient(): Promise<void> {
-        const entry = await this.createEntry();
-
-        if (this.closed) {
-            entry.client.close();
-            return;
-        }
-
-        // If a waiter is queued, deliver directly
-        if (this.waiters.length > 0) {
-            const waiter = this.waiters.shift()!;
-            waiter.resolve(entry);
-        } else {
-            this.idle.push(entry);
-        }
-    }
-
-    /** Reset connection state: DISCARD + UNWATCH + SELECT <configured_db>. */
-    private async resetClientState(client: BaseClient): Promise<void> {
-        try {
-            // Cast to access customCommand (available on GlideClient/GlideClusterClient)
-            const c = client as unknown as {
-                customCommand: (args: string[]) => Promise<unknown>;
-            };
-
-            const noop = () => {
-                /* ignore errors from commands that aren't applicable */
-            };
-
-            await c.customCommand(["DISCARD"]).catch(noop);
-            await c.customCommand(["UNWATCH"]).catch(noop);
-
-            const configuredDb = this.clientConfig.databaseId ?? 0;
-            await c
-                .customCommand(["SELECT", configuredDb.toString()])
-                .catch(noop);
-        } catch {
-            // Connection broken — client will reconnect on next use
-        }
     }
 }

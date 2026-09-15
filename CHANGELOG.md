@@ -4,6 +4,7 @@
 
 ### Fixes
 
+* Core/All: Fix a race condition where the `ClientPool` abandon monitor could silently reclaim a pooled client executing a blocking command (`BLPOP`, `XREAD BLOCK`, etc.), causing the in-flight future to complete with a `ClosingException`. The `is_blocking` flag is now set lock-free via a process-global `Arc<AtomicBool>` registry in `glide-core`, populated at borrow time and set synchronously on the caller thread before any `spawn()`. This eliminates the `try_lock` race that could leave the flag unset when the pool mutex was contended. ([#6971](https://github.com/valkey-io/valkey-glide/issues/6971))
 * Core: A scope pool configured with `max_total = N` now permits N concurrent scopes instead of N-1. The pool reserved a slot against `max_total` and the caller then re-checked capacity after that reservation, so the last acquire was never given a connection and the borrower timed out ([#6795](https://github.com/valkey-io/valkey-glide/issues/6795))
 * Java: Map the Jedis compatibility layer's database selection onto GLIDE's `databaseId` instead of logging a warning and discarding it. A `JedisPool` configured for a non-zero database ran every command against database 0, silently writing to a database the caller did not ask for ([#6994](https://github.com/valkey-io/valkey-glide/issues/6994))
 * Core: Mark `PSUBSCRIBE` and `PUNSUBSCRIBE` as readonly commands so cluster routing treats them consistently with `SUBSCRIBE`/`UNSUBSCRIBE` ([#6756](https://github.com/valkey-io/valkey-glide/pull/6756))
@@ -34,6 +35,7 @@
 
 ### Changes
 
+* Node: Migrate `ClientPool` to use `glide-core::ClientPool` directly, matching the architecture of Java, Go, and Python. Pool state (idle stack, active map, waiter queue, abandon monitor) is now fully managed in Rust. A new `create_handle_for_client()` function wraps pool-managed Rust connections as full `GlideClientHandle` N-API objects, preserving the complete command API. The TypeScript-side state duplication introduced in #6338 is removed. Public API is unchanged. ([#6887](https://github.com/valkey-io/valkey-glide/issues/6887))
 * Core: Add client-side caching support for MGET. Fully cached requests return locally; partially cached requests fetch only misses and preserve duplicate-key and NIL response semantics. ([#6793](https://github.com/valkey-io/valkey-glide/issues/6793))
 * Rust: Add an initial native Rust client (preview) built directly on `glide-core` ([#6864](https://github.com/valkey-io/valkey-glide/pull/6864))
 * Java, Node, Python, Go: Add optional client information tags across standalone, cluster, pooled, async/sync, and standalone monitor clients, plus configurable library-name overrides in Node, Python, and Go. Tags are composed with the default or custom library name reported in server client metadata, with runtime library names preferred during connection setup and existing fallbacks retained. Non-empty library-name overrides and tags must contain only printable ASCII characters from ! (U+0021) through ~ (U+007E). ([#6755](https://github.com/valkey-io/valkey-glide/pull/6755))

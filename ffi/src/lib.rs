@@ -40,6 +40,7 @@ use std::str;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::sync::Condvar;
+use std::sync::atomic::AtomicBool;
 use std::{
     ffi::{CString, c_void},
     os::raw::{c_char, c_double, c_long, c_ulong},
@@ -47,6 +48,20 @@ use std::{
 use tokio::runtime::Builder;
 use tokio::runtime::Runtime;
 use uuid::Uuid;
+
+/// RAII guard that clears the `is_blocking` flag when dropped.
+/// Ensures the flag is always unset on every exit path from a blocking
+/// command dispatch (normal completion, early return, cancellation).
+#[cfg(feature = "pool-support")]
+struct UnmarkOnDrop(Option<Arc<AtomicBool>>);
+#[cfg(feature = "pool-support")]
+impl Drop for UnmarkOnDrop {
+    fn drop(&mut self) {
+        if let Some(arc) = self.0.take() {
+            arc.store(false, std::sync::atomic::Ordering::Release);
+        }
+    }
+}
 
 #[repr(C)]
 pub struct ScriptHashBuffer {
@@ -3605,27 +3620,39 @@ unsafe fn execute_command(
         .map(|entry| *entry.value())
         .and_then(|(pool_id, client_id)| {
             glide_core::pool::refresh_client_activity(pool_id, client_id);
-            if glide_core::client::is_blocking_command(&cmd)
-                && glide_core::pool::mark_client_blocking(pool_id, client_id, true)
-            {
-                Some((pool_id, client_id))
+            if glide_core::client::is_blocking_command(&cmd) {
+                // Set is_blocking via pre-fetched Arc — no pool mutex (#6971).
+                glide_core::pool::get_blocking_flag(client_id).map(|arc| {
+                    arc.store(true, std::sync::atomic::Ordering::Release);
+                    (pool_id, client_id, arc)
+                })
             } else {
                 None
             }
         });
     #[cfg(not(feature = "pool-support"))]
-    let blocking_flag: Option<(u64, u64)> = None;
+    let blocking_flag: Option<(u64, u64, std::sync::Arc<std::sync::atomic::AtomicBool>)> = None;
 
     client_adapter.execute_request_with_buffer(
         request_id,
         async move {
-            let result = client.send_command(&mut cmd, routing_info).await;
-            // Unmark blocking after command completes
+            // Guard arms immediately on task entry — flag was already set true before request.
+            // This ensures the flag is cleared on every exit path including task abort.
+            // UnmarkOnDrop(None) is a no-op for the non-blocking case.
             #[cfg(feature = "pool-support")]
-            if let Some((pool_id, client_id)) = blocking_flag {
-                glide_core::pool::mark_client_blocking(pool_id, client_id, false);
+            let _unmark_guard = blocking_flag
+                .as_ref()
+                .map(|(_, _, arc)| UnmarkOnDrop(Some(arc.clone())));
+            // No pool support — blocking flag guard not needed (blocking_flag is always None).
+            let result = client.send_command(&mut cmd, routing_info).await;
+            // Refresh activity BEFORE clearing the blocking flag so the abandon
+            // monitor never observes is_blocking=false with a stale borrowed_at.
+            // The _unmark_guard provides a safety net; store(false) is idempotent.
+            #[cfg(feature = "pool-support")]
+            if let Some((pool_id, client_id, arc)) = blocking_flag {
+                glide_core::pool::refresh_client_activity(pool_id, client_id);
+                arc.store(false, std::sync::atomic::Ordering::Release);
             }
-            let _ = blocking_flag; // suppress unused warning when pool-support disabled
             result
         },
         response_buffer,
@@ -4410,27 +4437,48 @@ pub unsafe extern "C-unwind" fn invoke_script(
     if let Some((pool_id, client_id)) = script_pool_ids {
         glide_core::pool::refresh_client_activity(pool_id, client_id);
     }
+    // Pre-fetch the blocking Arc so script execution can set is_blocking lock-free (#6971).
+    #[cfg(feature = "pool-support")]
+    let script_blocking_arc =
+        script_pool_ids.and_then(|(_, client_id)| glide_core::pool::get_blocking_flag(client_id));
     #[cfg(not(feature = "pool-support"))]
     let script_pool_ids: Option<(u64, u64)> = None;
+    #[cfg(not(feature = "pool-support"))]
+    let script_blocking_arc: Option<std::sync::Arc<std::sync::atomic::AtomicBool>> = None;
+
+    // Mark as blocking BEFORE spawning — on the synchronous caller's thread — so the
+    // abandon monitor cannot observe a window where the task is in-flight but the flag
+    // is still false (#6971).
+    // Conservative: mark blocking for the full batch/script duration regardless
+    // of whether the payload contains a blocking command.
+    #[cfg(feature = "pool-support")]
+    if let Some(ref arc) = script_blocking_arc {
+        arc.store(true, std::sync::atomic::Ordering::Release);
+    }
 
     client_adapter.execute_request(request_id, async move {
-        // Mark as blocking for duration of script execution
+        // RAII guard: ensures is_blocking is cleared on every exit path —
+        // routing errors (get_route ?), normal completion, or cancellation.
+        // Guard arms immediately on task entry — flag was already set true before spawn.
         #[cfg(feature = "pool-support")]
-        if let Some((pool_id, client_id)) = script_pool_ids {
-            glide_core::pool::mark_client_blocking(pool_id, client_id, true);
-        }
+        let _unmark_guard = UnmarkOnDrop(script_blocking_arc.clone());
 
         let routing_info = get_route(route, None)?;
         let result = client
             .invoke_script(hash_str, &keys_vec, &args_vec, routing_info)
             .await;
 
-        // Unmark blocking after script completes
+        // Refresh activity timestamp so the abandon monitor does not
+        // reclaim this client immediately after a long blocking script.
+        // The RAII guard handles clearing the is_blocking flag on drop.
         #[cfg(feature = "pool-support")]
-        if let Some((pool_id, client_id)) = script_pool_ids {
-            glide_core::pool::mark_client_blocking(pool_id, client_id, false);
+        if script_blocking_arc.is_some()
+            && let Some((pool_id, client_id)) = script_pool_ids
+        {
+            glide_core::pool::refresh_client_activity(pool_id, client_id);
         }
         let _ = script_pool_ids;
+        let _ = script_blocking_arc;
 
         result
     })
@@ -4546,8 +4594,14 @@ pub unsafe extern "C" fn batch(
     if let Some((pool_id, client_id)) = batch_pool_ids {
         glide_core::pool::refresh_client_activity(pool_id, client_id);
     }
+    // Pre-fetch the blocking Arc so batch execution can set is_blocking lock-free (#6971).
+    #[cfg(feature = "pool-support")]
+    let batch_blocking_arc =
+        batch_pool_ids.and_then(|(_, client_id)| glide_core::pool::get_blocking_flag(client_id));
     #[cfg(not(feature = "pool-support"))]
     let batch_pool_ids: Option<(u64, u64)> = None;
+    #[cfg(not(feature = "pool-support"))]
+    let batch_blocking_arc: Option<std::sync::Arc<std::sync::atomic::AtomicBool>> = None;
 
     // Get compression manager for batch operations
     let compression_manager = client_adapter.core.client.compression_manager();
@@ -4577,12 +4631,22 @@ pub unsafe extern "C" fn batch(
 
     let (routing, timeout, pipeline_retry_strategy) = unsafe { get_pipeline_options(options_ptr) };
 
+    // Mark as blocking BEFORE spawning — on the synchronous caller's thread — so the
+    // abandon monitor cannot observe a window where the task is in-flight but the flag
+    // is still false (#6971).
+    // Conservative: mark blocking for the full batch/script duration regardless
+    // of whether the payload contains a blocking command.
+    #[cfg(feature = "pool-support")]
+    if let Some(ref arc) = batch_blocking_arc {
+        arc.store(true, std::sync::atomic::Ordering::Release);
+    }
+
     client_adapter.execute_request(callback_index, async move {
-        // Mark as blocking for duration of batch execution
+        // RAII guard: ensures is_blocking is cleared on every exit path —
+        // normal completion, decompression error, or cancellation.
+        // Guard arms immediately on task entry — flag was already set true before spawn.
         #[cfg(feature = "pool-support")]
-        if let Some((pool_id, client_id)) = batch_pool_ids {
-            glide_core::pool::mark_client_blocking(pool_id, client_id, true);
-        }
+        let _unmark_guard = UnmarkOnDrop(batch_blocking_arc.clone());
 
         let result = if pipeline.is_atomic() {
             client
@@ -4600,12 +4664,17 @@ pub unsafe extern "C" fn batch(
                 .await
         };
 
-        // Unmark blocking after batch completes
+        // Refresh activity timestamp so the abandon monitor does not
+        // reclaim this client immediately after a long blocking batch.
+        // The RAII guard handles clearing the is_blocking flag on drop.
         #[cfg(feature = "pool-support")]
-        if let Some((pool_id, client_id)) = batch_pool_ids {
-            glide_core::pool::mark_client_blocking(pool_id, client_id, false);
+        if batch_blocking_arc.is_some()
+            && let Some((pool_id, client_id)) = batch_pool_ids
+        {
+            glide_core::pool::refresh_client_activity(pool_id, client_id);
         }
         let _ = batch_pool_ids;
+        let _ = batch_blocking_arc;
 
         // Process batch response for decompression if compression is enabled
         match result {

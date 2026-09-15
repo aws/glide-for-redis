@@ -290,6 +290,18 @@ fn release_worker_pool() {
     }
 }
 
+/// RAII guard that clears the pool blocking flag when dropped.
+/// Ensures the flag is always unset on every exit path from a `spawn_local` task,
+/// including early returns, panics, and task cancellation.
+struct UnmarkOnDrop(Option<std::sync::Arc<std::sync::atomic::AtomicBool>>);
+impl Drop for UnmarkOnDrop {
+    fn drop(&mut self) {
+        if let Some(arc) = self.0.take() {
+            arc.store(false, Ordering::Release);
+        }
+    }
+}
+
 /// Message sent from NAPI thread to pinned worker thread for command execution.
 /// Kept minimal to reduce per-command overhead - no Arc cloning per message.
 enum WorkerMessage {
@@ -793,6 +805,345 @@ pub struct GlideClientHandle {
 ///
 /// # Returns
 /// A Promise that resolves to a GlideClientHandle on success
+/// Wrap an already-created [`Client`] in a [`GlideClientHandle`] with a dedicated
+/// pinned worker thread, command channel, and response buffer.
+///
+/// This is the factored-out "step 2" of [`create_direct_client`], reused by the
+/// pool warmup path so that pool-managed connections get the same full N-API
+/// client handle (worker thread + response buffer) as standalone connections.
+///
+/// The function spawns a pinned task on the worker pool and returns a future
+/// that resolves to the handle once the worker has initialised.  Callers must
+/// `.await` the returned future from a context that can drive the oneshot
+/// receive — the pool runtime's `spawn` context works correctly.
+///
+/// `push_receiver` must be the receiving end of the channel that was passed
+/// (as `push_sender`) to [`Client::new`] when `client` was created.
+pub(crate) async fn create_handle_for_client(
+    client: glide_core::client::Client,
+    mut push_receiver: mpsc::UnboundedReceiver<PushInfo>,
+    wake_tsfn: Arc<ThreadsafeFunction<(), (), (), Status, false>>,
+    inflight_requests_limit: isize,
+    provided_client_id: Option<u64>,
+) -> std::result::Result<GlideClientHandle, napi::Error> {
+    // Shared response buffer for this handle.
+    let response_buffer = Arc::new(ResponseBuffer::new());
+    let response_buffer_worker = Arc::clone(&response_buffer);
+
+    // Command channel: JS → worker thread.
+    let (command_tx, mut command_rx) = mpsc::unbounded_channel::<WorkerMessage>();
+
+    // Weak wake handles for the worker / push listener.
+    let wake_tsfn_worker = Arc::downgrade(&wake_tsfn);
+
+    // Acquire a worker-pool slot (released when the handle's message loop exits).
+    let worker_pool = acquire_worker_pool();
+
+    let response_buffer_push = Arc::clone(&response_buffer);
+    let wake_tsfn_push = Arc::downgrade(&wake_tsfn);
+
+    // Oneshot channel: worker → caller, delivers the constructed GlideClientHandle.
+    let (handle_tx, handle_rx) = tokio::sync::oneshot::channel::<GlideClientHandle>();
+
+    worker_pool.spawn_pinned(move || async move {
+        // Clone command_tx for the handle; drop the original so the channel
+        // closes when the handle is dropped, letting the message loop exit.
+        let command_tx_for_handle = command_tx.clone();
+        drop(command_tx);
+
+        let inflight_counter = Arc::new(AtomicIsize::new(inflight_requests_limit));
+        let client_id =
+            provided_client_id.unwrap_or_else(|| NEXT_CLIENT_ID.fetch_add(1, Ordering::Relaxed));
+
+        // Register client in the scope registry.
+        glide_core::scope::register_client(client_id, client.clone());
+
+        let handle = GlideClientHandle {
+            command_tx: Some(command_tx_for_handle),
+            inflight_requests: inflight_counter.clone(),
+            response_buffer: Arc::clone(&response_buffer_worker),
+            wake_callback: Some(Arc::clone(&wake_tsfn)),
+            client_id,
+        };
+
+        // Store worker-local references to avoid Arc::clone per command.
+        // These are cloned ONCE here and reused for all commands.
+        let worker_inflight = inflight_counter;
+
+        // Spawn a local task to listen for push notifications (pub/sub).
+        // NOTE: push listener is spawned BEFORE sending the handle so that
+        // cluster-mode push notifications cannot arrive in the window between
+        // the caller receiving the handle and the listener being scheduled.
+        task::spawn_local(async move {
+            while let Some(push_info) = push_receiver.recv().await {
+                let push_value = Value::Push {
+                    kind: push_info.kind,
+                    data: push_info.data,
+                };
+                let value_ptr = from_mut(Box::leak(Box::new(push_value)));
+                let [low, high] = split_pointer(value_ptr);
+                let response = CommandResponse {
+                    callback_idx: 0,
+                    resp_pointer_high: Some(high),
+                    resp_pointer_low: Some(low),
+                    constant_response: None,
+                    request_error: None,
+                    closing_error: None,
+                    is_push: true,
+                };
+                if response_buffer_push.push(response)
+                    && let Some(wake_callback) = wake_tsfn_push.upgrade()
+                {
+                    wake_callback.call((), ThreadsafeFunctionCallMode::NonBlocking);
+                }
+            }
+        });
+
+        // Send the handle to the awaiting caller; if the receiver has gone away
+        // (caller dropped the future) we continue running the message loop anyway
+        // so that the client is not orphaned.
+        let _ = handle_tx.send(handle);
+
+        // Process messages from the channel.
+        // Each message spawns a local task for concurrent execution within this thread.
+        while let Some(msg) = command_rx.recv().await {
+            run_worker_message(
+                msg,
+                &client,
+                &worker_inflight,
+                &response_buffer_worker,
+                &wake_tsfn_worker,
+            );
+        }
+
+        // Message loop has exited (channel closed by handle.close()).
+        release_worker_pool();
+    });
+
+    handle_rx
+        .await
+        .map_err(|_| napi::Error::new(Status::Unknown, "Worker thread failed to initialise"))
+}
+
+/// Dispatch a single [`WorkerMessage`] received by a pinned worker task.
+///
+/// Extracted from the monolithic `spawn_pinned` closure so that both
+/// [`create_direct_client`] and [`create_handle_for_client`] share identical
+/// dispatch logic without duplication.
+fn run_worker_message(
+    msg: WorkerMessage,
+    client: &glide_core::client::Client,
+    worker_inflight: &Arc<AtomicIsize>,
+    response_buffer_worker: &Arc<ResponseBuffer>,
+    wake_tsfn_worker: &std::sync::Weak<ThreadsafeFunction<(), (), (), Status, false>>,
+) {
+    match msg {
+        WorkerMessage::Command(cmd_msg) => {
+            let mut client_clone = client.clone();
+            let mut cmd = cmd_msg.cmd;
+            let callback_idx = cmd_msg.callback_idx;
+            let routing = cmd_msg.routing;
+            let pool_blocking_ids = cmd_msg.pool_blocking_ids;
+            let inflight = Arc::clone(worker_inflight);
+            let buffer = Arc::clone(response_buffer_worker);
+            let wake = wake_tsfn_worker.clone();
+
+            task::spawn_local(async move {
+                // RAII guard: clears the blocking flag on all exit paths
+                // (normal completion, early return, and task cancellation/drop).
+                let _unmark_guard = pool_blocking_ids
+                    .and_then(glide_core::pool::get_blocking_flag)
+                    .map(|arc| UnmarkOnDrop(Some(arc)));
+                if let Some(ref span) = cmd.span() {
+                    set_db_attributes(span, &cmd, &client_clone);
+                }
+                let result =
+                    match prepare_command_for_execution(&mut cmd, &client_clone, "send_command") {
+                        Ok(()) => client_clone.send_command(&mut cmd, routing).await,
+                        Err(err) => Err(err),
+                    };
+                if let Some(client_id) = pool_blocking_ids {
+                    pool::mark_blocking(client_id, false);
+                }
+                let response = build_response(callback_idx, result, cmd.span());
+                inflight.fetch_add(1, Ordering::Release);
+                if buffer.push(response)
+                    && let Some(wake_callback) = wake.upgrade()
+                {
+                    wake_callback.call((), ThreadsafeFunctionCallMode::NonBlocking);
+                }
+            });
+        }
+        WorkerMessage::Batch(batch_msg) => {
+            let mut client_clone = client.clone();
+            let callback_idx = batch_msg.callback_idx;
+            let pool_ids = batch_msg.pool_ids;
+            let inflight = Arc::clone(worker_inflight);
+            let buffer = Arc::clone(response_buffer_worker);
+            let wake = wake_tsfn_worker.clone();
+
+            task::spawn_local(async move {
+                // RAII guard: clears the blocking flag on all exit paths
+                // (normal completion, early return, and task cancellation/drop).
+                let _unmark_guard = pool_ids
+                    .and_then(glide_core::pool::get_blocking_flag)
+                    .map(|arc| UnmarkOnDrop(Some(arc)));
+                let command_span = batch_msg.command_span.clone();
+                let result = execute_batch(
+                    &mut client_clone,
+                    batch_msg.commands,
+                    batch_msg.is_atomic,
+                    batch_msg.raise_on_error,
+                    batch_msg.timeout,
+                    batch_msg.retry_server_error,
+                    batch_msg.retry_connection_error,
+                    batch_msg.routing,
+                    batch_msg.command_span,
+                )
+                .await;
+                if let Some(client_id) = pool_ids {
+                    pool::mark_blocking(client_id, false);
+                }
+                let response = build_response(callback_idx, result, command_span);
+                inflight.fetch_add(1, Ordering::Release);
+                if buffer.push(response)
+                    && let Some(wake_callback) = wake.upgrade()
+                {
+                    wake_callback.call((), ThreadsafeFunctionCallMode::NonBlocking);
+                }
+            });
+        }
+        WorkerMessage::ScriptInvocation(script_msg) => {
+            let mut client_clone = client.clone();
+            let callback_idx = script_msg.callback_idx;
+            let pool_ids = script_msg.pool_ids;
+            let inflight = Arc::clone(worker_inflight);
+            let buffer = Arc::clone(response_buffer_worker);
+            let wake = wake_tsfn_worker.clone();
+
+            task::spawn_local(async move {
+                // RAII guard: clears the blocking flag on all exit paths
+                // (normal completion, early return, and task cancellation/drop).
+                let _unmark_guard = pool_ids
+                    .and_then(glide_core::pool::get_blocking_flag)
+                    .map(|arc| UnmarkOnDrop(Some(arc)));
+                let keys: Vec<&[u8]> = script_msg.keys.iter().map(|k| k.as_ref()).collect();
+                let args: Vec<&[u8]> = script_msg.args.iter().map(|a| a.as_ref()).collect();
+                let result = client_clone
+                    .invoke_script(&script_msg.hash, &keys, &args, script_msg.routing)
+                    .await;
+                if let Some(client_id) = pool_ids {
+                    pool::mark_blocking(client_id, false);
+                }
+                let response = build_response(callback_idx, result, None);
+                inflight.fetch_add(1, Ordering::Release);
+                if buffer.push(response)
+                    && let Some(wake_callback) = wake.upgrade()
+                {
+                    wake_callback.call((), ThreadsafeFunctionCallMode::NonBlocking);
+                }
+            });
+        }
+        WorkerMessage::ClusterScan(scan_msg) => {
+            let mut client_clone = client.clone();
+            let callback_idx = scan_msg.callback_idx;
+            let inflight = Arc::clone(worker_inflight);
+            let buffer = Arc::clone(response_buffer_worker);
+            let wake = wake_tsfn_worker.clone();
+
+            task::spawn_local(async move {
+                let cursor_result = if scan_msg.cursor.is_empty() {
+                    Ok(ScanStateRC::new())
+                } else {
+                    get_cluster_scan_cursor(scan_msg.cursor)
+                };
+
+                let result = match cursor_result {
+                    Ok(scan_cursor) => {
+                        let mut args_builder = ClusterScanArgs::builder()
+                            .allow_non_covered_slots(scan_msg.allow_non_covered_slots);
+                        if let Some(pattern) = scan_msg.match_pattern {
+                            args_builder = args_builder.with_match_pattern::<Bytes>(pattern);
+                        }
+                        if let Some(count) = scan_msg.count {
+                            args_builder = args_builder.with_count(count as u32);
+                        }
+                        if let Some(obj_type) = scan_msg.object_type {
+                            args_builder = args_builder.with_object_type(obj_type.into());
+                        }
+                        let scan_args = args_builder.build();
+                        client_clone.cluster_scan(&scan_cursor, scan_args).await
+                    }
+                    Err(e) => Err(e),
+                };
+                let response = build_response(callback_idx, result, None);
+                inflight.fetch_add(1, Ordering::Release);
+                if buffer.push(response)
+                    && let Some(wake_callback) = wake.upgrade()
+                {
+                    wake_callback.call((), ThreadsafeFunctionCallMode::NonBlocking);
+                }
+            });
+        }
+        WorkerMessage::UpdateConnectionPassword(pwd_msg) => {
+            let mut client_clone = client.clone();
+            let callback_idx = pwd_msg.callback_idx;
+            let inflight = Arc::clone(worker_inflight);
+            let buffer = Arc::clone(response_buffer_worker);
+            let wake = wake_tsfn_worker.clone();
+
+            task::spawn_local(async move {
+                let result = client_clone
+                    .update_connection_password(pwd_msg.password, pwd_msg.immediate_auth)
+                    .await;
+                let response = build_response(callback_idx, result, None);
+                inflight.fetch_add(1, Ordering::Release);
+                if buffer.push(response)
+                    && let Some(wake_callback) = wake.upgrade()
+                {
+                    wake_callback.call((), ThreadsafeFunctionCallMode::NonBlocking);
+                }
+            });
+        }
+        WorkerMessage::RefreshIamToken(iam_msg) => {
+            let mut client_clone = client.clone();
+            let callback_idx = iam_msg.callback_idx;
+            let inflight = Arc::clone(worker_inflight);
+            let buffer = Arc::clone(response_buffer_worker);
+            let wake = wake_tsfn_worker.clone();
+
+            task::spawn_local(async move {
+                let result = client_clone.refresh_iam_token().await.map(|()| Value::Okay);
+                let response = build_response(callback_idx, result, None);
+                inflight.fetch_add(1, Ordering::Release);
+                if buffer.push(response)
+                    && let Some(wake_callback) = wake.upgrade()
+                {
+                    wake_callback.call((), ThreadsafeFunctionCallMode::NonBlocking);
+                }
+            });
+        }
+        WorkerMessage::GetCacheMetrics(metrics_msg) => {
+            let client_clone = client.clone();
+            let callback_idx = metrics_msg.callback_idx;
+            let inflight = Arc::clone(worker_inflight);
+            let buffer = Arc::clone(response_buffer_worker);
+            let wake = wake_tsfn_worker.clone();
+
+            task::spawn_local(async move {
+                let result = get_cache_metrics(&client_clone, metrics_msg.metrics_type);
+                let response = build_response(callback_idx, result, None);
+                inflight.fetch_add(1, Ordering::Release);
+                if buffer.push(response)
+                    && let Some(wake_callback) = wake.upgrade()
+                {
+                    wake_callback.call((), ThreadsafeFunctionCallMode::NonBlocking);
+                }
+            });
+        }
+    }
+}
+
 #[napi(
     js_name = "CreateDirectClient",
     ts_return_type = "Promise<GlideClientHandle>"
@@ -861,8 +1212,12 @@ pub fn create_direct_client<'a>(
     let response_buffer_push = Arc::clone(&response_buffer);
     let wake_tsfn_push = Arc::downgrade(&wake_tsfn);
 
-    // Spawn a pinned worker task that owns the Client and processes commands
-    // This task will run on a dedicated thread and never migrate
+    // Spawn a pinned worker task that owns the Client and processes commands.
+    // Client::new is called INSIDE spawn_pinned so the push listener is set up
+    // atomically with the connection — this prevents a race where PubSub push
+    // notifications (subscription confirmations) arrive before the listener task
+    // is running, which would cause them to buffer silently with no wake_callback
+    // fired, resulting in PubSub tests timing out.
     worker_pool.spawn_pinned(move || async move {
         // Create the client on this worker thread
         let client = match Client::new(connection_request, Some(push_sender)).await {
@@ -878,13 +1233,11 @@ pub fn create_direct_client<'a>(
             }
         };
 
-        // Create handle to return to JavaScript
-        // Clone command_tx for the handle - the original will be dropped after this
-        let command_tx_for_handle = command_tx.clone();
-
-        // Drop the original command_tx so only the handle holds a sender.
+        // Create handle to return to JavaScript.
+        // Clone command_tx for the handle — the original will be dropped after this.
         // This ensures the channel closes when the handle is dropped,
         // which allows the message loop below to exit.
+        let command_tx_for_handle = command_tx.clone();
         drop(command_tx);
 
         let inflight_counter = Arc::new(AtomicIsize::new(inflight_requests_limit));
@@ -902,16 +1255,17 @@ pub fn create_direct_client<'a>(
             client_id,
         };
 
-        // Resolve the promise with the handle
-        deferred.resolve(|_| Ok(handle));
-
-        // Store worker-local references to avoid Arc::clone per command
-        // These are cloned ONCE here and reused for all commands
+        // Store worker-local references to avoid Arc::clone per command.
+        // These are cloned ONCE here and reused for all commands.
         let worker_inflight = inflight_counter;
 
         // Spawn a local task to listen for push notifications (pub/sub).
         // Use a weak wake handle to avoid extending callback lifetime after close().
-        // Push messages arrive from glide-core via the push_receiver channel
+        // Push messages arrive from glide-core via the push_receiver channel.
+        // NOTE: push listener is spawned BEFORE resolving the promise so that
+        // cluster-mode push notifications (e.g. subscription confirmations)
+        // cannot arrive in the window between promise resolution and listener
+        // scheduling.
         task::spawn_local(async move {
             while let Some(push_info) = push_receiver.recv().await {
                 let push_value = Value::Push {
@@ -937,228 +1291,23 @@ pub fn create_direct_client<'a>(
             }
         });
 
-        // Process messages from the channel
-        // Each message spawns a local task for concurrent execution within this thread
+        // Resolve the promise with the handle — push listener is now scheduled,
+        // so no push notifications can be missed after this point.
+        deferred.resolve(|_| Ok(handle));
+
+        // Process messages from the channel.
+        // Each message spawns a local task for concurrent execution within this thread.
         while let Some(msg) = command_rx.recv().await {
-            match msg {
-                WorkerMessage::Command(cmd_msg) => {
-                    let mut client_clone = client.clone();
-                    let mut cmd = cmd_msg.cmd;
-                    let callback_idx = cmd_msg.callback_idx;
-                    let routing = cmd_msg.routing;
-                    let pool_blocking_ids = cmd_msg.pool_blocking_ids;
-                    let inflight = Arc::clone(&worker_inflight);
-                    let buffer = Arc::clone(&response_buffer_worker);
-                    let wake = wake_tsfn_worker.clone();
-
-                    // Spawn local task for this command
-                    task::spawn_local(async move {
-                        if let Some(ref span) = cmd.span() {
-                            set_db_attributes(span, &cmd, &client_clone);
-                        }
-                        let result = match prepare_command_for_execution(
-                            &mut cmd,
-                            &client_clone,
-                            "send_command",
-                        ) {
-                            Ok(()) => client_clone.send_command(&mut cmd, routing).await,
-                            Err(err) => Err(err),
-                        };
-                        // Unmark blocking after command completes
-                        if let Some(client_id) = pool_blocking_ids {
-                            pool::mark_blocking(client_id, false);
-                        }
-                        let response = build_response(callback_idx, result, cmd.span());
-                        inflight.fetch_add(1, Ordering::Release);
-                        if buffer.push(response)
-                            && let Some(wake_callback) = wake.upgrade()
-                        {
-                            wake_callback.call((), ThreadsafeFunctionCallMode::NonBlocking);
-                        }
-                    });
-                }
-                WorkerMessage::Batch(batch_msg) => {
-                    let mut client_clone = client.clone();
-                    let callback_idx = batch_msg.callback_idx;
-                    let pool_ids = batch_msg.pool_ids;
-                    let inflight = Arc::clone(&worker_inflight);
-                    let buffer = Arc::clone(&response_buffer_worker);
-                    let wake = wake_tsfn_worker.clone();
-
-                    // Spawn local task for batch execution
-                    task::spawn_local(async move {
-                        // Mark as blocking for duration of batch execution.
-                        // Conservative: prevents abandon monitor from discarding a client
-                        // mid-batch even if abandon_timeout < batch execution time.
-                        if let Some(client_id) = pool_ids {
-                            pool::mark_blocking(client_id, true);
-                        }
-                        let command_span = batch_msg.command_span.clone();
-                        let result = execute_batch(
-                            &mut client_clone,
-                            batch_msg.commands,
-                            batch_msg.is_atomic,
-                            batch_msg.raise_on_error,
-                            batch_msg.timeout,
-                            batch_msg.retry_server_error,
-                            batch_msg.retry_connection_error,
-                            batch_msg.routing,
-                            batch_msg.command_span,
-                        )
-                        .await;
-                        // Unmark blocking after batch completes
-                        if let Some(client_id) = pool_ids {
-                            pool::mark_blocking(client_id, false);
-                        }
-                        let response = build_response(callback_idx, result, command_span);
-                        inflight.fetch_add(1, Ordering::Release);
-                        if buffer.push(response)
-                            && let Some(wake_callback) = wake.upgrade()
-                        {
-                            wake_callback.call((), ThreadsafeFunctionCallMode::NonBlocking);
-                        }
-                    });
-                }
-                WorkerMessage::ScriptInvocation(script_msg) => {
-                    let mut client_clone = client.clone();
-                    let callback_idx = script_msg.callback_idx;
-                    let pool_ids = script_msg.pool_ids;
-                    let inflight = Arc::clone(&worker_inflight);
-                    let buffer = Arc::clone(&response_buffer_worker);
-                    let wake = wake_tsfn_worker.clone();
-
-                    task::spawn_local(async move {
-                        // Mark as blocking for duration of script execution.
-                        // Conservative: prevents abandon monitor from discarding a client
-                        // mid-script even if abandon_timeout < script execution time.
-                        if let Some(client_id) = pool_ids {
-                            pool::mark_blocking(client_id, true);
-                        }
-                        let keys: Vec<&[u8]> = script_msg.keys.iter().map(|k| k.as_ref()).collect();
-                        let args: Vec<&[u8]> = script_msg.args.iter().map(|a| a.as_ref()).collect();
-                        let result = client_clone
-                            .invoke_script(&script_msg.hash, &keys, &args, script_msg.routing)
-                            .await;
-                        // Unmark blocking after script completes
-                        if let Some(client_id) = pool_ids {
-                            pool::mark_blocking(client_id, false);
-                        }
-                        let response = build_response(callback_idx, result, None);
-                        inflight.fetch_add(1, Ordering::Release);
-                        if buffer.push(response)
-                            && let Some(wake_callback) = wake.upgrade()
-                        {
-                            wake_callback.call((), ThreadsafeFunctionCallMode::NonBlocking);
-                        }
-                    });
-                }
-                WorkerMessage::ClusterScan(scan_msg) => {
-                    let mut client_clone = client.clone();
-                    let callback_idx = scan_msg.callback_idx;
-                    let inflight = Arc::clone(&worker_inflight);
-                    let buffer = Arc::clone(&response_buffer_worker);
-                    let wake = wake_tsfn_worker.clone();
-
-                    task::spawn_local(async move {
-                        // Get or create scan cursor
-                        let cursor_result = if scan_msg.cursor.is_empty() {
-                            Ok(ScanStateRC::new())
-                        } else {
-                            get_cluster_scan_cursor(scan_msg.cursor)
-                        };
-
-                        let result = match cursor_result {
-                            Ok(scan_cursor) => {
-                                // Build scan args
-                                let mut args_builder = ClusterScanArgs::builder()
-                                    .allow_non_covered_slots(scan_msg.allow_non_covered_slots);
-                                if let Some(pattern) = scan_msg.match_pattern {
-                                    args_builder =
-                                        args_builder.with_match_pattern::<Bytes>(pattern);
-                                }
-                                if let Some(count) = scan_msg.count {
-                                    args_builder = args_builder.with_count(count as u32);
-                                }
-                                if let Some(obj_type) = scan_msg.object_type {
-                                    args_builder = args_builder.with_object_type(obj_type.into());
-                                }
-                                let scan_args = args_builder.build();
-                                client_clone.cluster_scan(&scan_cursor, scan_args).await
-                            }
-                            Err(e) => Err(e),
-                        };
-                        let response = build_response(callback_idx, result, None);
-                        inflight.fetch_add(1, Ordering::Release);
-                        if buffer.push(response)
-                            && let Some(wake_callback) = wake.upgrade()
-                        {
-                            wake_callback.call((), ThreadsafeFunctionCallMode::NonBlocking);
-                        }
-                    });
-                }
-                WorkerMessage::UpdateConnectionPassword(pwd_msg) => {
-                    let mut client_clone = client.clone();
-                    let callback_idx = pwd_msg.callback_idx;
-                    let inflight = Arc::clone(&worker_inflight);
-                    let buffer = Arc::clone(&response_buffer_worker);
-                    let wake = wake_tsfn_worker.clone();
-
-                    task::spawn_local(async move {
-                        let result = client_clone
-                            .update_connection_password(pwd_msg.password, pwd_msg.immediate_auth)
-                            .await;
-                        let response = build_response(callback_idx, result, None);
-                        inflight.fetch_add(1, Ordering::Release);
-                        if buffer.push(response)
-                            && let Some(wake_callback) = wake.upgrade()
-                        {
-                            wake_callback.call((), ThreadsafeFunctionCallMode::NonBlocking);
-                        }
-                    });
-                }
-                WorkerMessage::RefreshIamToken(iam_msg) => {
-                    let mut client_clone = client.clone();
-                    let callback_idx = iam_msg.callback_idx;
-                    let inflight = Arc::clone(&worker_inflight);
-                    let buffer = Arc::clone(&response_buffer_worker);
-                    let wake = wake_tsfn_worker.clone();
-
-                    task::spawn_local(async move {
-                        let result = client_clone.refresh_iam_token().await.map(|()| Value::Okay);
-                        let response = build_response(callback_idx, result, None);
-                        inflight.fetch_add(1, Ordering::Release);
-                        if buffer.push(response)
-                            && let Some(wake_callback) = wake.upgrade()
-                        {
-                            wake_callback.call((), ThreadsafeFunctionCallMode::NonBlocking);
-                        }
-                    });
-                }
-                WorkerMessage::GetCacheMetrics(metrics_msg) => {
-                    let client_clone = client.clone();
-                    let callback_idx = metrics_msg.callback_idx;
-                    let inflight = Arc::clone(&worker_inflight);
-                    let buffer = Arc::clone(&response_buffer_worker);
-                    let wake = wake_tsfn_worker.clone();
-
-                    task::spawn_local(async move {
-                        let result = get_cache_metrics(&client_clone, metrics_msg.metrics_type);
-                        let response = build_response(callback_idx, result, None);
-                        inflight.fetch_add(1, Ordering::Release);
-                        if buffer.push(response)
-                            && let Some(wake_callback) = wake.upgrade()
-                        {
-                            wake_callback.call((), ThreadsafeFunctionCallMode::NonBlocking);
-                        }
-                    });
-                }
-            }
+            run_worker_message(
+                msg,
+                &client,
+                &worker_inflight,
+                &response_buffer_worker,
+                &wake_tsfn_worker,
+            );
         }
 
-        // Message loop has exited (channel closed by client.close()).
-        // Release our reference to the worker pool.
-        // When all clients have released their references, the pool will be dropped,
-        // allowing worker threads to exit and Node.js to terminate cleanly.
+        // Message loop has exited (channel closed by handle.close()).
         release_worker_pool();
     });
 
@@ -1276,10 +1425,8 @@ impl GlideClientHandle {
         let command_span_for_error = cmd.span();
 
         // Pool abandon detection: refresh activity and mark blocking commands
-        let pool_blocking_ids = if pool::any_pool_clients()
-            && pool::get_client_pool_map().contains_key(&self.client_id)
-        {
-            pool::refresh_activity(self.client_id);
+        let pool_blocking_ids = if glide_core::pool::is_pool_client(self.client_id) {
+            glide_core::pool::refresh_activity_by_client(self.client_id);
             if glide_core::client::is_blocking_command(&cmd)
                 && pool::mark_blocking(self.client_id, true)
             {
@@ -1360,6 +1507,39 @@ impl GlideClientHandle {
         // This allows Node.js to exit cleanly once all other references are dropped.
         // The spawned worker task also holds references, but those will be dropped
         // when the message loop exits (which happens after command_tx is dropped above).
+        drop(self.wake_callback.take());
+
+        Ok(())
+    }
+
+    /// Stop this handle's worker thread WITHOUT removing the client from the
+    /// scope registry.
+    ///
+    /// Used by pool clients: when a pool client is released back to the pool,
+    /// its underlying [`glide_core::client::Client`] must remain registered in
+    /// the scope registry so that the next `pool_build_handle` call can find it
+    /// and spin up a new worker for the next borrower.
+    ///
+    /// For standalone (non-pool) clients, call `close()` instead.
+    #[napi]
+    pub fn close_for_pool_release(&mut self) -> Result<()> {
+        // Mark buffer closed first — prevents callbacks after this point.
+        self.response_buffer.mark_closed();
+
+        // Do NOT unregister from scope registry: the Client must stay registered
+        // so that the next pool_build_handle() call can find it.
+
+        // Do NOT call unregister_pool_client here: release_client_async (called
+        // by pool_release after this) already calls unregister_pool_client, so
+        // calling it here would result in a double-unregister.
+
+        // Free any leaked Value pointers.
+        self.response_buffer.free_leaked_values();
+
+        // Drop command_tx to signal the worker loop to exit.
+        drop(self.command_tx.take());
+
+        // Drop the wake callback reference.
         drop(self.wake_callback.take());
 
         Ok(())
@@ -1492,14 +1672,19 @@ impl GlideClientHandle {
         let command_span_for_error = command_span.clone();
 
         // Pool abandon detection: refresh activity for batch duration
-        let pool_ids = if pool::any_pool_clients()
-            && pool::get_client_pool_map().contains_key(&self.client_id)
-        {
-            pool::refresh_activity(self.client_id);
+        let pool_ids = if glide_core::pool::is_pool_client(self.client_id) {
+            glide_core::pool::refresh_activity_by_client(self.client_id);
             Some(self.client_id)
         } else {
             None
         };
+
+        // Set is_blocking synchronously on the sender thread BEFORE channel send,
+        // so the abandon monitor cannot observe is_blocking=false in the window
+        // between enqueue and the worker thread dequeuing the message (#6971).
+        if let Some(client_id) = pool_ids {
+            pool::mark_blocking(client_id, true);
+        }
 
         // Send batch message to worker
         let msg = WorkerMessage::Batch(BatchCommandMessage {
@@ -1520,6 +1705,10 @@ impl GlideClientHandle {
             None => true,
         };
         if send_failed {
+            // Sender-side mark was already applied; undo it since the message was never delivered.
+            if let Some(client_id) = pool_ids {
+                pool::mark_blocking(client_id, false);
+            }
             self.inflight_requests.fetch_add(1, Ordering::Relaxed);
             mark_span_error(&command_span_for_error, "Client connection closed");
             let response = CommandResponse {
@@ -1592,14 +1781,19 @@ impl GlideClientHandle {
         };
 
         // Pool abandon detection: refresh activity for script execution
-        let pool_ids = if pool::any_pool_clients()
-            && pool::get_client_pool_map().contains_key(&self.client_id)
-        {
-            pool::refresh_activity(self.client_id);
+        let pool_ids = if glide_core::pool::is_pool_client(self.client_id) {
+            glide_core::pool::refresh_activity_by_client(self.client_id);
             Some(self.client_id)
         } else {
             None
         };
+
+        // Set is_blocking synchronously on the sender thread BEFORE channel send,
+        // so the abandon monitor cannot observe is_blocking=false in the window
+        // between enqueue and the worker thread dequeuing the message (#6971).
+        if let Some(client_id) = pool_ids {
+            pool::mark_blocking(client_id, true);
+        }
 
         let msg = WorkerMessage::ScriptInvocation(ScriptInvocationMessage {
             callback_idx,
@@ -1615,6 +1809,10 @@ impl GlideClientHandle {
             None => true,
         };
         if send_failed {
+            // Sender-side mark was already applied; undo it since the message was never delivered.
+            if let Some(client_id) = pool_ids {
+                pool::mark_blocking(client_id, false);
+            }
             self.inflight_requests.fetch_add(1, Ordering::Relaxed);
             let response = CommandResponse {
                 callback_idx,
@@ -1663,8 +1861,8 @@ impl GlideClientHandle {
         });
 
         // Pool abandon detection: refresh activity for scan
-        if pool::any_pool_clients() && pool::get_client_pool_map().contains_key(&self.client_id) {
-            pool::refresh_activity(self.client_id);
+        if glide_core::pool::is_pool_client(self.client_id) {
+            glide_core::pool::refresh_activity_by_client(self.client_id);
         }
 
         let send_failed = match &self.command_tx {

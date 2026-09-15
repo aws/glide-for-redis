@@ -122,6 +122,7 @@ pub extern "system" fn Java_glide_ffi_resolvers_GlidePoolResolver_glidePoolTryAc
                 get_handle_table().remove(&cid);
                 glide_core::scope::unregister_client(cid);
                 get_pool_client_map().remove(&cid);
+                glide_core::pool::unregister_blocking_flag(cid);
             }
 
             let result = pool.try_acquire();
@@ -172,6 +173,13 @@ pub extern "system" fn Java_glide_ffi_resolvers_GlidePoolResolver_glidePoolRelea
     };
 
     let runtime = get_runtime();
+    // Do NOT call unregister_blocking_flag here: the registry entry must live for
+    // the entire lifetime the client_id exists in the pool (from creation until
+    // permanent discard). Removing it on a normal release (return-to-idle) would
+    // delete the entry so the next acquire of the recycled client has no registry
+    // entry and cannot set the flag. Cleanup happens only on permanent discard:
+    // in glidePoolDestroy, in the discard loop inside glidePoolTryAcquire, and in
+    // release_client_async's discard (failed reset) path.
     runtime.spawn(pool::release_client_async(pool_arc, client_id as u64));
     0
 }
@@ -198,16 +206,19 @@ pub extern "system" fn Java_glide_ffi_resolvers_GlidePoolResolver_glidePoolDestr
             handle_table.remove(&entry.client_id);
             glide_core::scope::unregister_client(entry.client_id);
             get_pool_client_map().remove(&entry.client_id);
+            glide_core::pool::unregister_blocking_flag(entry.client_id);
         }
         for entry in pool.in_use.iter() {
             handle_table.remove(entry.key());
             glide_core::scope::unregister_client(*entry.key());
             get_pool_client_map().remove(entry.key());
+            glide_core::pool::unregister_blocking_flag(*entry.key());
         }
         for cid in discarded {
             handle_table.remove(&cid);
             glide_core::scope::unregister_client(cid);
             get_pool_client_map().remove(&cid);
+            glide_core::pool::unregister_blocking_flag(cid);
         }
         pool.destroy();
     });
@@ -226,13 +237,19 @@ pub extern "system" fn Java_glide_ffi_resolvers_GlidePoolResolver_glidePoolMetri
         None => return std::ptr::null_mut(),
     };
 
-    let (idle, active, total) = match pool_arc.try_lock() {
-        Ok(pool) => (
+    let (idle, active, total) = {
+        // Use blocking_lock() instead of try_lock(): the metrics call is not on the
+        // hot path, and using try_lock() returns (0,0,0) when the lock is contended
+        // (e.g. during a heavy test load), causing getActiveCount() to spuriously
+        // return 0 even when clients are borrowed. A brief blocking wait gives
+        // accurate metrics without introducing a deadlock risk, since this function
+        // runs on a JNI thread (not on the Tokio runtime's async executor).
+        let pool = pool_arc.blocking_lock();
+        (
             pool.idle_count() as i32,
             pool.active_count() as i32,
             pool.total_count.load(Ordering::Acquire) as i32,
-        ),
-        Err(_) => (0, 0, 0),
+        )
     };
 
     let result = match env.new_int_array(3) {

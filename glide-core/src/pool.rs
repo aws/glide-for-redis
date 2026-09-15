@@ -166,9 +166,13 @@ impl ClientPool {
         NEXT_CLIENT_ID.fetch_add(1, Ordering::Relaxed)
     }
 
-    /// Non-blocking acquire. Returns client_id on success.
-    /// Returns -1 if pool is closed/closing, -3 if no idle client available.
+    /// Non-blocking acquire. Returns `client_id` on success (>= 0).
+    /// Returns `-1` if pool is closed/closing, `-3` if no idle client available.
     /// Evicts idle connections past idle_timeout internally.
+    ///
+    /// The `is_blocking` flag for the acquired client is accessible lock-free via
+    /// `glide_core::pool::get_blocking_flag(client_id)`, populated at client-creation
+    /// time in the global `BLOCKING_FLAG_REGISTRY`.
     pub fn try_acquire(&mut self) -> i64 {
         if self.state.load(Ordering::Acquire) != POOL_RUNNING {
             return -1;
@@ -178,6 +182,9 @@ impl ClientPool {
             let idle_duration = Instant::now().duration_since(entry.last_idle_at);
             if idle_duration > self.config.idle_timeout {
                 self.total_count.fetch_sub(1, Ordering::AcqRel);
+                // Fix 5: clean up registries for evicted idle clients to prevent leaks.
+                unregister_blocking_flag(entry.client_id);
+                unregister_pool_client(entry.client_id);
                 logger_core::log_debug(
                     "pool",
                     format!(
@@ -207,6 +214,7 @@ impl ClientPool {
     /// Increments total_count. Use `add_client_reserved` if the slot was pre-reserved.
     pub fn add_client(&mut self, client: GlideClient) -> u64 {
         let client_id = self.next_id();
+        let flag = Arc::new(AtomicBool::new(false));
         let entry = PooledClient {
             client_id,
             client,
@@ -214,10 +222,11 @@ impl ClientPool {
             last_idle_at: Instant::now(),
             borrowed_at: None,
             state: ClientState::Idle,
-            is_blocking: Arc::new(AtomicBool::new(false)),
+            is_blocking: flag.clone(),
         };
         self.idle.push_back(entry);
         self.total_count.fetch_add(1, Ordering::AcqRel);
+        get_blocking_flag_registry().insert(client_id, flag);
         client_id
     }
 
@@ -226,6 +235,7 @@ impl ClientPool {
     /// Returns the assigned client_id.
     pub fn add_client_reserved(&mut self, client: GlideClient) -> u64 {
         let client_id = self.next_id();
+        let flag = Arc::new(AtomicBool::new(false));
         let entry = PooledClient {
             client_id,
             client,
@@ -233,9 +243,10 @@ impl ClientPool {
             last_idle_at: Instant::now(),
             borrowed_at: None,
             state: ClientState::Idle,
-            is_blocking: Arc::new(AtomicBool::new(false)),
+            is_blocking: flag.clone(),
         };
         self.idle.push_back(entry);
+        get_blocking_flag_registry().insert(client_id, flag);
         client_id
     }
 
@@ -294,6 +305,19 @@ impl ClientPool {
             );
         }
 
+        // Defensive fallback: callers SHOULD call unregister_blocking_flag /
+        // unregister_pool_client for every client before calling destroy(), but if a
+        // future binding forgets we still clean up rather than silently leaking entries.
+        // DashMap::remove is idempotent, so double-removes are harmless.
+        for entry in self.idle.iter() {
+            unregister_blocking_flag(entry.client_id);
+            unregister_pool_client(entry.client_id);
+        }
+        for entry in self.in_use.iter() {
+            unregister_blocking_flag(*entry.key());
+            unregister_pool_client(*entry.key());
+        }
+
         self.state.store(POOL_CLOSED, Ordering::Release);
         self.idle.clear();
         self.in_use.clear();
@@ -339,18 +363,24 @@ pub async fn release_client_async(pool_arc: Arc<TokioMutex<ClientPool>>, client_
         }
     };
 
+    // Remove client→pool mapping so refresh_activity_by_client no-ops from here on.
+    unregister_pool_client(client_id);
+
     // Safety: if this task is cancelled after take_for_release but before
     // return_to_idle/discard_client, decrement total_count to prevent slot leak.
     // Note: blocking_lock() is safe here because this code runs on the dedicated
     // POOL_RUNTIME (not the main tokio runtime), and cancellation only occurs when
     // the pool is being destroyed (no other task holds the lock on this runtime).
     let pool_for_guard = pool_arc.clone();
+    let guard_client_id = entry.client_id;
     struct LeakGuard {
         pool: Option<Arc<TokioMutex<ClientPool>>>,
+        client_id: u64,
     }
     impl Drop for LeakGuard {
         fn drop(&mut self) {
             if let Some(pool_arc) = self.pool.take() {
+                unregister_blocking_flag(self.client_id);
                 if let Ok(mut pool) = pool_arc.try_lock() {
                     pool.discard_client();
                 } else {
@@ -361,6 +391,7 @@ pub async fn release_client_async(pool_arc: Arc<TokioMutex<ClientPool>>, client_
     }
     let mut guard = LeakGuard {
         pool: Some(pool_for_guard),
+        client_id: guard_client_id,
     };
 
     // Reset state: DISCARD (cancel MULTI/WATCH) + SELECT <configured_db>
@@ -382,6 +413,10 @@ pub async fn release_client_async(pool_arc: Arc<TokioMutex<ClientPool>>, client_
                 10,
                 "Client reset failed on release — discarding connection"
             );
+            // Clean up the blocking flag registry entry for this permanently
+            // discarded client. On a normal release (return-to-idle) this must
+            // NOT be called so the recycled client keeps its registry entry.
+            unregister_blocking_flag(entry.client_id);
             pool.discard_client();
         }
     }
@@ -401,6 +436,104 @@ static MONITOR_HANDLES: OnceLock<DashMap<u64, tokio::task::JoinHandle<()>>> = On
 fn get_monitor_handles() -> &'static DashMap<u64, tokio::task::JoinHandle<()>> {
     MONITOR_HANDLES.get_or_init(DashMap::new)
 }
+
+/// Process-global lockless map: client_id → is_blocking flag.
+/// Populated when a client enters the pool (add_client / add_client_reserved)
+/// and removed when discarded. Any binding can set the flag lock-free
+/// via `get_blocking_flag(client_id)` without acquiring the pool mutex.
+///
+/// **Concurrency safety:** The `AtomicBool` flag is safe for single-concurrent-command
+/// use because `ClientPool` enforces exclusive borrow: only one caller holds a pooled
+/// client at a time (via `try_acquire` / `release_client_async`). Concurrent blocking
+/// commands on the same pooled client are not possible through the pool API, so the
+/// flag is written by exactly one dispatch path at a time.
+static BLOCKING_FLAG_REGISTRY: OnceLock<DashMap<u64, Arc<AtomicBool>>> = OnceLock::new();
+
+fn get_blocking_flag_registry() -> &'static DashMap<u64, Arc<AtomicBool>> {
+    BLOCKING_FLAG_REGISTRY.get_or_init(DashMap::new)
+}
+
+/// Get the `is_blocking` flag Arc for a pool client.
+/// Returns `None` if the client is not currently registered in any pool.
+/// The caller can call `.store(true/false, Ordering::Release)` directly —
+/// no pool mutex needed.
+///
+/// **Exclusive-borrow invariant:** The pool guarantees that at most one caller holds
+/// a given pooled client at a time, so the flag is written by exactly one dispatch
+/// path concurrently. Two concurrent blocking commands on the same pooled client are
+/// not possible through the pool API.
+pub fn get_blocking_flag(client_id: u64) -> Option<Arc<AtomicBool>> {
+    get_blocking_flag_registry()
+        .get(&client_id)
+        .map(|e| e.value().clone())
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CLIENT → POOL MAPPING
+//
+// A lightweight process-global map: client_id → pool_id.
+// Populated when a client is acquired from a pool and removed when it is
+// returned or discarded. Allows any binding to call
+// `refresh_activity_by_client(client_id)` without needing to track pool_id
+// separately — useful for bindings (e.g. Node N-API) where the dispatch path
+// only has the client_id readily available.
+// ─────────────────────────────────────────────────────────────────────────────
+
+static CLIENT_TO_POOL: OnceLock<DashMap<u64, u64>> = OnceLock::new();
+
+fn get_client_to_pool() -> &'static DashMap<u64, u64> {
+    CLIENT_TO_POOL.get_or_init(DashMap::new)
+}
+
+/// Record that `client_id` was borrowed from `pool_id`.
+/// Called by language bindings immediately after a successful `try_acquire`.
+pub fn register_pool_client(pool_id: u64, client_id: u64) {
+    get_client_to_pool().insert(client_id, pool_id);
+}
+
+/// Remove the `client_id → pool_id` mapping.
+/// Called when a client is returned to the pool or discarded.
+pub fn unregister_pool_client(client_id: u64) {
+    get_client_to_pool().remove(&client_id);
+}
+
+/// Returns `true` if `client_id` is currently registered as a pool-borrowed client.
+pub fn is_pool_client(client_id: u64) -> bool {
+    get_client_to_pool().contains_key(&client_id)
+}
+
+/// Returns the pool_id for the given `client_id`, or `None` if not registered.
+/// Convenience helper for bindings that need to look up pool configuration by client.
+pub fn get_pool_id_for_client(client_id: u64) -> Option<u64> {
+    get_client_to_pool().get(&client_id).map(|e| *e.value())
+}
+
+/// Refresh the inactivity timer for a pool-borrowed client, looked up by
+/// client_id alone. No-op if the client is not currently pool-registered.
+/// Convenience wrapper used by bindings where pool_id is not on the hot path.
+/// For glide-core-managed pools this updates `borrowed_at` in `ClientPool.in_use`.
+/// For TS-managed pools (not in POOL_REGISTRY) this is a no-op at the pool level;
+/// language bindings should maintain their own activity timestamps for those.
+pub fn refresh_activity_by_client(client_id: u64) {
+    if let Some(pool_id) = get_client_to_pool().get(&client_id).map(|e| *e.value()) {
+        refresh_client_activity(pool_id, client_id);
+    }
+}
+
+/// Register a blocking flag for a client that was manually added to the pool
+/// (i.e. without going through `add_client`/`add_client_reserved`).
+/// The provided Arc must be the same one stored in the `PooledClient.is_blocking` field
+/// so that the abandon monitor and the binding share the same atomic.
+pub fn register_blocking_flag(client_id: u64, flag: Arc<AtomicBool>) {
+    get_blocking_flag_registry().insert(client_id, flag);
+}
+
+/// Remove a client's blocking flag from the registry.
+/// Call this when a client is permanently discarded (not just returned to idle).
+pub fn unregister_blocking_flag(client_id: u64) {
+    get_blocking_flag_registry().remove(&client_id);
+}
+
 /// Global client_id allocator — ensures uniqueness across all pools.
 static NEXT_CLIENT_ID: AtomicU64 = AtomicU64::new(1);
 
@@ -521,6 +654,10 @@ pub fn start_abandon_monitor(pool_id: u64, runtime_handle: &tokio::runtime::Hand
                 if pool.in_use.remove(&client_id).is_some() {
                     pool.discard_client();
                     pool.discarded_ids.push(client_id);
+                    // Remove client→pool mapping so refresh_activity_by_client no-ops.
+                    unregister_pool_client(client_id);
+                    // Fix 1: remove blocking flag to prevent BLOCKING_FLAG_REGISTRY leak.
+                    unregister_blocking_flag(client_id);
                 }
             }
         }
@@ -528,49 +665,6 @@ pub fn start_abandon_monitor(pool_id: u64, runtime_handle: &tokio::runtime::Hand
 
     // Store handle outside the pool mutex so destroy() can abort without locking.
     get_monitor_handles().insert(pool_id, handle);
-}
-
-/// Mark a borrowed client as currently executing a blocking command.
-/// The abandon monitor will skip this client until unmarked.
-/// This is a no-op if the client is not found in any pool's `in_use` map.
-pub fn mark_client_blocking(pool_id: u64, client_id: u64, blocking: bool) -> bool {
-    let pool_arc = match get_pool(pool_id) {
-        Some(arc) => arc,
-        None => return false,
-    };
-    // Use try_lock to avoid blocking the command dispatch path.
-    // If the pool is locked (e.g., during release), skip — the client
-    // will either be released soon or caught on the next monitor scan.
-    #[allow(clippy::collapsible_if)]
-    if let Ok(pool) = pool_arc.try_lock() {
-        if let Some(entry) = pool.in_use.get(&client_id) {
-            entry.value().is_blocking.store(blocking, Ordering::Release);
-        } else {
-            return false;
-        }
-        // When unmarking (command completed), refresh borrowed_at so the client
-        // isn't instantly reclaimable after a long-running blocking command.
-        if !blocking {
-            if let Some(mut entry) = pool.in_use.get_mut(&client_id) {
-                entry.value_mut().borrowed_at = Some(Instant::now());
-            }
-        }
-        return true;
-    }
-    false
-}
-
-/// Get the `is_blocking` flag Arc for a client (for use by the command dispatch path).
-/// Returns None if the client is not currently borrowed from this pool.
-pub fn get_client_blocking_flag(pool_id: u64, client_id: u64) -> Option<Arc<AtomicBool>> {
-    let pool_arc = get_pool(pool_id)?;
-    #[allow(clippy::collapsible_if)]
-    if let Ok(pool) = pool_arc.try_lock() {
-        if let Some(entry) = pool.in_use.get(&client_id) {
-            return Some(entry.value().is_blocking.clone());
-        }
-    }
-    None
 }
 
 /// Refresh a borrowed client's `borrowed_at` timestamp to the current instant.
@@ -1321,5 +1415,216 @@ mod scope_pool_tests {
                 "max_total={max_total}: a rejected acquire must not reserve"
             );
         }
+    }
+}
+
+/// Tests for the abandon-monitor race fix (issue #6971).
+///
+/// The abandon monitor must skip `PooledClient` entries whose `is_blocking` flag
+/// is `true`.  These tests verify the invariant end-to-end using the live monitor
+/// task against a pool populated with a lazy (no-connection) test client.
+///
+/// No real Valkey server is required.
+#[cfg(test)]
+mod abandon_monitor_tests {
+    use super::*;
+    use std::time::Duration;
+
+    /// Build a `PoolConfig` with the given `abandon_timeout` and otherwise
+    /// minimal / safe values.
+    fn test_pool_config(abandon_timeout: Duration) -> PoolConfig {
+        PoolConfig {
+            max_size: 4,
+            min_idle: 0,
+            idle_timeout: Duration::from_secs(300),
+            request_timeout: Duration::from_secs(5),
+            test_on_borrow: false,
+            connection_request: vec![],
+            is_async: false,
+            configured_database_id: 0,
+            abandon_timeout,
+        }
+    }
+
+    /// Regression test for issue #6971.
+    ///
+    /// The abandon monitor iterates `pool.in_use` and checks `is_blocking`
+    /// before deciding whether to evict a client.  This test inserts a client
+    /// whose `borrowed_at` is already past the abandon timeout, sets
+    /// `is_blocking = true`, and asserts the monitor does **not** evict it.
+    ///
+    /// On the buggy code path the flag was set via `try_lock`, which could fail
+    /// under pool-mutex contention, causing the monitor to evict the client
+    /// erroneously.  The fix stores the flag in `BLOCKING_FLAG_REGISTRY` as an
+    /// `Arc<AtomicBool>` shared with `PooledClient.is_blocking`, so the binding
+    /// can set it lock-free before spawn.
+    #[test]
+    #[serial_test::serial]
+    fn abandon_monitor_skips_blocking_clients() {
+        // ── 1. Runtime ─────────────────────────────────────────────────────────
+        let rt = tokio::runtime::Builder::new_multi_thread()
+            .enable_all()
+            .worker_threads(2)
+            .build()
+            .expect("tokio runtime");
+
+        let abandon_timeout = Duration::from_millis(200);
+
+        // ── 2. Pool setup ───────────────────────────────────────────────────────
+        let pool_id = {
+            let pool = ClientPool::new(test_pool_config(abandon_timeout)).expect("ClientPool::new");
+            register_pool(pool)
+        };
+        let pool_arc = get_pool(pool_id).expect("pool registered");
+
+        // ── 3. Insert a test client into the pool's in_use map ─────────────────
+        //
+        // We need a PooledClient in `pool.in_use` with:
+        //   • borrowed_at = some time well in the past (past abandon_timeout)
+        //   • is_blocking  = true
+        //
+        // Steps:
+        //   a. add_client() → idle
+        //   b. try_acquire() → in_use  (sets borrowed_at = now)
+        //   c. register_pool_client() so the monitor-side unregister works
+        //   d. Back-date borrowed_at so the monitor's age check triggers
+        //   e. Set is_blocking = true so the monitor must skip the entry
+        let client_id: u64;
+        {
+            let mut pool = pool_arc.blocking_lock();
+
+            // (a) add a lazy test client (no TCP connection)
+            let glide_client = crate::client::create_test_glide_client();
+            let cid = pool.add_client(glide_client);
+            client_id = cid;
+
+            // (b) move from idle → in_use
+            let acquired = pool.try_acquire();
+            assert_eq!(
+                acquired, client_id as i64,
+                "try_acquire should return the only idle client"
+            );
+
+            // (c) register the pool→client mapping (normally done by JNI/FFI after try_acquire)
+            register_pool_client(pool_id, client_id);
+
+            // (d) back-date borrowed_at so the monitor's age check fires
+            if let Some(mut entry) = pool.in_use.get_mut(&client_id) {
+                entry.borrowed_at = Some(Instant::now() - abandon_timeout * 3);
+            }
+        } // pool mutex released
+
+        // (e) Set is_blocking = true lock-free — simulates what a binding does
+        //     right before spawning the blocking command.
+        let flag = get_blocking_flag(client_id).expect("flag registered by add_client");
+        flag.store(true, Ordering::Release);
+
+        // ── 4. Start the abandon monitor ───────────────────────────────────────
+        start_abandon_monitor(pool_id, rt.handle());
+
+        // ── 5. Sleep 3× the scan interval so the monitor fires at least once ───
+        // scan_interval = abandon_timeout / 2, so 3× scan_interval = 1.5× timeout.
+        std::thread::sleep(abandon_timeout * 3);
+
+        // ── 6. Assertions ──────────────────────────────────────────────────────
+        {
+            let pool = pool_arc.blocking_lock();
+            assert!(
+                pool.in_use.contains_key(&client_id),
+                "Issue #6971 regression: abandon monitor evicted client {} even though \
+                 is_blocking=true. The monitor must skip clients executing blocking commands.",
+                client_id
+            );
+        }
+
+        assert!(
+            get_blocking_flag(client_id).is_some(),
+            "Client {} was removed from BLOCKING_FLAG_REGISTRY while is_blocking=true",
+            client_id
+        );
+
+        // ── 7. Cleanup ─────────────────────────────────────────────────────────
+        flag.store(false, Ordering::Release);
+        {
+            let pool = pool_arc.blocking_lock();
+            pool.in_use.remove(&client_id);
+            pool.total_count.fetch_sub(1, Ordering::AcqRel);
+        }
+        unregister_blocking_flag(client_id);
+        unregister_pool_client(client_id);
+        unregister_pool(pool_id);
+    }
+
+    /// Companion test: the monitor **does** evict a client whose `borrowed_at`
+    /// has passed the abandon timeout and whose `is_blocking` flag is `false`.
+    ///
+    /// This confirms the monitor is actually running and that the first test is
+    /// meaningful — it cannot pass simply because the monitor never fires.
+    #[test]
+    #[serial_test::serial]
+    fn abandon_monitor_evicts_non_blocking_abandoned_clients() {
+        // ── 1. Runtime ─────────────────────────────────────────────────────────
+        let rt = tokio::runtime::Builder::new_multi_thread()
+            .enable_all()
+            .worker_threads(2)
+            .build()
+            .expect("tokio runtime");
+
+        let abandon_timeout = Duration::from_millis(200);
+
+        // ── 2. Pool setup ───────────────────────────────────────────────────────
+        let pool_id = {
+            let pool = ClientPool::new(test_pool_config(abandon_timeout)).expect("ClientPool::new");
+            register_pool(pool)
+        };
+        let pool_arc = get_pool(pool_id).expect("pool registered");
+
+        // ── 3. Insert a test client (is_blocking stays false) ──────────────────
+        let client_id: u64;
+        {
+            let mut pool = pool_arc.blocking_lock();
+            let glide_client = crate::client::create_test_glide_client();
+            let cid = pool.add_client(glide_client);
+            client_id = cid;
+
+            let acquired = pool.try_acquire();
+            assert_eq!(acquired, client_id as i64);
+
+            register_pool_client(pool_id, client_id);
+
+            // Back-date borrowed_at past the abandon timeout
+            if let Some(mut entry) = pool.in_use.get_mut(&client_id) {
+                entry.borrowed_at = Some(Instant::now() - abandon_timeout * 3);
+            }
+        }
+        // is_blocking remains false — the monitor should evict this client.
+
+        // ── 4. Start the abandon monitor ───────────────────────────────────────
+        start_abandon_monitor(pool_id, rt.handle());
+
+        // ── 5. Sleep long enough for the monitor to fire ───────────────────────
+        std::thread::sleep(abandon_timeout * 4);
+
+        // ── 6. The client must have been evicted ───────────────────────────────
+        {
+            let pool = pool_arc.blocking_lock();
+            assert!(
+                !pool.in_use.contains_key(&client_id),
+                "Abandon monitor should have evicted client {} (is_blocking=false, \
+                 borrowed_at past timeout), but it is still in pool.in_use",
+                client_id
+            );
+        }
+
+        // The monitor also calls unregister_blocking_flag / unregister_pool_client,
+        // so the registries should no longer contain this client.
+        assert!(
+            get_blocking_flag(client_id).is_none(),
+            "Client {} should have been removed from BLOCKING_FLAG_REGISTRY by the monitor",
+            client_id
+        );
+
+        // ── 7. Cleanup ─────────────────────────────────────────────────────────
+        unregister_pool(pool_id);
     }
 }

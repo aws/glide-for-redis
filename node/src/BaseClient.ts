@@ -10159,6 +10159,60 @@ export class BaseClient {
 
     /**
      * @internal
+     * Serialize a client configuration into the protobuf bytes expected by the
+     * Rust pool APIs (`createPool`, etc.).
+     *
+     * Exposed as a public static so that `ClientPool` (which is not a
+     * BaseClient subclass) can serialise connection config without making a
+     * real connection.
+     */
+    public static serializeConnectionRequest(
+        options: BaseClientConfiguration,
+        constructor: (options?: BaseClientConfiguration) => BaseClient,
+    ): { bytes: Uint8Array; resolverKey: string | undefined } {
+        const instance = constructor(options);
+        const request = instance.createClientRequest(options);
+
+        let resolverKey: string | undefined;
+        if (options.addressResolver) {
+            // Register the resolver so Rust can find it by key when creating
+            // pool connections. The key must be embedded in the serialised
+            // request so every new pool connection can locate the callback.
+            resolverKey = registerAddressResolver(options.addressResolver);
+            request.addressResolverKey = resolverKey;
+        }
+
+        const bytes = Buffer.from(
+            connection_request.ConnectionRequest.encode(
+                connection_request.ConnectionRequest.create(request),
+            ).finish(),
+        );
+        return { bytes, resolverKey };
+    }
+
+    /**
+     * @internal
+     * Wrap an already-built {@link GlideClientHandle} in a client instance.
+     *
+     * Used by the pool layer: after `pool_build_handle` returns a handle for a
+     * pool-managed connection, the pool calls this method to get a fully-typed
+     * GlideClient / GlideClusterClient without going through `connectToServer`.
+     *
+     * The `options` argument is used only to configure defaults (decoder,
+     * config snapshot) — no network connection is made.
+     */
+    protected static createClientFromHandle<TConnection extends BaseClient>(
+        handle: GlideClientHandle,
+        options: BaseClientConfiguration,
+        constructor: (options?: BaseClientConfiguration) => TConnection,
+    ): TConnection {
+        const connection = constructor(options);
+        connection.clientHandle = handle;
+        return connection;
+    }
+
+    /**
+     * @internal
      * Creates and connects a client instance.
      */
     protected static async createClientInternal<TConnection extends BaseClient>(

@@ -473,6 +473,7 @@ public abstract class BaseClient
                 && config.getProtocol() == glide.api.models.configuration.ProtocolVersion.RESP2) {
             throw new ConfigurationError("PubSub subscriptions require RESP3 protocol");
         }
+        ConnectionManager.validateClientAz(config);
         try {
             // Create client components using build methods
             ConnectionManager connectionManager = buildConnectionManager();

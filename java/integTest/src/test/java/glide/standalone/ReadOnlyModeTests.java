@@ -78,8 +78,6 @@ public class ReadOnlyModeTests {
     @Test
     public void test_read_only_rejects_az_affinity() {
         // Test that read-only mode with AZAffinity strategy fails during client creation.
-        // Note: The specific error message from the Rust core may not be propagated through
-        // the JNI layer, so we just verify that client creation fails.
         ExecutionException exception =
                 assertThrows(
                         ExecutionException.class,
@@ -92,8 +90,13 @@ public class ReadOnlyModeTests {
                                                         .build())
                                         .get());
 
-        // Verify that an exception was thrown (client creation failed)
         assertInstanceOf(ClosingException.class, exception.getCause());
+        assertTrue(
+                exception
+                        .getCause()
+                        .getMessage()
+                        .contains("read-only mode is not compatible with AZAffinity strategies"),
+                "Unexpected failure reason: " + exception.getCause().getMessage());
     }
 
     @SneakyThrows
@@ -101,8 +104,6 @@ public class ReadOnlyModeTests {
     public void test_read_only_rejects_az_affinity_replicas_and_primary() {
         // Test that read-only mode with AZAffinityReplicasAndPrimary strategy fails during client
         // creation.
-        // Note: The specific error message from the Rust core may not be propagated through
-        // the JNI layer, so we just verify that client creation fails.
         ExecutionException exception =
                 assertThrows(
                         ExecutionException.class,
@@ -115,8 +116,41 @@ public class ReadOnlyModeTests {
                                                         .build())
                                         .get());
 
-        // Verify that an exception was thrown (client creation failed)
         assertInstanceOf(ClosingException.class, exception.getCause());
+        assertTrue(
+                exception
+                        .getCause()
+                        .getMessage()
+                        .contains("read-only mode is not compatible with AZAffinity strategies"),
+                "Unexpected failure reason: " + exception.getCause().getMessage());
+    }
+
+    @SneakyThrows
+    @Test
+    public void test_read_only_rejects_az_affinity_all_nodes() {
+        // Test that read-only mode with AZAffinityAllNodes strategy fails during client creation.
+        ExecutionException exception =
+                assertThrows(
+                        ExecutionException.class,
+                        () ->
+                                GlideClient.createClient(
+                                                commonClientConfig()
+                                                        .readOnly(true)
+                                                        .readFrom(ReadFrom.AZ_AFFINITY_ALL_NODES)
+                                                        .clientAZ("us-east-1a")
+                                                        .build())
+                                        .get());
+
+        assertInstanceOf(ClosingException.class, exception.getCause());
+        // The core's rejection reason reaches Java intact through the JNI layer, so assert on it
+        // rather than only on the failure - otherwise this test would still pass if the client
+        // failed to connect for an unrelated reason.
+        assertTrue(
+                exception
+                        .getCause()
+                        .getMessage()
+                        .contains("read-only mode is not compatible with AZAffinity strategies"),
+                "Unexpected failure reason: " + exception.getCause().getMessage());
     }
 
     @SneakyThrows

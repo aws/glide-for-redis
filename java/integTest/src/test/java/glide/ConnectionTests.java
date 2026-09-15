@@ -570,6 +570,140 @@ public class ConnectionTests {
 
     @SneakyThrows
     @Test
+    public void test_az_affinity_all_nodes_splits_between_primary_and_replica() {
+        assumeTrue(SERVER_VERSION.isGreaterThanOrEqualTo("8.0.0"), "Skip for versions below 8");
+        // Windows integration tests has replicas set to zero due to resource limitations
+        // on Github Action using Windows runner with WSL
+        // TODO: Remove the skip after fixing Windows Replicas issues
+        // https://github.com/valkey-io/valkey-glide/issues/5210
+        assumeTrue(!isWindows(), "Skip on Windows");
+
+        String az = "us-east-1a";
+        String otherAz = "us-east-1b";
+        int nGetCalls = 4;
+        int nodesInSameAz = 2; // one primary + one replica
+        int perNodeCalls = nGetCalls / nodesInSameAz;
+        String perNodeGetCmdstat = String.format("cmdstat_get:calls=%d", perNodeCalls);
+
+        // Create client for setting the configs
+        GlideClusterClient configSetClient =
+                GlideClusterClient.createClient(azClusterClientConfig().requestTimeout(2000).build()).get();
+
+        // Reset stats and set all nodes to other_az
+        assertEquals(configSetClient.configResetStat().get(), OK);
+        configSetClient
+                .configSet(Collections.singletonMap("availability-zone", otherAz), ALL_NODES)
+                .get();
+
+        // Move the primary and one replica of slot 12182 into az
+        configSetClient
+                .configSet(
+                        Collections.singletonMap("availability-zone", az),
+                        new RequestRoutingConfiguration.SlotIdRoute(12182, PRIMARY))
+                .get();
+        configSetClient
+                .configSet(
+                        Collections.singletonMap("availability-zone", az),
+                        new RequestRoutingConfiguration.SlotIdRoute(12182, REPLICA))
+                .get();
+
+        // Read the AZs back, so a fixture that failed to apply is distinguishable from a routing
+        // regression - both would otherwise surface as "0 nodes handled the GET calls".
+        // The primary is addressable deterministically; a REPLICA slot route is not (it may pick a
+        // different replica than the one just tagged), so the replica is confirmed by counting how
+        // many nodes cluster-wide report the AZ.
+        ClusterValue<Map<String, String>> primaryAzResult =
+                configSetClient
+                        .configGet(
+                                new String[] {"availability-zone"},
+                                new RequestRoutingConfiguration.SlotIdRoute(12182, PRIMARY))
+                        .get();
+        assertEquals(
+                az,
+                primaryAzResult.getSingleValue().get("availability-zone"),
+                "Primary for slot 12182 is not in the expected AZ " + az);
+
+        ClusterValue<Map<String, String>> allAzResult =
+                configSetClient.configGet(new String[] {"availability-zone"}, ALL_NODES).get();
+        long nodesTaggedWithAz =
+                allAzResult.getMultiValue().values().stream()
+                        .filter(nodeConfig -> az.equals(nodeConfig.get("availability-zone")))
+                        .count();
+        assertEquals(
+                nodesInSameAz,
+                nodesTaggedWithAz,
+                "Expected exactly "
+                        + nodesInSameAz
+                        + " nodes (one primary + one replica) in AZ "
+                        + az
+                        + " after fixture setup");
+
+        configSetClient.close();
+
+        // Create test client AFTER configuration so it picks up the AZs on connect
+        GlideClusterClient azTestClient =
+                GlideClusterClient.createClient(
+                                azClusterClientConfig()
+                                        .readFrom(ReadFrom.AZ_AFFINITY_ALL_NODES)
+                                        .clientAZ(az)
+                                        .requestTimeout(2000)
+                                        .build())
+                        .get();
+
+        try {
+            // Execute GET commands
+            for (int i = 0; i < nGetCalls; i++) {
+                azTestClient.get("foo").get();
+            }
+
+            ClusterValue<String> infoResult =
+                    azTestClient.info(new InfoOptions.Section[] {InfoOptions.Section.ALL}, ALL_NODES).get();
+            Map<String, String> infoData = infoResult.getMultiValue();
+
+            // Reads must be spread evenly across every node in the AZ - primary and replica alike -
+            // rather than prioritizing the replica the way AZ_AFFINITY_REPLICAS_AND_PRIMARY would.
+            long matchingEntries =
+                    infoData.values().stream()
+                            .filter(value -> value.contains(perNodeGetCmdstat) && value.contains(az))
+                            .count();
+            assertEquals(
+                    nodesInSameAz,
+                    matchingEntries,
+                    "Each of the "
+                            + nodesInSameAz
+                            + " nodes in AZ "
+                            + az
+                            + " should have handled "
+                            + perNodeCalls
+                            + " GET calls");
+
+            // No GET should have landed on a node outside the client's AZ
+            long outOfAzEntries =
+                    infoData.values().stream()
+                            .filter(value -> value.contains("cmdstat_get:calls=") && !value.contains(az))
+                            .count();
+            assertEquals(0, outOfAzEntries, "GET calls landed on nodes outside AZ " + az);
+
+            // Verify total GET calls
+            long totalGetCalls =
+                    infoData.values().stream()
+                            .filter(value -> value.contains("cmdstat_get:calls="))
+                            .mapToInt(
+                                    value -> {
+                                        int startIndex =
+                                                value.indexOf("cmdstat_get:calls=") + "cmdstat_get:calls=".length();
+                                        int endIndex = value.indexOf(",", startIndex);
+                                        return Integer.parseInt(value.substring(startIndex, endIndex));
+                                    })
+                            .sum();
+            assertEquals(nGetCalls, totalGetCalls, "Total GET calls mismatch");
+        } finally {
+            azTestClient.close();
+        }
+    }
+
+    @SneakyThrows
+    @Test
     public void test_az_affinity_replicas_and_primary_prioritizes_replicas_over_primary() {
         assumeTrue(SERVER_VERSION.isGreaterThanOrEqualTo("8.0.0"), "Skip for versions below 8");
         // Windows integration tests has replicas set to zero. This is set because of the resource

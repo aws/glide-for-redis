@@ -23,4 +23,31 @@ public enum ReadFrom {
     AZ_AFFINITY_REPLICAS_AND_PRIMARY,
     /** Spread the read requests between all nodes (primary and replicas) in a round-robin manner. */
     ALL_NODES,
+    /**
+     * Spread the read requests equally among all nodes (primary and replicas) within the client's
+     * Availability Zone (AZ) in a round-robin manner, falling back to a round-robin across all nodes
+     * if no node in the client's AZ is available.
+     *
+     * <p>Unlike {@link #AZ_AFFINITY_REPLICAS_AND_PRIMARY}, this strategy does not prioritize replicas
+     * ahead of the primary within the AZ, which is what makes an even per-node read distribution
+     * possible. Unlike {@link #ALL_NODES}, which is AZ-agnostic, this strategy is scoped to the
+     * client's AZ.
+     *
+     * <p>Choose this over {@link #AZ_AFFINITY_REPLICAS_AND_PRIMARY} when the in-AZ primary should
+     * take a share of the reads. That strategy sends every read to an in-AZ replica whenever one is
+     * connected, so the primary serves reads only as a fallback.
+     *
+     * <p>Requires {@code clientAZ} to be set on the client configuration.
+     */
+    AZ_AFFINITY_ALL_NODES;
+
+    /** Whether this strategy needs {@code clientAZ} set on the client configuration. */
+    public boolean requiresClientAz() {
+        // A new AZ-scoped strategy has to be listed here too.
+        // ConnectionManagerTest.requiresClientAz_isSetForExactlyTheAzStrategies fails until every
+        // constant has an explicit answer.
+        return this == AZ_AFFINITY
+                || this == AZ_AFFINITY_REPLICAS_AND_PRIMARY
+                || this == AZ_AFFINITY_ALL_NODES;
+    }
 }

@@ -403,6 +403,32 @@ pub struct Client {
     otel_metadata: Arc<types::OTelMetadata>,
 }
 
+/// Determines whether command execution must preserve the caller's [`Cmd`] or
+/// can consume it directly. JNI constructs a command exclusively for a single
+/// request, so moving it avoids cloning the command's argument storage.
+enum CommandInput<'a> {
+    Borrowed(&'a mut Cmd),
+    Owned(Cmd),
+}
+
+impl CommandInput<'_> {
+    #[inline]
+    fn as_mut(&mut self) -> &mut Cmd {
+        match self {
+            Self::Borrowed(cmd) => cmd,
+            Self::Owned(cmd) => cmd,
+        }
+    }
+
+    #[inline]
+    fn into_owned(self) -> Cmd {
+        match self {
+            Self::Borrowed(cmd) => cmd.clone(),
+            Self::Owned(cmd) => cmd,
+        }
+    }
+}
+
 impl std::ops::Deref for Client {
     type Target = ClientShared;
     #[inline]
@@ -1155,298 +1181,321 @@ impl Client {
         cmd: &'a mut Cmd,
         routing: Option<RoutingInfo>,
     ) -> redis::RedisFuture<'a, Value> {
-        Box::pin(async move {
-            // Check for IAM token changes and update the password without authentication if needed (pull model)
-            if let Some(iam_manager) = &self.iam_token_manager
-                && iam_manager.token_changed()
-            {
-                let current_token = iam_manager.get_token().await;
-                if current_token.is_empty() {
-                    return Err(RedisError::from((
-                        ErrorKind::ClientError,
-                        "IAM token not available",
-                    )));
-                }
-                iam_manager.clear_token_changed();
-                log_debug(
-                    "update_connection_password",
-                    "Updating connection password with IAM token",
-                );
-                self.update_connection_password(Some(current_token), false)
-                    .await?;
-            }
+        Box::pin(self.send_command_inner(CommandInput::Borrowed(cmd), routing))
+    }
 
-            let client = self.get_or_initialize_client().await?;
+    /// Sends a command that the caller no longer needs after this call.
+    ///
+    /// This has the same behavior as [`Self::send_command`], but moves the
+    /// command into the execution path instead of deep-cloning its argument
+    /// storage. Callers must use the borrowed variant when they need to retain
+    /// or inspect the command after submission.
+    pub async fn send_command_owned(
+        &mut self,
+        cmd: Cmd,
+        routing: Option<RoutingInfo>,
+    ) -> RedisResult<Value> {
+        self.send_command_inner(CommandInput::Owned(cmd), routing)
+            .await
+    }
 
-            // Reject immediately if circuit breaker is open.
-            if !self.is_circuit_breaker_healthy() {
+    async fn send_command_inner(
+        &mut self,
+        mut command: CommandInput<'_>,
+        routing: Option<RoutingInfo>,
+    ) -> RedisResult<Value> {
+        // Check for IAM token changes and update the password without authentication if needed (pull model)
+        if let Some(iam_manager) = &self.iam_token_manager
+            && iam_manager.token_changed()
+        {
+            let current_token = iam_manager.get_token().await;
+            if current_token.is_empty() {
                 return Err(RedisError::from((
-                    ErrorKind::CircuitBreakerOpen,
-                    "Client circuit breaker is open - core unhealthy",
+                    ErrorKind::ClientError,
+                    "IAM token not available",
                 )));
             }
+            iam_manager.clear_token_changed();
+            log_debug(
+                "update_connection_password",
+                "Updating connection password with IAM token",
+            );
+            self.update_connection_password(Some(current_token), false)
+                .await?;
+        }
 
-            if let Some(result) = self.pubsub_synchronizer.intercept_pubsub_command(cmd).await {
-                return result;
+        let client = self.get_or_initialize_client().await?;
+
+        // Reject immediately if circuit breaker is open.
+        if !self.is_circuit_breaker_healthy() {
+            return Err(RedisError::from((
+                ErrorKind::CircuitBreakerOpen,
+                "Client circuit breaker is open - core unhealthy",
+            )));
+        }
+
+        if let Some(result) = self
+            .pubsub_synchronizer
+            .intercept_pubsub_command(command.as_mut())
+            .await
+        {
+            return result;
+        }
+
+        let request_timeout = get_request_timeout(command.as_mut(), self.request_timeout)?;
+
+        // Reserve an inflight slot. The tracker holds the slot until the
+        // last clone of the Cmd is dropped (i.e. all sub-commands in the
+        // cluster event loop finish). This decouples user-facing timeout
+        // from internal pipeline cleanup.
+        let tracker = match self.reserve_inflight_request() {
+            Some(t) => t,
+            None => {
+                let available = self.inflight_requests_allowed.load(Ordering::Relaxed);
+                log_warn_rate_limited!(
+                    "inflight",
+                    10,
+                    format!(
+                        "Inflight request limit exhausted. limit={}, available={}",
+                        self.inflight_requests_limit, available
+                    )
+                );
+                return Err(RedisError::from((
+                    ErrorKind::ClientError,
+                    "Reached maximum inflight requests",
+                )));
             }
+        };
 
-            let request_timeout = get_request_timeout(cmd, self.request_timeout)?;
-
-            // Reserve an inflight slot. The tracker holds the slot until the
-            // last clone of the Cmd is dropped (i.e. all sub-commands in the
-            // cluster event loop finish). This decouples user-facing timeout
-            // from internal pipeline cleanup.
-            let tracker = match self.reserve_inflight_request() {
-                Some(t) => t,
-                None => {
-                    let available = self.inflight_requests_allowed.load(Ordering::Relaxed);
-                    log_warn_rate_limited!(
-                        "inflight",
-                        10,
-                        format!(
-                            "Inflight request limit exhausted. limit={}, available={}",
-                            self.inflight_requests_limit, available
-                        )
-                    );
-                    return Err(RedisError::from((
-                        ErrorKind::ClientError,
-                        "Reached maximum inflight requests",
-                    )));
-                }
-            };
-
-            // Log at debug level when inflight usage crosses a 10% threshold.
-            // Only one log per threshold crossing — zero noise when stable.
-            {
-                static LAST_BUCKET: AtomicIsize = AtomicIsize::new(0);
-                let remaining = self.inflight_requests_allowed.load(Ordering::Relaxed);
-                let used = self.inflight_requests_limit - remaining;
-                let bucket = used / self.inflight_log_interval;
-                let prev = LAST_BUCKET.load(Ordering::Relaxed);
-                if bucket != prev {
-                    LAST_BUCKET.store(bucket, Ordering::Relaxed);
-                    log_debug(
-                        "inflight",
-                        format!(
-                            "Inflight: {used}/{} slots used",
-                            self.inflight_requests_limit
-                        ),
-                    );
-                }
+        // Log at debug level when inflight usage crosses a 10% threshold.
+        // Only one log per threshold crossing — zero noise when stable.
+        {
+            static LAST_BUCKET: AtomicIsize = AtomicIsize::new(0);
+            let remaining = self.inflight_requests_allowed.load(Ordering::Relaxed);
+            let used = self.inflight_requests_limit - remaining;
+            let bucket = used / self.inflight_log_interval;
+            let prev = LAST_BUCKET.load(Ordering::Relaxed);
+            if bucket != prev {
+                LAST_BUCKET.store(bucket, Ordering::Relaxed);
+                log_debug(
+                    "inflight",
+                    format!(
+                        "Inflight: {used}/{} slots used",
+                        self.inflight_requests_limit
+                    ),
+                );
             }
+        }
 
-            cmd.set_inflight_tracker(tracker);
-            cmd.set_response_timeout(request_timeout);
+        command.as_mut().set_inflight_tracker(tracker);
+        command.as_mut().set_response_timeout(request_timeout);
 
-            // Clone compression_manager reference only if compression is enabled
-            let compression_manager = if self.is_compression_enabled() {
-                self.compression_manager.clone()
-            } else {
-                None
-            };
-            let self_clone = self.clone();
+        // Clone compression_manager reference only if compression is enabled
+        let compression_manager = if self.is_compression_enabled() {
+            self.compression_manager.clone()
+        } else {
+            None
+        };
+        let self_clone = self.clone();
 
-            // Blocking commands have artificially long latencies; exclude from tracker.
-            let is_blocking_cmd = is_blocking_command(cmd);
-            // Propagate the blocking flag into the Cmd BEFORE cloning owned_cmd so
-            // the copy that actually travels to the multiplexed connection carries
-            // it, letting that connection suppress false-positive response-wait
-            // warnings (#6283).
-            cmd.set_is_blocking(is_blocking_cmd);
-            let owned_cmd = cmd.clone();
+        // Blocking commands have artificially long latencies; exclude from tracker.
+        let is_blocking_cmd = is_blocking_command(command.as_mut());
+        // Propagate the blocking flag into the Cmd BEFORE cloning owned_cmd so
+        // the copy that actually travels to the multiplexed connection carries
+        // it, letting that connection suppress false-positive response-wait
+        // warnings (#6283).
+        command.as_mut().set_is_blocking(is_blocking_cmd);
+        let owned_cmd = command.into_owned();
 
-            // Captured by the timeout path for watchdog-informed CB decisions.
-            let mut timeout_cause: Option<crate::timeout_watchdog::TimeoutCause> = None;
+        // Captured by the timeout path for watchdog-informed CB decisions.
+        let mut timeout_cause: Option<crate::timeout_watchdog::TimeoutCause> = None;
 
-            let result = match request_timeout {
-                Some(duration) => {
-                    // Compute inflight count (cheap atomic load)
-                    let inflight = Some(
-                        (self.inflight_requests_limit
-                            - self.inflight_requests_allowed.load(Ordering::Relaxed))
-                            as usize,
-                    );
+        let result = match request_timeout {
+            Some(duration) => {
+                // Compute inflight count (cheap atomic load)
+                let inflight = Some(
+                    (self.inflight_requests_limit
+                        - self.inflight_requests_allowed.load(Ordering::Relaxed))
+                        as usize,
+                );
 
-                    // Wrap Cmd in Arc so the timeout arm can still read watchdog fields after execute takes ownership
-                    let owned_cmd = Arc::new(owned_cmd);
+                // Wrap Cmd in Arc so the timeout arm can still read watchdog fields after execute takes ownership
+                let owned_cmd = Arc::new(owned_cmd);
 
-                    // Single Instant::now() shared between watchdog and latency tracking
-                    let cmd_start = Instant::now();
+                // Single Instant::now() shared between watchdog and latency tracking
+                let cmd_start = Instant::now();
 
-                    let timeout_rx = crate::timeout_watchdog::TimeoutWatchdog::global()
-                        .register(duration, cmd_start);
-                    // Defer the expensive Debug-format of the route to the (rare)
-                    // timeout path. Cloning the routing is cheap for the common
-                    // single-node case (no heap allocation); previously a String was
-                    // allocated and Debug-formatted on EVERY command just for a
-                    // diagnostic field that is only read when a timeout fires.
-                    let routing_for_diag = routing.clone();
-                    let execute = Self::execute_command_owned(
-                        self_clone,
-                        owned_cmd.clone(),
-                        routing,
-                        client,
-                        compression_manager,
-                    );
+                let timeout_rx = crate::timeout_watchdog::TimeoutWatchdog::global()
+                    .register(duration, cmd_start);
+                // Defer the expensive Debug-format of the route to the (rare)
+                // timeout path. Cloning the routing is cheap for the common
+                // single-node case (no heap allocation); previously a String was
+                // allocated and Debug-formatted on EVERY command just for a
+                // diagnostic field that is only read when a timeout fires.
+                let routing_for_diag = routing.clone();
+                let execute = Self::execute_command_owned(
+                    self_clone,
+                    owned_cmd.clone(),
+                    routing,
+                    client,
+                    compression_manager,
+                );
 
-                    tokio::pin!(execute);
-                    tokio::select! {
-                        result = &mut execute => {
-                            // Record latency into per-client tracker
-                            if !is_blocking_cmd {
-                                let elapsed = cmd_start.elapsed();
-                                self.latency_tracker.record(elapsed);
-                            }
-                            result
+                tokio::pin!(execute);
+                tokio::select! {
+                    result = &mut execute => {
+                        // Record latency into per-client tracker
+                        if !is_blocking_cmd {
+                            let elapsed = cmd_start.elapsed();
+                            self.latency_tracker.record(elapsed);
                         }
-                        recv_result = timeout_rx => {
-                            match recv_result {
-                                Err(_) => {
-                                    // Watchdog thread died — fall through to let the
-                                    // command complete via Tokio's timer as fallback.
-                                    execute.await
-                                }
-                                Ok(()) => {
-                                    // Build diagnostic event on the consumer side (rare timeout path)
-                                    let actual_elapsed = cmd_start.elapsed();
-                                    let (phase, node, retry_count, command) = {
-                                        let p = owned_cmd.watchdog_phase.load(Ordering::Acquire);
-                                        let n: String = routing_for_diag
-                                            .as_ref()
-                                            .map(|r| format!("{:?}", r))
-                                            .unwrap_or_else(|| "unknown".to_owned());
-                                        let r = owned_cmd.watchdog_retry_count.load(Ordering::Relaxed);
-                                        let c = owned_cmd.arg_idx(0)
-                                            .map(crate::timeout_watchdog::cmd_name_from_bytes)
-                                            .unwrap_or("UNKNOWN");
-                                        (
-                                            if p == redis::PHASE_SENT {
-                                                crate::timeout_watchdog::CommandPhase::Sent
-                                            } else {
-                                                crate::timeout_watchdog::CommandPhase::Queued
-                                            },
-                                            n,
-                                            r,
-                                            c,
-                                        )
-                                    };
-                                    let pending = crate::timeout_watchdog::pending_count();
-                                    let inflight_now = (self.inflight_requests_limit
-                                        - self.inflight_requests_allowed.load(Ordering::Relaxed))
-                                        as usize;
-                                    let p99 = self.latency_tracker.p99();
-                                    let cause = if phase == crate::timeout_watchdog::CommandPhase::Queued {
-                                        crate::timeout_watchdog::TimeoutCause::ClientBackpressure {
-                                            queue_depth: pending,
-                                            scheduling_delay: actual_elapsed,
-                                        }
-                                    } else if pending > 100 {
-                                        crate::timeout_watchdog::TimeoutCause::SystemOverload {
-                                            pending_total: pending,
-                                        }
-                                    } else {
-                                        crate::timeout_watchdog::TimeoutCause::ServerUnresponsive {
-                                            node: node.clone(),
-                                        }
-                                    };
-                                    timeout_cause = Some(cause.clone());
-                                    let event = crate::timeout_watchdog::TimeoutEvent {
-                                        cause,
-                                        command,
-                                        node,
-                                        phase,
-                                        configured_timeout: duration,
-                                        actual_elapsed,
-                                        pending_commands: pending,
-                                        recent_p99_latency: p99,
-                                        rss_bytes: crate::timeout_watchdog::get_rss(),
-                                        suggested_timeout: p99.map(|p| (p * 3).max(duration)),
-                                        inflight_at_register: inflight,
-                                        inflight_at_timeout: Some(inflight_now),
-                                        retry_count,
-                                    };
-
-                                    log_warn_rate_limited!(
-                                        "timeout_watchdog",
-                                        2,
-                                        event.to_string()
-                                    );
-                                    if let Err(e) = GlideOpenTelemetry::record_timeout_error() {
-                                        log_error(
-                                            "OpenTelemetry:timeout_error",
-                                            format!("Failed to record timeout error: {e}"),
-                                        );
+                        result
+                    }
+                    recv_result = timeout_rx => {
+                        match recv_result {
+                            Err(_) => {
+                                // Watchdog thread died — fall through to let the
+                                // command complete via Tokio's timer as fallback.
+                                execute.await
+                            }
+                            Ok(()) => {
+                                // Build diagnostic event on the consumer side (rare timeout path)
+                                let actual_elapsed = cmd_start.elapsed();
+                                let (phase, node, retry_count, command) = {
+                                    let p = owned_cmd.watchdog_phase.load(Ordering::Acquire);
+                                    let n: String = routing_for_diag
+                                        .as_ref()
+                                        .map(|r| format!("{:?}", r))
+                                        .unwrap_or_else(|| "unknown".to_owned());
+                                    let r = owned_cmd.watchdog_retry_count.load(Ordering::Relaxed);
+                                    let c = owned_cmd.arg_idx(0)
+                                        .map(crate::timeout_watchdog::cmd_name_from_bytes)
+                                        .unwrap_or("UNKNOWN");
+                                    (
+                                        if p == redis::PHASE_SENT {
+                                            crate::timeout_watchdog::CommandPhase::Sent
+                                        } else {
+                                            crate::timeout_watchdog::CommandPhase::Queued
+                                        },
+                                        n,
+                                        r,
+                                        c,
+                                    )
+                                };
+                                let pending = crate::timeout_watchdog::pending_count();
+                                let inflight_now = (self.inflight_requests_limit
+                                    - self.inflight_requests_allowed.load(Ordering::Relaxed))
+                                    as usize;
+                                let p99 = self.latency_tracker.p99();
+                                let cause = if phase == crate::timeout_watchdog::CommandPhase::Queued {
+                                    crate::timeout_watchdog::TimeoutCause::ClientBackpressure {
+                                        queue_depth: pending,
+                                        scheduling_delay: actual_elapsed,
                                     }
-                                    Err(io::Error::from(io::ErrorKind::TimedOut).into())
+                                } else if pending > 100 {
+                                    crate::timeout_watchdog::TimeoutCause::SystemOverload {
+                                        pending_total: pending,
+                                    }
+                                } else {
+                                    crate::timeout_watchdog::TimeoutCause::ServerUnresponsive {
+                                        node: node.clone(),
+                                    }
+                                };
+                                timeout_cause = Some(cause.clone());
+                                let event = crate::timeout_watchdog::TimeoutEvent {
+                                    cause,
+                                    command,
+                                    node,
+                                    phase,
+                                    configured_timeout: duration,
+                                    actual_elapsed,
+                                    pending_commands: pending,
+                                    recent_p99_latency: p99,
+                                    rss_bytes: crate::timeout_watchdog::get_rss(),
+                                    suggested_timeout: p99.map(|p| (p * 3).max(duration)),
+                                    inflight_at_register: inflight,
+                                    inflight_at_timeout: Some(inflight_now),
+                                    retry_count,
+                                };
+
+                                log_warn_rate_limited!(
+                                    "timeout_watchdog",
+                                    2,
+                                    event.to_string()
+                                );
+                                if let Err(e) = GlideOpenTelemetry::record_timeout_error() {
+                                    log_error(
+                                        "OpenTelemetry:timeout_error",
+                                        format!("Failed to record timeout error: {e}"),
+                                    );
                                 }
+                                Err(io::Error::from(io::ErrorKind::TimedOut).into())
                             }
                         }
                     }
                 }
-                None => {
-                    let owned_cmd = Arc::new(owned_cmd);
-                    let execute = Self::execute_command_owned(
-                        self_clone,
-                        owned_cmd,
-                        routing,
-                        client,
-                        compression_manager,
-                    );
-                    execute.await
+            }
+            None => {
+                let owned_cmd = Arc::new(owned_cmd);
+                let execute = Self::execute_command_owned(
+                    self_clone,
+                    owned_cmd,
+                    routing,
+                    client,
+                    compression_manager,
+                );
+                execute.await
+            }
+        };
+
+        // Report result to client-wide circuit breaker
+        if let Some(cb) = &self.circuit_breaker {
+            let (is_error, error_kind) = match result.as_ref() {
+                Ok(_) => (false, None),
+                Err(e) => {
+                    let counts = if e.is_timeout() {
+                        cb.counts_timeouts()
+                    } else {
+                        matches!(
+                            e.kind(),
+                            ErrorKind::IoError
+                                | ErrorKind::FatalSendError
+                                | ErrorKind::FatalReceiveError
+                        ) || e.is_connection_dropped()
+                    };
+                    if counts {
+                        let kind_str = if e.is_timeout() {
+                            match &timeout_cause {
+                                Some(crate::timeout_watchdog::TimeoutCause::SystemOverload {
+                                    ..
+                                }) => "TimeoutSystemOverload",
+                                Some(
+                                    crate::timeout_watchdog::TimeoutCause::ClientBackpressure {
+                                        ..
+                                    },
+                                ) => "TimeoutClientBackpressure",
+                                _ => "TimeoutServerUnresponsive",
+                            }
+                        } else {
+                            match e.kind() {
+                                ErrorKind::FatalSendError => "FatalSendError",
+                                ErrorKind::FatalReceiveError => "FatalReceiveError",
+                                _ => "IoError",
+                            }
+                        };
+                        (true, Some(kind_str))
+                    } else {
+                        (false, None)
+                    }
                 }
             };
+            let current_inflight = (self.inflight_requests_limit
+                - self.inflight_requests_allowed.load(Ordering::Relaxed))
+                as u32;
+            cb.on_result(is_error, error_kind, current_inflight);
+        }
 
-            // Report result to client-wide circuit breaker
-            if let Some(cb) = &self.circuit_breaker {
-                let (is_error, error_kind) = match result.as_ref() {
-                    Ok(_) => (false, None),
-                    Err(e) => {
-                        let counts = if e.is_timeout() {
-                            cb.counts_timeouts()
-                        } else {
-                            matches!(
-                                e.kind(),
-                                ErrorKind::IoError
-                                    | ErrorKind::FatalSendError
-                                    | ErrorKind::FatalReceiveError
-                            ) || e.is_connection_dropped()
-                        };
-                        if counts {
-                            let kind_str = if e.is_timeout() {
-                                match &timeout_cause {
-                                    Some(
-                                        crate::timeout_watchdog::TimeoutCause::SystemOverload {
-                                            ..
-                                        },
-                                    ) => "TimeoutSystemOverload",
-                                    Some(
-                                        crate::timeout_watchdog::TimeoutCause::ClientBackpressure {
-                                            ..
-                                        },
-                                    ) => "TimeoutClientBackpressure",
-                                    _ => "TimeoutServerUnresponsive",
-                                }
-                            } else {
-                                match e.kind() {
-                                    ErrorKind::FatalSendError => "FatalSendError",
-                                    ErrorKind::FatalReceiveError => "FatalReceiveError",
-                                    _ => "IoError",
-                                }
-                            };
-                            (true, Some(kind_str))
-                        } else {
-                            (false, None)
-                        }
-                    }
-                };
-                let current_inflight = (self.inflight_requests_limit
-                    - self.inflight_requests_allowed.load(Ordering::Relaxed))
-                    as u32;
-                cb.on_result(is_error, error_kind, current_inflight);
-            }
-
-            result
-        })
+        result
     }
 
     /// Execute a command on a provided dedicated connection (for isolated execution).
@@ -3168,9 +3217,34 @@ mod tests {
 
     use crate::client::types::{ConnectionRequest, NodeAddress, OTelMetadata};
     use crate::client::{
-        BLOCKING_CMD_TIMEOUT_EXTENSION, ClientShared, RequestTimeoutOption, TimeUnit,
+        BLOCKING_CMD_TIMEOUT_EXTENSION, ClientShared, CommandInput, RequestTimeoutOption, TimeUnit,
         get_request_timeout, is_blocking_command, is_blocking_command_name,
     };
+
+    #[test]
+    fn owned_command_input_moves_inline_argument_storage() {
+        let mut cmd = redis::cmd("MGET");
+        cmd.arg("key");
+        let data_ptr = cmd.arg_idx(1).unwrap().as_ptr();
+
+        let moved = CommandInput::Owned(cmd).into_owned();
+
+        assert_eq!(moved.arg_idx(1).unwrap().as_ptr(), data_ptr);
+        assert_eq!(moved.arg_idx(1), Some(b"key".as_slice()));
+    }
+
+    #[test]
+    fn borrowed_command_input_preserves_the_original_command() {
+        let mut cmd = redis::cmd("MGET");
+        cmd.arg("key");
+        let original_ptr = cmd.arg_idx(1).unwrap().as_ptr();
+
+        let cloned = CommandInput::Borrowed(&mut cmd).into_owned();
+
+        assert_eq!(cmd.arg_idx(1), Some(b"key".as_slice()));
+        assert_eq!(cloned.arg_idx(1), Some(b"key".as_slice()));
+        assert_ne!(cloned.arg_idx(1).unwrap().as_ptr(), original_ptr);
+    }
 
     use super::{
         Client, ClientWrapper, ConnectionError, LazyClient, get_timeout_from_cmd_arg,

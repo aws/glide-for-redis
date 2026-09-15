@@ -47,6 +47,14 @@ fn send_message() {
 }
 
 #[library_benchmark]
+fn send_message_owned() {
+    runner(|mut client| async move {
+        let command = black_box(cmd("PING"));
+        client.send_command_owned(command, None).await.unwrap();
+    });
+}
+
+#[library_benchmark]
 fn send_and_receive_messages() {
     runner(|mut client| async move {
         let mut command = cmd("SET");
@@ -104,7 +112,7 @@ fn lots_of_messages() {
 
 library_benchmark_group!(
     name = cluster;
-    benchmarks = just_setup, send_message, send_and_receive_messages, lots_of_messages
+    benchmarks = just_setup, send_message, send_message_owned, send_and_receive_messages, lots_of_messages
 );
 
 main!(library_benchmark_groups = cluster);

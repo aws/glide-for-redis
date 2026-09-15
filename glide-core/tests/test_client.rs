@@ -161,6 +161,70 @@ pub(crate) mod shared_client_tests {
     #[rstest]
     #[serial_test::serial]
     #[timeout(SHORT_CLUSTER_TEST_TIMEOUT)]
+    fn test_send_command_owned_matches_borrowed_execution_and_metadata() {
+        block_on_all(async {
+            let mut test_basics = setup_test_basics(
+                false,
+                TestConfiguration {
+                    request_timeout: Some(1000),
+                    shared_server: false,
+                    ..Default::default()
+                },
+            )
+            .await;
+
+            let mut borrowed_ping = redis::cmd("PING");
+            let borrowed_result = test_basics
+                .client
+                .send_command(&mut borrowed_ping, None)
+                .await
+                .unwrap();
+            assert_eq!(borrowed_result, Value::SimpleString("PONG".to_string()));
+            assert_eq!(
+                borrowed_ping.response_timeout(),
+                Some(std::time::Duration::from_millis(1000))
+            );
+
+            let owned_result = test_basics
+                .client
+                .send_command_owned(redis::cmd("PING"), None)
+                .await
+                .unwrap();
+            assert_eq!(owned_result, borrowed_result);
+
+            let channel = generate_random_string(10);
+            let mut borrowed_subscribe = redis::cmd("SUBSCRIBE");
+            borrowed_subscribe.arg(&channel);
+            let borrowed_subscribe_result = test_basics
+                .client
+                .send_command(&mut borrowed_subscribe, None)
+                .await
+                .unwrap();
+            assert_eq!(borrowed_subscribe_result, Value::Nil);
+            assert_eq!(borrowed_subscribe.response_timeout(), None);
+
+            let mut owned_subscribe = redis::cmd("SUBSCRIBE");
+            owned_subscribe.arg(&channel);
+            let owned_subscribe_result = test_basics
+                .client
+                .send_command_owned(owned_subscribe, None)
+                .await
+                .unwrap();
+            assert_eq!(owned_subscribe_result, borrowed_subscribe_result);
+
+            let mut unsubscribe = redis::cmd("UNSUBSCRIBE");
+            unsubscribe.arg(&channel);
+            test_basics
+                .client
+                .send_command_owned(unsubscribe, None)
+                .await
+                .unwrap();
+        });
+    }
+
+    #[rstest]
+    #[serial_test::serial]
+    #[timeout(SHORT_CLUSTER_TEST_TIMEOUT)]
     fn test_transaction_is_not_routed() {
         // This test checks that a transaction without user routing isn't routed to a random node before reaching its target.
         // This is tested by checking how many requests each node has received - one of the 6 nodes should have more requests than the others.
